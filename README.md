@@ -84,8 +84,22 @@ npm run build
 
 ## 🌐 الروابط
 
-- **Vercel**: سيتم إنشاء الرابط بعد النشر
+- **GitHub**: https://github.com/mturke1996/DebtFlow-
+- **Vercel**: سيتم إنشاء الرابط بعد النشر (اتبع الخطوات أعلاه)
 - **Firebase**: https://test-company-a0c68.web.app
+
+## 📝 ملاحظات للنشر على Vercel
+
+1. تأكد من إضافة متغيرات البيئة في Vercel:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+
+2. Vercel سيكتشف الإعدادات تلقائياً من `vercel.json`
+3. المشروع جاهز للنشر مباشرة بعد ربطه مع GitHub
 
 ## 📄 الترخيص
 
