@@ -57,12 +57,14 @@ export const HomePage = () => {
     const clientsCount = clients.length;
 
     // Calculate profit for each client separately
-    // Each client has their own percentage stored in localStorage
+    // Each client has their own percentage stored in database
     const totalProfit = clients.reduce((totalProfit, client) => {
-      const clientPercentage = localStorage.getItem(
-        `profitPercentage_${client.id}`
-      );
-      if (!clientPercentage || isNaN(parseFloat(clientPercentage))) {
+      const clientPercentage = client.profitPercentage;
+      if (
+        !clientPercentage ||
+        isNaN(clientPercentage) ||
+        clientPercentage <= 0
+      ) {
         return totalProfit;
       }
 
@@ -74,8 +76,7 @@ export const HomePage = () => {
         (sum, exp) => sum + exp.amount,
         0
       );
-      const clientProfit =
-        (clientTotalExpenses * parseFloat(clientPercentage)) / 100;
+      const clientProfit = (clientTotalExpenses * clientPercentage) / 100;
 
       return totalProfit + clientProfit;
     }, 0);

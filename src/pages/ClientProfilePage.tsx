@@ -306,21 +306,20 @@ export const ClientProfilePage = () => {
     }
   }, [editingParty, setPartyValue, resetParty]);
 
-  // Load profit percentage for this client from localStorage
+  // Load profit percentage for this client from database
   useEffect(() => {
-    if (clientId) {
-      const savedPercentage = localStorage.getItem(`profitPercentage_${clientId}`);
-      if (savedPercentage) {
-        setProfitPercentage(savedPercentage);
+    if (client) {
+      if (client.profitPercentage !== undefined && client.profitPercentage !== null) {
+        setProfitPercentage(client.profitPercentage.toString());
       } else {
         setProfitPercentage("");
       }
     }
-  }, [clientId]);
+  }, [client]);
 
   // Handle save profit percentage for this client
-  const handleSaveProfitPercentage = () => {
-    if (!clientId) return;
+  const handleSaveProfitPercentage = async () => {
+    if (!clientId || !client) return;
     
     const percentage = parseFloat(profitPercentage);
     if (isNaN(percentage) || percentage < 0 || percentage > 100) {
@@ -328,12 +327,23 @@ export const ClientProfilePage = () => {
       setSnackbarOpen(true);
       return;
     }
-    localStorage.setItem(`profitPercentage_${clientId}`, profitPercentage);
-    // Dispatch custom event to update HomePage
-    window.dispatchEvent(new Event("profitPercentageUpdated"));
-    setSnackbarMessage("تم حفظ النسبة بنجاح");
-    setSnackbarOpen(true);
-    setProfitDialogOpen(false);
+    
+    try {
+      // Save to database
+      await updateClient(clientId, {
+        profitPercentage: percentage,
+      });
+      
+      // Dispatch custom event to update HomePage
+      window.dispatchEvent(new Event("profitPercentageUpdated"));
+      setSnackbarMessage("تم حفظ النسبة بنجاح");
+      setSnackbarOpen(true);
+      setProfitDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error saving profit percentage:", error);
+      setSnackbarMessage(error?.message || "حدث خطأ أثناء حفظ النسبة");
+      setSnackbarOpen(true);
+    }
   };
 
   const clientExpenses = useMemo(
@@ -2675,25 +2685,18 @@ export const ClientProfilePage = () => {
 
         <Box sx={{ flex: 1, overflowY: "auto", pb: 2 }}>
           {parties.length === 0 ? (
-            <Container maxWidth="sm" sx={{ mt: -2 }}>
+            <Container maxWidth="sm" sx={{ mt: { xs: 4, sm: 6 }, px: { xs: 1.5, sm: 2 } }}>
               <Card
                 sx={{
                   borderRadius: 2.5,
                   textAlign: "center",
                   py: 6,
                   bgcolor: "background.paper",
+                  border: theme.palette.mode === "dark" ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.05)",
                 }}
               >
-                <CreditCard
-                  sx={{
-                    fontSize: 60,
-                    color: "text.secondary",
-                    opacity: 0.3,
-                    mb: 2,
-                  }}
-                />
-                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                  لا توجد بروفايلات
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 3, fontWeight: 600 }}>
+                  لا توجد ديون
                 </Typography>
                 <Button
                   variant="contained"
@@ -2711,9 +2714,15 @@ export const ClientProfilePage = () => {
                     });
                     setDebtDialogOpen(true);
                   }}
-                  sx={{ mt: 2, borderRadius: 2 }}
+                  sx={{ 
+                    mt: 2, 
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.5,
+                    fontWeight: 700,
+                  }}
                 >
-                  إضافة أول دين
+                  أضف أول دين
                 </Button>
               </Card>
             </Container>

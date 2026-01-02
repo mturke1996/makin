@@ -14,6 +14,7 @@ export interface Client {
   phone: string;
   address: string;
   type: 'company' | 'individual';
+  profitPercentage?: number; // نسبة الأرباح من المصروفات
   createdAt: string;
   updatedAt: string;
 }
