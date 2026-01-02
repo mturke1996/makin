@@ -166,8 +166,10 @@ export const ClientsPage = () => {
             ? 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)'
             : 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)',
           pt: 3,
-          pb: 3,
+          pb: 4,
           px: 2,
+          borderRadius: '0 0 32px 32px',
+          boxShadow: '0 8px 32px rgba(25, 118, 210, 0.25)',
         }}
       >
         <Container maxWidth="sm">
@@ -185,9 +187,14 @@ export const ClientsPage = () => {
                 bgcolor: 'white',
                 color: 'primary.main',
                 fontWeight: 700,
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
-                borderRadius: 2,
-                px: 2,
+                '&:hover': { 
+                  bgcolor: 'rgba(255,255,255,0.95)',
+                  transform: 'scale(1.05)',
+                },
+                borderRadius: 2.5,
+                px: 2.5,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                transition: 'all 0.2s',
               }}
               startIcon={<Add />}
             >
@@ -202,10 +209,11 @@ export const ClientsPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             sx={{
-              mt: 2,
+              mt: 2.5,
               '& .MuiOutlinedInput-root': {
                 bgcolor: 'white',
-                borderRadius: 2.5,
+                borderRadius: 3,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                 '& fieldset': { border: 'none' },
               },
             }}
@@ -249,19 +257,22 @@ export const ClientsPage = () => {
                   key={client.id}
                   onClick={() => navigate(`/clients/${client.id}`)}
                   sx={{
-                    borderRadius: 2.5,
+                    borderRadius: 3,
                     boxShadow: theme.palette.mode === 'light'
-                      ? '0 2px 8px rgba(0,0,0,0.06)'
-                      : '0 2px 8px rgba(0,0,0,0.3)',
+                      ? '0 4px 20px rgba(0,0,0,0.08)'
+                      : '0 4px 20px rgba(0,0,0,0.4)',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     bgcolor: 'background.paper',
-                    border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                    border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : 'none',
                     '&:hover': {
                       boxShadow: theme.palette.mode === 'light'
-                        ? '0 4px 12px rgba(0,0,0,0.12)'
-                        : '0 4px 12px rgba(0,0,0,0.4)',
-                      transform: 'translateY(-2px)',
+                        ? '0 12px 40px rgba(0,0,0,0.15)'
+                        : '0 12px 40px rgba(0,0,0,0.5)',
+                      transform: 'translateY(-4px) scale(1.01)',
+                    },
+                    '&:active': {
+                      transform: 'scale(0.98)',
                     },
                   }}
                 >
@@ -270,11 +281,12 @@ export const ClientsPage = () => {
                       {/* Avatar */}
                       <Avatar
                         sx={{
-                          width: 48,
-                          height: 48,
+                          width: 52,
+                          height: 52,
                           bgcolor: client.type === 'company' ? 'primary.light' : 'secondary.light',
                           flexShrink: 0,
                           marginLeft: '24px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                         }}
                       >
                         {client.type === 'company' ? (
@@ -334,12 +346,19 @@ export const ClientsPage = () => {
                           sx={{
                             bgcolor: 'primary.light',
                             color: 'primary.main',
-                            width: 36,
-                            height: 36,
-                            '&:hover': { bgcolor: 'primary.main', color: 'white' },
+                            width: 40,
+                            height: 40,
+                            borderRadius: 2,
+                            boxShadow: '0 2px 8px rgba(25, 118, 210, 0.2)',
+                            '&:hover': { 
+                              bgcolor: 'primary.main', 
+                              color: 'white',
+                              transform: 'scale(1.05)',
+                            },
+                            transition: 'all 0.2s',
                           }}
                         >
-                          <Edit sx={{ fontSize: 18 }} />
+                          <Edit sx={{ fontSize: 20 }} />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -350,12 +369,19 @@ export const ClientsPage = () => {
                           sx={{
                             bgcolor: 'error.light',
                             color: 'error.main',
-                            width: 36,
-                            height: 36,
-                            '&:hover': { bgcolor: 'error.main', color: 'white' },
+                            width: 40,
+                            height: 40,
+                            borderRadius: 2,
+                            boxShadow: '0 2px 8px rgba(211, 47, 47, 0.2)',
+                            '&:hover': { 
+                              bgcolor: 'error.main', 
+                              color: 'white',
+                              transform: 'scale(1.05)',
+                            },
+                            transition: 'all 0.2s',
                           }}
                         >
-                          <Delete sx={{ fontSize: 18 }} />
+                          <Delete sx={{ fontSize: 20 }} />
                         </IconButton>
                       </Stack>
                     </Stack>
