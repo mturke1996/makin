@@ -1,320 +1,532 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from "react";
 import {
+  Add,
+  Delete,
+  Edit,
+  Payment,
+  Person,
+  Store,
+  Search,
+} from "@mui/icons-material";
+import {
+  Avatar,
   Box,
+  Button,
   Card,
   CardContent,
-  Grid,
-  Typography,
-  TextField,
-  InputAdornment,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  IconButton,
+  InputAdornment,
   MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  LinearProgress,
-} from '@mui/material';
-import { Search, Warning, CheckCircle, HourglassEmpty } from '@mui/icons-material';
-import { useDataStore } from '@/store/useDataStore';
-import type { Debt } from '@/types';
-import { formatCurrency, calculateDebtProgress } from '@/utils/calculations';
-import dayjs from 'dayjs';
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import dayjs from "dayjs";
+import { useDataStore } from "@/store/useDataStore";
+import type { StandaloneDebt } from "@/types";
+import { formatCurrency } from "@/utils/calculations";
 
 export const DebtsPage = () => {
-  const { clients, invoices, debts } = useDataStore();
+  const {
+    clients,
+    standaloneDebts,
+    addStandaloneDebt,
+    updateStandaloneDebt,
+    deleteStandaloneDebt,
+  } = useDataStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paid">(
+    "all"
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<StandaloneDebt | null>(null);
+  const [selectedDebt, setSelectedDebt] = useState<StandaloneDebt | null>(null);
+  const [payAmount, setPayAmount] = useState<string>("");
+  const [form, setForm] = useState({
+    clientId: "",
+    description: "",
+    amount: "",
+    date: dayjs().format("YYYY-MM-DD"),
+    notes: "",
+  });
 
   const filteredDebts = useMemo(() => {
-    return debts.filter((debt) => {
-      const client = clients.find((c) => c.id === debt.clientId);
-      const invoice = invoices.find((i) => i.id === debt.invoiceId);
-      const matchesSearch =
-        client?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        invoice?.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || debt.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [debts, clients, invoices, searchQuery, statusFilter]);
+    return standaloneDebts
+      .filter((debt) => {
+        const client = clients.find((c) => c.id === debt.clientId);
+        const matchesSearch =
+          debt.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          debt.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          client?.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus =
+          statusFilter === "all" ? true : debt.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => dayjs(b.date).diff(dayjs(a.date)));
+  }, [standaloneDebts, clients, searchQuery, statusFilter]);
 
   const stats = useMemo(() => {
-    const totalDebt = debts.reduce((sum, d) => sum + d.totalAmount, 0);
-    const totalPaid = debts.reduce((sum, d) => sum + d.paidAmount, 0);
-    const totalRemaining = debts.reduce((sum, d) => sum + d.remainingAmount, 0);
-    const overdueDebts = debts.filter(
-      (d) => d.status !== 'paid' && dayjs(d.dueDate).isBefore(dayjs(), 'day')
+    const totalAmount = standaloneDebts.reduce((sum, d) => sum + d.amount, 0);
+    const totalPaid = standaloneDebts.reduce((sum, d) => sum + d.paidAmount, 0);
+    const totalRemaining = standaloneDebts.reduce(
+      (sum, d) => sum + d.remainingAmount,
+      0
     );
-    const overdueAmount = overdueDebts.reduce((sum, d) => sum + d.remainingAmount, 0);
+    return { totalAmount, totalPaid, totalRemaining };
+  }, [standaloneDebts]);
 
-    return {
-      totalDebt,
-      totalPaid,
-      totalRemaining,
-      overdueAmount,
-      overdueCount: overdueDebts.length,
-      activeCount: debts.filter((d) => d.status !== 'paid').length,
-    };
-  }, [debts]);
+  const handleOpenDialog = (debt?: StandaloneDebt) => {
+    if (debt) {
+      setEditingDebt(debt);
+      setForm({
+        clientId: debt.clientId,
+        description: debt.description,
+        amount: String(debt.amount),
+        date: debt.date,
+        notes: debt.notes || "",
+      });
+    } else {
+      setEditingDebt(null);
+      setForm({
+        clientId: "",
+        description: "",
+        amount: "",
+        date: dayjs().format("YYYY-MM-DD"),
+        notes: "",
+      });
+    }
+    setDialogOpen(true);
+  };
 
-  const getStatusColor = (status: Debt['status']) => {
-    switch (status) {
-      case 'paid':
-        return 'success';
-      case 'overdue':
-        return 'error';
-      case 'partially_paid':
-        return 'warning';
-      default:
-        return 'default';
+  const handleSubmit = async () => {
+    const amount = parseFloat(form.amount) || 0;
+    if (!form.clientId || !form.description || amount <= 0) return;
+
+    if (editingDebt) {
+      const clampedPaid = Math.min(editingDebt.paidAmount, amount);
+      const newRemaining = Math.max(0, amount - clampedPaid);
+      await updateStandaloneDebt(editingDebt.id, {
+        clientId: form.clientId,
+        description: form.description,
+        amount,
+        paidAmount: clampedPaid,
+        remainingAmount: newRemaining,
+        status: newRemaining <= 0 ? "paid" : "active",
+        date: form.date,
+        notes: form.notes,
+      });
+    } else {
+      const newDebt: StandaloneDebt = {
+        id: crypto.randomUUID(),
+        clientId: form.clientId,
+        description: form.description,
+        amount,
+        paidAmount: 0,
+        remainingAmount: amount,
+        status: "active",
+        date: form.date,
+        notes: form.notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await addStandaloneDebt(newDebt);
+    }
+
+    setDialogOpen(false);
+    setEditingDebt(null);
+    setForm({
+      clientId: "",
+      description: "",
+      amount: "",
+      date: dayjs().format("YYYY-MM-DD"),
+      notes: "",
+    });
+  };
+
+  const handleDelete = async (debtId: string) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا الدين؟")) {
+      await deleteStandaloneDebt(debtId);
     }
   };
 
-  const getStatusLabel = (status: Debt['status']) => {
-    switch (status) {
-      case 'paid':
-        return 'مدفوع';
-      case 'overdue':
-        return 'متأخر';
-      case 'partially_paid':
-        return 'مدفوع جزئياً';
-      default:
-        return 'غير مدفوع';
-    }
+  const handleOpenPayDialog = (debt: StandaloneDebt) => {
+    setSelectedDebt(debt);
+    setPayAmount("");
+    setPayDialogOpen(true);
   };
 
-  const getStatusIcon = (status: Debt['status']) => {
-    switch (status) {
-      case 'paid':
-        return <CheckCircle fontSize="small" />;
-      case 'overdue':
-        return <Warning fontSize="small" />;
-      default:
-        return <HourglassEmpty fontSize="small" />;
-    }
+  const handlePay = async () => {
+    if (!selectedDebt) return;
+    const pay = parseFloat(payAmount) || 0;
+    if (pay <= 0 || pay > selectedDebt.remainingAmount) return;
+    const newPaid = selectedDebt.paidAmount + pay;
+    const newRemaining = Math.max(0, selectedDebt.amount - newPaid);
+    await updateStandaloneDebt(selectedDebt.id, {
+      paidAmount: newPaid,
+      remainingAmount: newRemaining,
+      status: newRemaining <= 0 ? "paid" : "active",
+    });
+    setPayDialogOpen(false);
+    setSelectedDebt(null);
+  };
+
+  const statusChip = (status: StandaloneDebt["status"]) => {
+    const config =
+      status === "paid"
+        ? { label: "مدفوع", color: "success" as const }
+        : { label: "نشط", color: "warning" as const };
+    return <Chip size="small" label={config.label} color={config.color} />;
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" fontWeight={700}>
-          الديون
-        </Typography>
-      </Box>
+    <Box sx={{ pb: 4 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
+      >
+        <Box>
+          <Typography variant="h5" fontWeight={800}>
+            الديون (أشخاص ومحلات)
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            إضافة، تعديل، حذف، ودفع جزء من الدين بسرعة
+          </Typography>
+        </Box>
+        <Button
+          startIcon={<Add />}
+          variant="contained"
+          onClick={() => handleOpenDialog()}
+          sx={{ borderRadius: 2 }}
+        >
+          إضافة دين
+        </Button>
+      </Stack>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 5 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 4, borderColor: 'primary.main' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 1.5 }}>
+      {/* Stats */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary">
                 إجمالي الديون
               </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {formatCurrency(stats.totalDebt)}
+              <Typography variant="h6" fontWeight={800}>
+                {formatCurrency(stats.totalAmount)}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 4, borderColor: 'success.main' }}>
+        <Grid item xs={12} sm={4}>
+          <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                المبالغ المحصلة
+              <Typography variant="body2" color="text.secondary">
+                المدفوع
               </Typography>
-              <Typography variant="h5" fontWeight={700} color="success.main">
+              <Typography variant="h6" fontWeight={800} color="success.main">
                 {formatCurrency(stats.totalPaid)}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 4, borderColor: 'warning.main' }}>
+        <Grid item xs={12} sm={4}>
+          <Card>
             <CardContent>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Typography variant="body2" color="text.secondary">
                 المتبقي
               </Typography>
-              <Typography variant="h5" fontWeight={700} color="warning.main">
+              <Typography variant="h6" fontWeight={800} color="warning.main">
                 {formatCurrency(stats.totalRemaining)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: 4, borderColor: 'error.main' }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                المتأخرات
-              </Typography>
-              <Typography variant="h5" fontWeight={700} color="error.main">
-                {formatCurrency(stats.overdueAmount)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {stats.overdueCount} دين متأخر
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      <Card sx={{ mb: 5 }}>
-        <CardContent sx={{ p: 3.5 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
-              <TextField
-                fullWidth
-                placeholder="البحث عن دين..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>الحالة</InputLabel>
-                <Select
-                  value={statusFilter}
-                  label="الحالة"
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <MenuItem value="all">الكل</MenuItem>
-                  <MenuItem value="unpaid">غير مدفوع</MenuItem>
-                  <MenuItem value="partially_paid">مدفوع جزئياً</MenuItem>
-                  <MenuItem value="paid">مدفوع</MenuItem>
-                  <MenuItem value="overdue">متأخر</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+      {/* Filters */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: 2.5 }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            alignItems={{ xs: "stretch", sm: "center" }}
+          >
+            <TextField
+              fullWidth
+              placeholder="ابحث بالاسم، الملاحظة، أو الشخص/المحل..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <TextField
+              select
+              label="الحالة"
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as "all" | "active" | "paid")
+              }
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="all">الكل</MenuItem>
+              <MenuItem value="active">نشط</MenuItem>
+              <MenuItem value="paid">مدفوع</MenuItem>
+            </TextField>
+          </Stack>
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>العميل</TableCell>
-              <TableCell>رقم الفاتورة</TableCell>
-              <TableCell>المبلغ الكلي</TableCell>
-              <TableCell>المدفوع</TableCell>
-              <TableCell>المتبقي</TableCell>
-              <TableCell>التقدم</TableCell>
-              <TableCell>تاريخ الاستحقاق</TableCell>
-              <TableCell>الحالة</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredDebts.map((debt) => {
-              const client = clients.find((c) => c.id === debt.clientId);
-              const invoice = invoices.find((i) => i.id === debt.invoiceId);
-              const progress = calculateDebtProgress(debt.totalAmount, debt.paidAmount);
-              const isOverdue =
-                debt.status !== 'paid' && dayjs(debt.dueDate).isBefore(dayjs(), 'day');
+      {/* Debts list */}
+      <Stack spacing={2.5}>
+        {filteredDebts.map((debt) => {
+          const client = clients.find((c) => c.id === debt.clientId);
+          return (
+            <Card
+              key={debt.id}
+              sx={{
+                borderRadius: 2.5,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              }}
+            >
+              <CardContent sx={{ p: 2.5 }}>
+                <Stack direction="row" spacing={2} alignItems="flex-start">
+                  <Avatar
+                    sx={{
+                      bgcolor: "primary.light",
+                      color: "primary.main",
+                      width: 46,
+                      height: 46,
+                    }}
+                  >
+                    {client?.type === "company" ? <Store /> : <Person />}
+                  </Avatar>
 
-              return (
-                <TableRow
-                  key={debt.id}
-                  sx={{
-                    bgcolor: isOverdue ? 'error.lighter' : 'inherit',
-                  }}
-                >
-                  <TableCell>
-                    <Typography fontWeight={600}>{client?.name}</Typography>
-                  </TableCell>
-                  <TableCell>{invoice?.invoiceNumber}</TableCell>
-                  <TableCell>
-                    <Typography fontWeight={600}>
-                      {formatCurrency(debt.totalAmount)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography color="success.main" fontWeight={600}>
-                      {formatCurrency(debt.paidAmount)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      color={debt.remainingAmount > 0 ? 'error.main' : 'success.main'}
-                      fontWeight={600}
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1}
+                      alignItems={{ xs: "flex-start", sm: "center" }}
                     >
-                      {formatCurrency(debt.remainingAmount)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ flexGrow: 1, minWidth: 100 }}>
-                        <LinearProgress
-                          variant="determinate"
-                          value={progress}
-                          sx={{
-                            height: 8,
-                            borderRadius: 4,
-                            bgcolor: 'action.hover',
-                            '& .MuiLinearProgress-bar': {
-                              bgcolor:
-                                progress === 100
-                                  ? 'success.main'
-                                  : progress > 0
-                                  ? 'warning.main'
-                                  : 'error.main',
-                            },
-                          }}
-                        />
-                      </Box>
-                      <Typography variant="caption" fontWeight={600}>
-                        {Math.round(progress)}%
+                      <Typography variant="subtitle2" fontWeight={800} noWrap>
+                        {debt.description}
                       </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      color={isOverdue ? 'error.main' : 'text.primary'}
-                      fontWeight={isOverdue ? 600 : 400}
-                    >
-                      {dayjs(debt.dueDate).format('DD/MM/YYYY')}
-                      {isOverdue && (
-                        <Box component="span" sx={{ display: 'block', fontSize: '0.75rem' }}>
-                          متأخر {dayjs().diff(dayjs(debt.dueDate), 'days')} يوم
-                        </Box>
+                      {client && (
+                        <Chip
+                          size="small"
+                          label={client.name}
+                          variant="outlined"
+                          sx={{ height: 22 }}
+                        />
                       )}
+                      {statusChip(debt.status)}
+                    </Stack>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 0.5 }}
+                    >
+                      {dayjs(debt.date).format("DD/MM/YYYY")}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getStatusLabel(isOverdue ? 'overdue' : debt.status)}
-                      color={getStatusColor(isOverdue ? 'overdue' : debt.status)}
-                      size="small"
-                      icon={getStatusIcon(isOverdue ? 'overdue' : debt.status)}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    {debt.notes && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          mt: 1,
+                          px: 1.2,
+                          py: 0.6,
+                          borderRadius: 1.5,
+                          bgcolor: "action.hover",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        💬 {debt.notes}
+                      </Typography>
+                    )}
 
-      {filteredDebts.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary">
-            لا توجد ديون
-          </Typography>
-        </Box>
-      )}
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      alignItems="center"
+                      sx={{ mt: 1.5, flexWrap: "wrap", rowGap: 1 }}
+                    >
+                      <Chip
+                        label={`المبلغ: ${formatCurrency(debt.amount)}`}
+                        color="primary"
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={`مدفوع: ${formatCurrency(debt.paidAmount)}`}
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={`متبقي: ${formatCurrency(debt.remainingAmount)}`}
+                        color="warning"
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Stack>
+                  </Box>
+
+                  <Stack direction="row" spacing={1.2} sx={{ ml: 1 }}>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleOpenPayDialog(debt)}
+                      sx={{ bgcolor: "primary.light" }}
+                    >
+                      <Payment fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenDialog(debt)}
+                      sx={{ bgcolor: "action.hover" }}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(debt.id)}
+                      sx={{ bgcolor: "error.light", color: "white" }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {filteredDebts.length === 0 && (
+          <Card sx={{ textAlign: "center", py: 6 }}>
+            <Typography variant="h6" color="text.secondary">
+              لا توجد ديون مسجلة
+            </Typography>
+          </Card>
+        )}
+      </Stack>
+
+      {/* Add / Edit Debt Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullScreen
+      >
+        <DialogTitle>
+          {editingDebt ? "تعديل الدين" : "إضافة دين جديد"}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2.5} sx={{ mt: 1 }}>
+            <TextField
+              select
+              label="العميل"
+              value={form.clientId}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, clientId: e.target.value }))
+              }
+              fullWidth
+            >
+              {clients.map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            <TextField
+              label="اسم الشخص / المحل"
+              value={form.description}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, description: e.target.value }))
+              }
+              fullWidth
+            />
+
+            <TextField
+              label="المبلغ الكلي"
+              type="number"
+              value={form.amount}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, amount: e.target.value }))
+              }
+              fullWidth
+            />
+
+            <TextField
+              label="التاريخ"
+              type="date"
+              value={form.date}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, date: e.target.value }))
+              }
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              label="ملاحظات"
+              multiline
+              minRows={3}
+              value={form.notes}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, notes: e.target.value }))
+              }
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setDialogOpen(false)}>إلغاء</Button>
+          <Button variant="contained" onClick={handleSubmit}>
+            {editingDebt ? "حفظ التعديلات" : "إضافة"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Partial payment dialog */}
+      <Dialog open={payDialogOpen} onClose={() => setPayDialogOpen(false)}>
+        <DialogTitle>دفع جزء من الدين</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              المتبقي: {formatCurrency(selectedDebt?.remainingAmount || 0)}
+            </Typography>
+            <TextField
+              label="قيمة الدفعة"
+              type="number"
+              value={payAmount}
+              onChange={(e) => setPayAmount(e.target.value)}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPayDialogOpen(false)}>إلغاء</Button>
+          <Button variant="contained" onClick={handlePay}>
+            تأكيد الدفع
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

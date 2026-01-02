@@ -50,9 +50,7 @@ import {
   Add,
   TrendingDown,
   TrendingUp,
-  AccountBalance,
   CheckCircle,
-  WhatsApp,
   CalendarMonth,
   Edit,
   Delete,
@@ -68,7 +66,6 @@ import {
 import { useDataStore } from "@/store/useDataStore";
 import { useForm, Controller } from "react-hook-form";
 import { formatCurrency } from "@/utils/calculations";
-import { generateWhatsAppStatement } from "@/utils/whatsappExport";
 import { generateExpenseInvoicePDF } from "@/utils/pdfGenerator";
 import { CloseExpensesDialog } from "@/components/CloseExpensesDialog";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -163,7 +160,6 @@ export const ClientProfilePage = () => {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editingDebt, setEditingDebt] = useState<StandaloneDebt | null>(null);
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [closeExpensesDialogOpen, setCloseExpensesDialogOpen] = useState(false);
@@ -177,6 +173,8 @@ export const ClientProfilePage = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const client = clients.find((c) => c.id === clientId);
+  const clientInitial =
+    client?.name?.charAt(0)?.toUpperCase?.() || "ع";
 
   // Client Edit Form
   const {
@@ -331,26 +329,6 @@ export const ClientProfilePage = () => {
       paymentCount: clientPayments.length,
     };
   }, [clientExpenses, clientDebts, clientPayments]);
-
-  const handleExportWhatsApp = async () => {
-    if (!client) return;
-
-    setIsExporting(true);
-    try {
-      await generateWhatsAppStatement(
-        client,
-        clientExpenses,
-        summary.totalExpenses,
-        summary.totalPaid,
-        summary.remainingBalance
-      );
-    } catch (error) {
-      console.error("Error exporting:", error);
-      alert("حدث خطأ في التصدير");
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   const handleEditExpense = (expense: Expense) => {
     console.log("Editing expense:", expense);
@@ -702,14 +680,13 @@ export const ClientProfilePage = () => {
                 </Typography>
               </Stack>
             </Box>
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1.5}>
               <IconButton
                 onClick={() => setEditClientDialogOpen(true)}
                 sx={{
                   color: "white",
                   bgcolor: "rgba(255,255,255,0.15)",
                   "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
-                  ml: 0.5,
                 }}
                 size="small"
               >
@@ -731,22 +708,6 @@ export const ClientProfilePage = () => {
               >
                 <Delete fontSize="small" />
               </IconButton>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleExportWhatsApp}
-                disabled={isExporting}
-                sx={{
-                  bgcolor: "success.main",
-                  color: "white",
-                  "&:hover": { bgcolor: "success.dark" },
-                  fontWeight: 700,
-                  minWidth: "auto",
-                  px: 2,
-                }}
-              >
-                <WhatsApp sx={{ fontSize: 20 }} />
-              </Button>
             </Stack>
           </Stack>
 
