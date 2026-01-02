@@ -713,7 +713,7 @@ export const ClientProfilePage = () => {
 
           {/* Summary Cards */}
           <Grid container spacing={2.5}>
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Card
                 sx={{
                   borderRadius: 2,
@@ -743,7 +743,7 @@ export const ClientProfilePage = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Card
                 sx={{
                   borderRadius: 2,
@@ -773,7 +773,7 @@ export const ClientProfilePage = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={3}>
+            <Grid item xs={4}>
               <Card
                 sx={{
                   borderRadius: 2,
@@ -798,38 +798,6 @@ export const ClientProfilePage = () => {
                     sx={{ mt: 0.5, fontSize: "0.85rem" }}
                   >
                     {formatCurrency(summary.totalPaid)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={3}>
-              <Card
-                sx={{
-                  borderRadius: 2,
-                  bgcolor: "rgba(255,255,255,0.15)",
-                  backdropFilter: "blur(10px)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  boxShadow: "none",
-                }}
-              >
-                <CardContent sx={{ p: 2.5, textAlign: "center" }}>
-                  <AccountBalance
-                    sx={{ fontSize: 18, mb: 0.5, opacity: 0.9 }}
-                  />
-                  <Typography
-                    variant="caption"
-                    sx={{ opacity: 0.9, display: "block", fontSize: "0.6rem" }}
-                  >
-                    المتبقي
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight={800}
-                    sx={{ mt: 0.5, fontSize: "0.85rem" }}
-                  >
-                    {formatCurrency(summary.remainingBalance)}
                   </Typography>
                 </CardContent>
               </Card>

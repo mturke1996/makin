@@ -33,6 +33,7 @@ import {
   Person,
   ChevronLeft,
   ArrowBack,
+  People,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDataStore } from '@/store/useDataStore';
@@ -322,10 +323,41 @@ export const ClientsPage = () => {
                         </Stack>
                       </Box>
 
-                      {/* Arrow */}
-                      <Box sx={{ marginLeft: '24px', flexShrink: 0 }}>
-                        <ChevronLeft sx={{ color: 'text.secondary', fontSize: 24 }} />
-                      </Box>
+                      {/* Actions */}
+                      <Stack direction="row" spacing={1.5} sx={{ marginLeft: '16px', flexShrink: 0 }}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDialog(client);
+                          }}
+                          sx={{
+                            bgcolor: 'primary.light',
+                            color: 'primary.main',
+                            width: 36,
+                            height: 36,
+                            '&:hover': { bgcolor: 'primary.main', color: 'white' },
+                          }}
+                        >
+                          <Edit sx={{ fontSize: 18 }} />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(client.id);
+                          }}
+                          sx={{
+                            bgcolor: 'error.light',
+                            color: 'error.main',
+                            width: 36,
+                            height: 36,
+                            '&:hover': { bgcolor: 'error.main', color: 'white' },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
