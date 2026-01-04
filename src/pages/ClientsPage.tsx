@@ -28,7 +28,6 @@ import {
   Add,
   Search,
   Edit,
-  Delete,
   Business,
   Person,
   ChevronLeft,
@@ -57,7 +56,7 @@ type ClientFormData = z.infer<typeof clientSchema>;
 export const ClientsPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { clients, expenses, standaloneDebts, payments, addClient, updateClient, deleteClient } = useDataStore();
+  const { clients, expenses, standaloneDebts, payments, addClient, updateClient } = useDataStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -145,11 +144,6 @@ export const ClientsPage = () => {
     handleCloseDialog();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا العميل؟')) {
-      deleteClient(id);
-    }
-  };
 
   return (
     <Box
@@ -374,31 +368,6 @@ export const ClientsPage = () => {
                           }}
                         >
                           <Edit sx={{ fontSize: { xs: 20, sm: 18 } }} />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(client.id);
-                          }}
-                          sx={{
-                            bgcolor: 'error.main',
-                            color: 'white',
-                            width: { xs: 44, sm: 40 },
-                            height: { xs: 44, sm: 40 },
-                            borderRadius: 2,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            '&:hover': { 
-                              bgcolor: 'error.dark',
-                              transform: 'scale(1.05)',
-                            },
-                            '&:active': {
-                              transform: 'scale(0.95)',
-                            },
-                            transition: 'all 0.2s ease-in-out',
-                          }}
-                        >
-                          <Delete sx={{ fontSize: { xs: 20, sm: 18 } }} />
                         </IconButton>
                       </Stack>
                     </Stack>
