@@ -244,20 +244,20 @@ export const PaymentsPage = () => {
                   مشاركة المجموع
                 </Button>
               )}
-              <Button
-                variant="contained"
-                onClick={() => handleOpenDialog()}
-                sx={{
-                  bgcolor: 'white',
-                  color: 'success.main',
-                  fontWeight: 700,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
-                  borderRadius: 2,
-                }}
-                startIcon={<Add />}
-              >
-                جديدة
-              </Button>
+            <Button
+              variant="contained"
+              onClick={() => handleOpenDialog()}
+              sx={{
+                bgcolor: 'white',
+                color: 'success.main',
+                fontWeight: 700,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' },
+                borderRadius: 2,
+              }}
+              startIcon={<Add />}
+            >
+              جديدة
+            </Button>
             </Stack>
           </Stack>
 

@@ -43,10 +43,12 @@ import {
   CreditCard,
   PictureAsPdf,
   Search,
+  Assessment,
 } from "@mui/icons-material";
 import { useDataStore } from "@/store/useDataStore";
 import { useForm, Controller } from "react-hook-form";
 import { formatCurrency } from "@/utils/calculations";
+import { generateFinalReportPDF } from "@/utils/pdfGenerator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import dayjs from "dayjs";
@@ -1005,6 +1007,35 @@ export const ClientProfilePage = () => {
               spacing={{ xs: 1.5, sm: 2 }}
               sx={{ flexShrink: 0 }}
             >
+              <IconButton
+                onClick={() => {
+                  if (!client) return;
+                  generateFinalReportPDF(
+                    client,
+                    clientExpenses,
+                    clientPayments,
+                    invoices.filter((inv) => inv.clientId === client.id)
+                  );
+                }}
+                sx={{
+                  color: "white",
+                  bgcolor: "rgba(255,255,255,0.2)",
+                  width: { xs: 44, sm: 40 },
+                  height: { xs: 44, sm: 40 },
+                  "&:hover": {
+                    bgcolor: "rgba(255,255,255,0.3)",
+                    transform: "scale(1.05)",
+                  },
+                  "&:active": {
+                    transform: "scale(0.95)",
+                  },
+                  transition: "all 0.2s ease-in-out",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                }}
+                title="التقرير النهائي"
+              >
+                <Assessment sx={{ fontSize: { xs: 20, sm: 18 } }} />
+              </IconButton>
               <IconButton
                 onClick={() => setEditClientDialogOpen(true)}
                 sx={{
