@@ -7,11 +7,13 @@ import {
   Box,
 } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createAppTheme } from "./theme";
+import { Toaster } from "react-hot-toast";
+import { createAppTheme, createModernTheme } from "./theme";
 import { useThemeStore } from "./store/useThemeStore";
 import { useAuthStore } from "./store/useAuthStore";
 import { useDataStore } from "./store/useDataStore";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { MainLayout } from "./components/MainLayout";
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() =>
@@ -48,6 +50,17 @@ const ExpenseInvoicesPage = lazy(() =>
     default: module.ExpenseInvoicesPage,
   }))
 );
+const MigrationPage = lazy(() => import("./pages/MigrationPage"));
+const SettingsPage = lazy(() =>
+  import("@/pages/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  }))
+);
+const BackupPage = lazy(() =>
+  import("@/pages/BackupPage").then((module) => ({
+    default: module.BackupPage,
+  }))
+);
 
 // Create QueryClient with optimized settings
 const queryClient = new QueryClient({
@@ -75,14 +88,22 @@ const LoadingFallback = () => (
   </Box>
 );
 
+const HomePageModern = lazy(() =>
+  import("./pages/HomePageModern").then((module) => ({ default: module.HomePageModern }))
+);
+
 function App() {
+  const queryClient = new QueryClient();
   const themeMode = useThemeStore((state) => state.mode);
+  const designSystem = useThemeStore((state) => state.designSystem);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { initialized, initializeData, subscribeToRealtimeUpdates } =
     useDataStore();
 
-  // Memoize theme to prevent unnecessary recalculations
-  const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
+  // Choose theme
+  const theme = useMemo(() => {
+    return createAppTheme(themeMode);
+  }, [themeMode]);
 
   // Initialize data when user is authenticated
   useEffect(() => {
@@ -114,6 +135,32 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: themeMode === 'dark' ? '#1e293b' : '#ffffff',
+              color: themeMode === 'dark' ? '#f1f5f9' : '#0f172a',
+              borderRadius: '12px',
+              padding: '16px',
+              fontFamily: 'Cairo, sans-serif',
+              fontWeight: 600,
+            },
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#ffffff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#ffffff',
+              },
+            },
+          }}
+        />
         <BrowserRouter>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
@@ -130,7 +177,9 @@ function App() {
                 path="/"
                 element={
                   <ProtectedRoute>
-                    <HomePage />
+                    <MainLayout>
+                      <HomePageModern />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />
@@ -138,7 +187,9 @@ function App() {
                 path="/clients"
                 element={
                   <ProtectedRoute>
-                    <ClientsPage />
+                    <MainLayout>
+                      <ClientsPage />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />
@@ -146,7 +197,9 @@ function App() {
                 path="/clients/:clientId"
                 element={
                   <ProtectedRoute>
-                    <ClientProfilePage />
+                    <MainLayout>
+                      <ClientProfilePage />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />
@@ -154,7 +207,9 @@ function App() {
                 path="/invoices"
                 element={
                   <ProtectedRoute>
-                    <InvoicesPage />
+                    <MainLayout>
+                      <InvoicesPage />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />
@@ -162,7 +217,9 @@ function App() {
                 path="/payments"
                 element={
                   <ProtectedRoute>
-                    <PaymentsPage />
+                    <MainLayout>
+                      <PaymentsPage />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />
@@ -170,7 +227,9 @@ function App() {
                 path="/debts"
                 element={
                   <ProtectedRoute>
-                    <DebtsPage />
+                    <MainLayout>
+                      <DebtsPage />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />
@@ -178,7 +237,40 @@ function App() {
                 path="/expense-invoices"
                 element={
                   <ProtectedRoute>
-                    <ExpenseInvoicesPage />
+                    <MainLayout>
+                      <ExpenseInvoicesPage />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/migration"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <MigrationPage />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <SettingsPage />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/backup"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <BackupPage />
+                    </MainLayout>
                   </ProtectedRoute>
                 }
               />

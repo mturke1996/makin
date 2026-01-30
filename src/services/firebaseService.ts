@@ -4,6 +4,7 @@ import {
   getDocs,
   getDoc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -15,7 +16,7 @@ import {
   QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { Client, Invoice, Payment, Debt, Project, Expense, StandaloneDebt, ExpenseInvoice, DebtParty } from '../types';
+import type { Client, Invoice, Payment, Debt, Project, Expense, StandaloneDebt, ExpenseInvoice, DebtParty, User } from '../types';
 
 // Generic CRUD operations
 export class FirestoreService<T extends { id: string }> {
@@ -54,18 +55,25 @@ export class FirestoreService<T extends { id: string }> {
     }
   }
 
-  async add(data: Omit<T, 'id'>): Promise<string> {
+  async add(data: any): Promise<string> {
     try {
       const collectionRef = collection(db, this.collectionName);
-      // Strip any provided id so Firestore controls the document id
-      // (defensive in case caller accidentally passes an id field)
-      const { id: _ignoreId, ...rest } = data as any;
-      const docRef = await addDoc(collectionRef, {
+      const { id, createdAt: _ignoreCreated, updatedAt: _ignoreUpdated, ...rest } = data;
+      
+      const timestampData = {
         ...rest,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      });
-      return docRef.id;
+      };
+
+      if (id) {
+        const docRef = doc(db, this.collectionName, id);
+        await setDoc(docRef, timestampData);
+        return id;
+      } else {
+        const docRef = await addDoc(collectionRef, timestampData);
+        return docRef.id;
+      }
     } catch (error) {
       console.error(`Error adding ${this.collectionName}:`, error);
       throw error;
@@ -113,6 +121,8 @@ export class FirestoreService<T extends { id: string }> {
         } as T;
       }) as T[];
       callback(data);
+    }, (error) => {
+      console.error(`Error subscribing to ${this.collectionName}:`, error);
     });
   }
 }
@@ -126,6 +136,7 @@ export const projectsService = new FirestoreService<Project>('projects');
 export const expensesService = new FirestoreService<Expense>('expenses');
 export const standaloneDebtsService = new FirestoreService<StandaloneDebt>('standaloneDebts');
 export const expenseInvoicesService = new FirestoreService<ExpenseInvoice>('expenseInvoices');
+export const usersService = new FirestoreService<User>('users');
 export const debtPartiesService = new FirestoreService<DebtParty>('debtParties');
 
 // Special functions for expense invoices

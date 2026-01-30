@@ -170,16 +170,16 @@ export const HomePage = () => {
                 </Typography>
               </Box>
             </Stack>
-            <Stack direction="row" spacing={1.5}>
+            <Stack direction="row" spacing={3}>
               <IconButton
                 onClick={toggleTheme}
                 sx={{
                   color: "white",
                   bgcolor: "rgba(255,255,255,0.15)",
+                  backdropFilter: "blur(10px)",
                   "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
-                  margin: "8px",
                 }}
-                size="small"
+                size="medium"
               >
                 {mode === "dark" ? (
                   <Brightness7 fontSize="small" />
@@ -192,10 +192,10 @@ export const HomePage = () => {
                 sx={{
                   color: "white",
                   bgcolor: "rgba(255,255,255,0.15)",
+                  backdropFilter: "blur(10px)",
                   "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
-                  margin: "8px",
                 }}
-                size="small"
+                size="medium"
               >
                 <Logout fontSize="small" />
               </IconButton>
@@ -215,7 +215,7 @@ export const HomePage = () => {
                 textShadow: "0 2px 8px rgba(0,0,0,0.2)",
               }}
             >
-              المهندس محمد التركي
+              شركة مكين
             </Typography>
             <Typography
               variant="body1"
@@ -226,7 +226,7 @@ export const HomePage = () => {
                 letterSpacing: 0.3,
               }}
             >
-              إدارة الديون والفواتير
+              للخدمات الهندسية والإنشاءات
             </Typography>
           </Box>
 
@@ -299,44 +299,50 @@ export const HomePage = () => {
           القوائم الرئيسية
         </Typography>
 
-        <Stack spacing={1.5}>
+        <Stack spacing={2.5}>
           {menuItems.map((item, index) => (
             <Card
               key={index}
               onClick={() => navigate(item.path)}
               sx={{
-                borderRadius: 2.5,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                borderRadius: 3,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
                 cursor: "pointer",
-                transition: "all 0.2s",
+                transition: "all 0.3s ease",
                 border:
                   theme.palette.mode === "dark"
                     ? "1px solid rgba(255,255,255,0.1)"
-                    : "none",
+                    : "1px solid rgba(0,0,0,0.02)",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
+                },
                 "&:active": {
                   transform: "scale(0.98)",
                 },
               }}
             >
-              <CardContent sx={{ p: 2 }}>
+              <CardContent sx={{ p: 2.5 }}>
                 <Stack
                   direction="row"
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <Stack direction="row" spacing={2} alignItems="center">
+                  <Stack direction="row" spacing={0} alignItems="center">
                     <Box
                       sx={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: 2,
+                        width: 56,
+                        height: 56,
+                        borderRadius: "50%",
                         bgcolor: item.bgColor,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        flexShrink: 0,
+                        ml: 2.5, // Explicit margin from the circle to the text
                       }}
                     >
-                      <item.icon sx={{ fontSize: 26, color: item.color }} />
+                      <item.icon sx={{ fontSize: 28, color: item.color }} />
                     </Box>
                     <Box>
                       <Typography variant="body1" fontWeight={700}>
@@ -357,7 +363,7 @@ export const HomePage = () => {
         {/* Footer */}
         <Box sx={{ textAlign: "center", mt: 4, opacity: 0.6 }}>
           <Typography variant="caption" color="text.secondary">
-            المهندس محمد التركي © 2024
+            شركة مكين للخدمات الهندسية © 2024
           </Typography>
         </Box>
       </Container>

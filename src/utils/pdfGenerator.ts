@@ -7,14 +7,15 @@ import type {
 } from "../types";
 import { formatCurrency } from "./calculations";
 import dayjs from "dayjs";
+import QRCode from "qrcode";
 
 export const generateInvoicePDF = (invoice: Invoice, client: Client) => {
   // Company information
   const COMPANY_INFO = {
-    name: "المهندس محمد التركي",
-    address: "تاجوراء شارع اولاد التركي",
-    phone: "0913041404",
-    email: "",
+    name: "شركة ماكن للمقاولات العامة",
+    address: "طرابلس - تاجوراء",
+    phone: "0912118388",
+    email: "info@makin.ly",
     taxNumber: "",
   };
 
@@ -651,10 +652,10 @@ export const generateExpenseInvoicePDF = (
 ) => {
   // Company information
   const COMPANY_INFO = {
-    name: "المهندس محمد التركي",
-    address: "تاجوراء شارع اولاد التركي",
-    phone: "0913041404",
-    email: "",
+    name: "شركة ماكن للمقاولات العامة",
+    address: "طرابلس - تاجوراء",
+    phone: "0912118388",
+    email: "info@makin.ly",
     taxNumber: "",
   };
 
@@ -1422,10 +1423,10 @@ export const generatePaymentsSummaryPDF = (
 ) => {
   // Company information
   const COMPANY_INFO = {
-    name: "المهندس محمد التركي",
-    address: "تاجوراء شارع اولاد التركي",
-    phone: "0913041404",
-    email: "",
+    name: "شركة ماكن للمقاولات العامة",
+    address: "طرابلس - تاجوراء",
+    phone: "0912118388",
+    email: "info@makin.ly",
     taxNumber: "",
   };
 
@@ -2042,10 +2043,10 @@ export const generateExpenseInvoicesSummaryPDF = (
 ) => {
   // Company information
   const COMPANY_INFO = {
-    name: "المهندس محمد التركي",
-    address: "تاجوراء شارع اولاد التركي",
-    phone: "0913041404",
-    email: "",
+    name: "شركة ماكن للمقاولات العامة",
+    address: "طرابلس - تاجوراء",
+    phone: "0912118388",
+    email: "info@makin.ly",
     taxNumber: "",
   };
 
@@ -2696,10 +2697,10 @@ export const generateFinalReportPDF = (
 ) => {
   // Company information
   const COMPANY_INFO = {
-    name: "المهندس محمد التركي",
-    address: "تاجوراء شارع اولاد التركي",
-    phone: "0913041404",
-    email: "",
+    name: "شركة ماكن للمقاولات العامة",
+    address: "طرابلس - تاجوراء",
+    phone: "0912118388",
+    email: "info@makin.ly",
     taxNumber: "",
   };
 

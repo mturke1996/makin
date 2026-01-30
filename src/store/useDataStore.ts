@@ -10,7 +10,9 @@ import type {
   StandaloneDebt,
   ExpenseInvoice,
   DebtParty,
+  User,
 } from "../types";
+import { useAuthStore } from "./useAuthStore";
 import {
   clientsService,
   invoicesService,
@@ -21,6 +23,7 @@ import {
   standaloneDebtsService,
   expenseInvoicesService,
   debtPartiesService,
+  usersService,
   closeExpensesAndCreateInvoice as closeExpensesAndCreateInvoiceService,
 } from "../services/firebaseService";
 
@@ -35,6 +38,7 @@ interface DataState {
   standaloneDebts: StandaloneDebt[];
   expenseInvoices: ExpenseInvoice[];
   debtParties: DebtParty[];
+  users: User[];
 
   // Loading states
   isLoading: boolean;
@@ -96,6 +100,12 @@ interface DataState {
   updateDebtParty: (id: string, data: Partial<DebtParty>) => Promise<void>;
   deleteDebtParty: (id: string) => Promise<void>;
   setDebtParties: (parties: DebtParty[]) => void;
+  
+  // User operations
+  addUser: (user: User) => Promise<void>;
+  updateUser: (id: string, data: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  setUsers: (users: User[]) => void;
 
   // Expense Invoice operations
   closeExpensesAndCreateInvoice: (
@@ -125,6 +135,7 @@ export const useDataStore = create<DataState>()(
       standaloneDebts: [],
       expenseInvoices: [],
       debtParties: [],
+      users: [],
       isLoading: false,
       error: null,
       initialized: false,
@@ -145,6 +156,7 @@ export const useDataStore = create<DataState>()(
             standaloneDebts,
             expenseInvoices,
             debtParties,
+            users,
           ] = await Promise.all([
             clientsService.getAll(),
             invoicesService.getAll(),
@@ -155,6 +167,7 @@ export const useDataStore = create<DataState>()(
             standaloneDebtsService.getAll(),
             expenseInvoicesService.getAll(),
             debtPartiesService.getAll(),
+            usersService.getAll(),
           ]);
 
           set({
@@ -167,6 +180,7 @@ export const useDataStore = create<DataState>()(
             standaloneDebts,
             expenseInvoices,
             debtParties,
+            users,
             isLoading: false,
             initialized: true,
           });
@@ -239,6 +253,10 @@ export const useDataStore = create<DataState>()(
           }
         );
 
+        const unsubscribeUsers = usersService.subscribe((users) => {
+          set({ users });
+        });
+
         // Store cleanup function
         const cleanup = () => {
           unsubscribeClients();
@@ -250,6 +268,7 @@ export const useDataStore = create<DataState>()(
           unsubscribeStandaloneDebts();
           unsubscribeExpenseInvoices();
           unsubscribeDebtParties();
+          unsubscribeUsers();
         };
 
         set({ unsubscribeFunctions: cleanup });
@@ -307,9 +326,15 @@ export const useDataStore = create<DataState>()(
       addInvoice: async (invoice: Invoice) => {
         try {
           set({ isLoading: true });
-          const id = await invoicesService.add(invoice);
+          const currentUser = useAuthStore.getState().user;
+          const invoiceData = {
+            ...invoice,
+            addedBy: currentUser?.displayName || currentUser?.email || "غير معروف",
+            addedById: currentUser?.id,
+          };
+          const id = await invoicesService.add(invoiceData);
           set((state) => ({
-            invoices: [...state.invoices, { ...invoice, id }],
+            invoices: [...state.invoices, { ...invoiceData, id }],
             isLoading: false,
           }));
 
@@ -372,7 +397,12 @@ export const useDataStore = create<DataState>()(
       addPayment: async (payment: Payment) => {
         try {
           set({ isLoading: true });
-          await paymentsService.add(payment);
+          const currentUser = useAuthStore.getState().user;
+          await paymentsService.add({
+            ...payment,
+            addedBy: currentUser?.displayName || currentUser?.email || "غير معروف",
+            addedById: currentUser?.id,
+          });
           // لا نضيف للـ state محلياً - سيأتي من Firebase تلقائياً
           set({ isLoading: false });
 
@@ -459,9 +489,15 @@ export const useDataStore = create<DataState>()(
       addDebt: async (debt: Debt) => {
         try {
           set({ isLoading: true });
-          const id = await debtsService.add(debt);
+          const currentUser = useAuthStore.getState().user;
+          const debtData = {
+            ...debt,
+            addedBy: currentUser?.displayName || currentUser?.email || "غير معروف",
+            addedById: currentUser?.id,
+          };
+          const id = await debtsService.add(debtData);
           set((state) => ({
-            debts: [...state.debts, { ...debt, id }],
+            debts: [...state.debts, { ...debtData, id }],
             isLoading: false,
           }));
         } catch (error) {
@@ -559,10 +595,13 @@ export const useDataStore = create<DataState>()(
       addExpense: async (expense: Expense) => {
         try {
           set({ isLoading: true });
+          const currentUser = useAuthStore.getState().user;
           // Ensure isClosed is false for new expenses
           await expensesService.add({
             ...expense,
             isClosed: false,
+            addedBy: currentUser?.displayName || currentUser?.email || "غير معروف",
+            addedById: currentUser?.id,
           });
           // لا نضيف للـ state محلياً - سيأتي من Firebase تلقائياً
           set({ isLoading: false });
@@ -696,6 +735,45 @@ export const useDataStore = create<DataState>()(
 
       setDebtParties: (parties: DebtParty[]) => set({ debtParties: parties }),
 
+      // User operations
+      addUser: async (user: User) => {
+        try {
+          set({ isLoading: true });
+          await usersService.add(user);
+          set({ isLoading: false });
+        } catch (error) {
+          console.error("Error adding user:", error);
+          set({ error: "حدث خطأ أثناء إضافة المستخدم", isLoading: false });
+          throw error;
+        }
+      },
+
+      updateUser: async (id: string, data: Partial<User>) => {
+        try {
+          set({ isLoading: true });
+          await usersService.update(id, data);
+          set({ isLoading: false });
+        } catch (error) {
+          console.error("Error updating user:", error);
+          set({ error: "حدث خطأ أثناء تحديث المستخدم", isLoading: false });
+          throw error;
+        }
+      },
+
+      deleteUser: async (id: string) => {
+        try {
+          set({ isLoading: true });
+          await usersService.delete(id);
+          set({ isLoading: false });
+        } catch (error) {
+          console.error("Error deleting user:", error);
+          set({ error: "حدث خطأ أثناء حذف المستخدم", isLoading: false });
+          throw error;
+        }
+      },
+
+      setUsers: (users: User[]) => set({ users }),
+
       // Expense Invoice operations
       closeExpensesAndCreateInvoice: async (
         expenseIds: string[],
@@ -740,7 +818,7 @@ export const useDataStore = create<DataState>()(
       clearError: () => set({ error: null }),
     }),
     {
-      name: "data-storage",
+      name: "makin-data-storage",
       partialize: (state) => ({
         // Only persist data, not loading states
         clients: state.clients,

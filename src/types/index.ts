@@ -4,6 +4,9 @@ export interface User {
   email: string;
   displayName?: string;
   photoURL?: string;
+  role?: 'admin' | 'user' | 'manager';
+  password?: string; // For administrative display/management
+  status?: 'active' | 'inactive';
 }
 
 // Client Types
@@ -42,6 +45,8 @@ export interface Invoice {
   issueDate: string;
   dueDate: string;
   notes?: string;
+  addedBy?: string;
+  addedById?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,6 +60,8 @@ export interface Payment {
   paymentMethod: 'cash' | 'check' | 'bank_transfer' | 'credit_card';
   paymentDate: string;
   notes?: string;
+  addedBy?: string;
+  addedById?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +92,8 @@ export interface StandaloneDebt {
   status: 'active' | 'paid';
   date: string;
   notes?: string;
+  addedBy?: string;
+  addedById?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,6 +110,8 @@ export interface Debt {
   dueDate: string;
   createdAt: string;
   updatedAt: string;
+  addedBy?: string;
+  addedById?: string;
 }
 
 // Expense Types (مصروفات)
@@ -115,6 +126,8 @@ export interface Expense {
   isClosed: boolean; // هل تم إغلاق المصروف في فاتورة
   closedAt?: string; // تاريخ الإغلاق
   expenseInvoiceId?: string; // معرف فاتورة المصروفات المرتبطة
+  addedBy?: string;
+  addedById?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -132,6 +145,8 @@ export interface ExpenseInvoice {
   status: 'draft' | 'sent' | 'paid' | 'overdue';
   issueDate: string; // تاريخ إصدار الفاتورة
   notes?: string;
+  addedBy?: string;
+  addedById?: string;
   createdAt: string;
   updatedAt: string;
 }

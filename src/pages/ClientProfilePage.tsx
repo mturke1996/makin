@@ -44,8 +44,10 @@ import {
   PictureAsPdf,
   Search,
   Assessment,
+  LocationOn,
 } from "@mui/icons-material";
 import { useDataStore } from "@/store/useDataStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useForm, Controller } from "react-hook-form";
 import { formatCurrency } from "@/utils/calculations";
 import { generateFinalReportPDF } from "@/utils/pdfGenerator";
@@ -76,6 +78,7 @@ export const ClientProfilePage = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const user = useAuthStore((state) => state.user);
 
   const {
     clients,
@@ -96,6 +99,7 @@ export const ClientProfilePage = () => {
     addDebtParty,
     updateDebtParty,
     updateClient,
+    deleteClient,
   } = useDataStore();
 
   // Menu items for quick navigation
@@ -200,6 +204,19 @@ export const ClientProfilePage = () => {
     } catch (error: any) {
       setSnackbarMessage(error?.message || "حدث خطأ أثناء التحديث");
       setSnackbarOpen(true);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!clientId) return;
+    if (window.confirm("هل أنت متأكد من حذف هذا العميل نهائياً؟ لا يمكن التراجع عن هذا الإجراء.")) {
+      try {
+        await deleteClient(clientId);
+        navigate("/clients");
+      } catch (error: any) {
+        setSnackbarMessage(error?.message || "حدث خطأ أثناء الحذف");
+        setSnackbarOpen(true);
+      }
     }
   };
 
@@ -918,491 +935,224 @@ export const ClientProfilePage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        background: theme.palette.mode === "dark" ? "#0f172a" : "#f8fafc",
+        background: theme.palette.background.default,
         pb: 8,
+        position: 'relative'
       }}
     >
-      {/* Header */}
-      <Box
-        sx={{
-          background:
-            theme.palette.mode === "light"
-              ? "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)"
-              : "linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)",
-          pt: 2,
-          pb: 4,
-          px: 2,
-        }}
-      >
-        <Container maxWidth="sm">
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1.5}
-            sx={{ mb: 3 }}
-          >
-            <IconButton
-              onClick={() => navigate("/clients")}
-              sx={{ color: "white", marginLeft: "8px" }}
-            >
-              <ArrowBack />
-            </IconButton>
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography
-                variant="h5"
-                fontWeight={800}
-                sx={{
-                  color: "white",
-                  fontSize: { xs: "1.25rem", sm: "1.5rem" },
-                  mb: 1,
-                  wordBreak: "break-word",
-                }}
-              >
-                {client.name}
-              </Typography>
-              <Stack
-                direction="row"
-                spacing={1.5}
-                alignItems="center"
-                sx={{
-                  mt: 0.5,
-                  flexWrap: "wrap",
-                  gap: 1,
-                }}
-              >
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  alignItems="center"
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
-                    px: 1.5,
-                    py: 0.75,
-                    borderRadius: 2,
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <Phone
-                    sx={{
-                      fontSize: { xs: 16, sm: 18 },
-                      color: "white",
-                      opacity: 0.95,
-                    }}
+      {/* Background Ambience */}
+      <Box sx={{
+         position: 'absolute', top: 0, left: 0, right: 0, height: 400,
+         background: theme.palette.mode === 'dark' 
+           ? 'linear-gradient(180deg, #1e293b 0%, transparent 100%)' 
+           : 'linear-gradient(180deg, #dbeafe 0%, transparent 100%)',
+         zIndex: 0,
+         opacity: 0.5
+      }} />
+
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, pt: 3 }}>
+        {/* Navigation & Title */}
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
+           <IconButton onClick={() => navigate('/clients')} sx={{ 
+               bgcolor: theme.palette.background.paper,
+               boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+               '&:hover': { bgcolor: theme.palette.background.default } 
+           }}>
+             <ArrowBack />
+           </IconButton>
+           
+           <Box flexGrow={1}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                 <Typography variant="h4" fontWeight={800}>{client.name}</Typography>
+                 <Chip 
+                    label={client.type === 'company' ? 'شركة' : 'فرد'} 
+                    size="small" 
+                    color={client.type === 'company' ? 'primary' : 'secondary'}
+                    variant="filled" 
+                    sx={{ borderRadius: 2, height: 24, fontWeight: 700 }}
                   />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "white",
-                      fontWeight: 600,
-                      fontSize: { xs: "0.875rem", sm: "0.9375rem" },
-                    }}
-                  >
-                    {client.phone}
-                  </Typography>
-                </Stack>
               </Stack>
-            </Box>
-            <Stack
-              direction="row"
-              spacing={{ xs: 1.5, sm: 2 }}
-              sx={{ flexShrink: 0 }}
-            >
-              <IconButton
-                onClick={() => {
-                  if (!client) return;
-                  generateFinalReportPDF(
-                    client,
-                    clientExpenses,
-                    clientPayments,
-                    invoices.filter((inv) => inv.clientId === client.id)
-                  );
-                }}
-                sx={{
-                  color: "white",
-                  bgcolor: "rgba(255,255,255,0.2)",
-                  width: { xs: 44, sm: 40 },
-                  height: { xs: 44, sm: 40 },
-                  "&:hover": {
-                    bgcolor: "rgba(255,255,255,0.3)",
-                    transform: "scale(1.05)",
-                  },
-                  "&:active": {
-                    transform: "scale(0.95)",
-                  },
-                  transition: "all 0.2s ease-in-out",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                }}
-                title="التقرير النهائي"
-              >
-                <Assessment sx={{ fontSize: { xs: 20, sm: 18 } }} />
-              </IconButton>
-              <IconButton
-                onClick={() => setEditClientDialogOpen(true)}
-                sx={{
-                  color: "white",
-                  bgcolor: "rgba(255,255,255,0.2)",
-                  width: { xs: 44, sm: 40 },
-                  height: { xs: 44, sm: 40 },
-                  "&:hover": {
-                    bgcolor: "rgba(255,255,255,0.3)",
-                    transform: "scale(1.05)",
-                  },
-                  "&:active": {
-                    transform: "scale(0.95)",
-                  },
-                  transition: "all 0.2s ease-in-out",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                }}
-              >
-                <Edit sx={{ fontSize: { xs: 20, sm: 18 } }} />
-              </IconButton>
-            </Stack>
-          </Stack>
-
-          {/* Summary Cards */}
-          <Grid container spacing={1.5} sx={{ mt: 1.5 }}>
-            <Grid size={{ xs: 6 }}>
-              <Card
-                sx={{
-                  borderRadius: 2.5,
-                  background:
-                    "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)",
-                  backdropFilter: "blur(20px)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 1.5,
-                    textAlign: "center",
-                    "&:last-child": { pb: 1.5 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 2,
-                      bgcolor: "rgba(255,255,255,0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mx: "auto",
-                      mb: 0.75,
-                    }}
-                  >
-                    <TrendingDown sx={{ fontSize: 18, color: "white" }} />
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      opacity: 0.95,
-                      display: "block",
-                      fontSize: "0.65rem",
-                      fontWeight: 600,
-                      mb: 0.25,
-                    }}
-                  >
-                    المصروفات
+              <Stack direction="row" spacing={2} alignItems="center" mt={0.5} color="text.secondary">
+                  <Typography variant="body2" display="flex" alignItems="center" gap={0.5} fontWeight={500}>
+                      <Phone fontSize="small" /> {client.phone}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight={800}
-                    sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-                  >
-                    {formatCurrency(summary.totalExpenses)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Card
-                sx={{
-                  borderRadius: 2.5,
-                  background:
-                    "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%)",
-                  backdropFilter: "blur(20px)",
-                  color: "white",
-                  border: "1px solid rgba(255,255,255,0.3)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 1.5,
-                    textAlign: "center",
-                    "&:last-child": { pb: 1.5 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 2,
-                      bgcolor: "rgba(255,255,255,0.2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mx: "auto",
-                      mb: 0.75,
-                    }}
-                  >
-                    <Payment sx={{ fontSize: 18, color: "white" }} />
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      opacity: 0.95,
-                      display: "block",
-                      fontSize: "0.65rem",
-                      fontWeight: 600,
-                      mb: 0.25,
-                    }}
-                  >
-                    المدفوع
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight={800}
-                    sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-                  >
-                    {formatCurrency(summary.totalPaid)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Card
-                sx={{
-                  borderRadius: 2.5,
-                  background:
-                    summary.remaining >= 0
-                      ? "linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.2) 100%)"
-                      : "linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%)",
-                  backdropFilter: "blur(20px)",
-                  color: "white",
-                  border:
-                    summary.remaining >= 0
-                      ? "1px solid rgba(16, 185, 129, 0.4)"
-                      : "1px solid rgba(239, 68, 68, 0.4)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 1.5,
-                    textAlign: "center",
-                    "&:last-child": { pb: 1.5 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 2,
-                      bgcolor:
-                        summary.remaining >= 0
-                          ? "rgba(16, 185, 129, 0.3)"
-                          : "rgba(239, 68, 68, 0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mx: "auto",
-                      mb: 0.75,
-                    }}
-                  >
-                    {summary.remaining >= 0 ? (
-                      <TrendingUp sx={{ fontSize: 18, color: "white" }} />
-                    ) : (
-                      <TrendingDown sx={{ fontSize: 18, color: "white" }} />
-                    )}
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      opacity: 0.95,
-                      display: "block",
-                      fontSize: "0.65rem",
-                      fontWeight: 600,
-                      mb: 0.25,
-                    }}
-                  >
-                    المتبقي
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight={800}
-                    sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-                  >
-                    {formatCurrency(summary.remaining)}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid size={{ xs: 6 }}>
-              <Card
-                sx={{
-                  borderRadius: 2.5,
-                  background:
-                    "linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(124, 58, 237, 0.2) 100%)",
-                  backdropFilter: "blur(20px)",
-                  color: "white",
-                  border: "1px solid rgba(139, 92, 246, 0.4)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 1.5,
-                    textAlign: "center",
-                    "&:last-child": { pb: 1.5 },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 2,
-                      bgcolor: "rgba(139, 92, 246, 0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      mx: "auto",
-                      mb: 0.75,
-                    }}
-                  >
-                    <TrendingUp sx={{ fontSize: 18, color: "white" }} />
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      opacity: 0.95,
-                      display: "block",
-                      fontSize: "0.65rem",
-                      fontWeight: 600,
-                      mb: 0.25,
-                    }}
-                  >
-                    نسبة الربح
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight={800}
-                    sx={{ fontSize: { xs: "0.85rem", sm: "0.9rem" } }}
-                  >
-                    {summary.profitPercentage > 0
-                      ? `${summary.profitPercentage}%`
-                      : "غير محدد"}
-                  </Typography>
-                  {summary.profit > 0 && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        opacity: 0.9,
-                        display: "block",
-                        fontSize: "0.6rem",
-                        mt: 0.25,
-                      }}
-                    >
-                      {formatCurrency(summary.profit)}
+                  {client.address && (
+                    <Typography variant="body2" display="flex" alignItems="center" gap={0.5} fontWeight={500}>
+                        <LocationOn fontSize="small" /> {client.address}
                     </Typography>
                   )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
+              </Stack>
+           </Box>
 
-      {/* Content */}
-      <Container maxWidth="sm" sx={{ mt: -2 }}>
-        {/* Menu Section */}
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          sx={{ mb: 4, px: 0.5, mt: 5 }}
-        >
-          القوائم السريعة
-        </Typography>
-
-        <Stack spacing={3.5} sx={{ mb: 5 }}>
-          {menuItems.map((item, index) => (
-            <Card
-              key={index}
-              onClick={item.onClick}
-              sx={{
-                borderRadius: 3,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                border:
-                  theme.palette.mode === "dark"
-                    ? "1px solid rgba(255,255,255,0.1)"
-                    : "none",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-                },
-                "&:active": {
-                  transform: "scale(0.98)",
-                },
-              }}
-            >
-              <CardContent sx={{ p: 3.5 }}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  spacing={2}
-                >
-                  <Stack direction="row" alignItems="center" spacing={0}>
-                    <Box
-                      sx={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 2.5,
-                        bgcolor: item.bgColor,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginLeft: "24px",
-                      }}
-                    >
-                      <item.icon sx={{ fontSize: 28, color: item.color }} />
-                    </Box>
-                    <Box>
-                      <Typography
-                        variant="body1"
-                        fontWeight={700}
-                        sx={{ mb: 0.5 }}
-                      >
-                        {item.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        اضغط للدخول
-                      </Typography>
-                    </Box>
-                  </Stack>
-                  <Box sx={{ flexShrink: 0 }}>
-                    <ChevronLeft
-                      sx={{ color: "text.secondary", fontSize: 28 }}
-                    />
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
+           <Stack direction="row" spacing={1}>
+               <IconButton onClick={() => setEditClientDialogOpen(true)} 
+                   sx={{ bgcolor: theme.palette.primary.main, color: 'white', '&:hover': { bgcolor: theme.palette.primary.dark } }}>
+                  <Edit />
+               </IconButton>
+               <IconButton
+                 onClick={() => {
+                   if (!client) return;
+                   generateFinalReportPDF(
+                     client,
+                     clientExpenses,
+                     clientPayments,
+                     invoices.filter((inv) => inv.clientId === client.id)
+                   );
+                 }}
+                 sx={{ bgcolor: theme.palette.secondary.main, color: 'white', '&:hover': { bgcolor: theme.palette.secondary.dark } }}
+               >
+                 <Assessment />
+               </IconButton>
+           </Stack>
         </Stack>
+
+        {/* Financial Stats Grid - Professional Design */}
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+           {/* Total Payments */}
+           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card sx={{ 
+                 height: '100%', 
+                 borderRadius: 3, 
+                 border: '1px solid', 
+                 borderColor: 'rgba(16, 185, 129, 0.2)',
+                 background: theme.palette.mode === 'dark' 
+                    ? 'linear-gradient(145deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 78, 59, 0.2) 100%)' 
+                    : '#f0fdf4',
+                 boxShadow: 'none'
+              }}>
+                 <CardContent>
+                    <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+                       <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(16, 185, 129, 0.2)', color: '#10b981' }}>
+                          <Payment fontSize="small" />
+                       </Box>
+                       <Typography variant="subtitle2" fontWeight={700} color="text.secondary">إجمالي المدفوعات</Typography>
+                    </Stack>
+                    <Typography variant="h5" fontWeight={800} sx={{ color: '#059669' }}>
+                       {formatCurrency(summary.totalPaid)}
+                    </Typography>
+                 </CardContent>
+              </Card>
+           </Grid>
+
+           {/* Total Expenses */}
+           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card sx={{ 
+                 height: '100%', 
+                 borderRadius: 3, 
+                 border: '1px solid', 
+                 borderColor: 'rgba(239, 68, 68, 0.2)',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'linear-gradient(145deg, rgba(239, 68, 68, 0.1) 0%, rgba(127, 29, 29, 0.2) 100%)' 
+                    : '#fef2f2',
+                 boxShadow: 'none'
+              }}>
+                 <CardContent>
+                    <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+                       <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }}>
+                          <TrendingDown fontSize="small" />
+                       </Box>
+                       <Typography variant="subtitle2" fontWeight={700} color="text.secondary">إجمالي المصروفات</Typography>
+                    </Stack>
+                    <Typography variant="h5" fontWeight={800} sx={{ color: '#dc2626' }}>
+                       {formatCurrency(summary.totalExpenses)}
+                    </Typography>
+                 </CardContent>
+              </Card>
+           </Grid>
+
+           {/* Remaining Balance */}
+           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card sx={{ 
+                 height: '100%', 
+                 borderRadius: 3, 
+                 border: '1px solid', 
+                 borderColor: theme.palette.divider,
+                 background: theme.palette.background.paper,
+                 boxShadow: '0 4px 20px rgba(0,0,0,0.04)'
+              }}>
+                 <CardContent>
+                    <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+                       <Box sx={{ p: 1, borderRadius: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: theme.palette.text.primary }}>
+                          <CreditCard fontSize="small" />
+                       </Box>
+                       <Typography variant="subtitle2" fontWeight={700} color="text.secondary">صافي الرصيد</Typography>
+                    </Stack>
+                    <Typography variant="h5" fontWeight={800} sx={{ color: summary.remaining >= 0 ? 'success.main' : 'error.main' }}>
+                       {formatCurrency(summary.remaining)}
+                    </Typography>
+                 </CardContent>
+              </Card>
+           </Grid>
+
+           {/* Net Profit */}
+           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Card 
+                onClick={() => setProfitDialogOpen(true)}
+                sx={{ 
+                 height: '100%', 
+                 borderRadius: 3, 
+                 cursor: 'pointer',
+                 border: '1px solid', 
+                 borderColor: 'rgba(139, 92, 246, 0.3)',
+                 background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                 color: 'white',
+                 boxShadow: '0 8px 20px -5px rgba(124, 58, 237, 0.4)',
+                 transition: 'transform 0.2s',
+                 '&:hover': { transform: 'translateY(-4px)' }
+              }}>
+                 <CardContent>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                           <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}>
+                              <TrendingUp fontSize="small" />
+                           </Box>
+                           <Typography variant="subtitle2" fontWeight={700} sx={{ opacity: 0.9 }}>صافي الربح</Typography>
+                        </Stack>
+                        <Chip label={`${summary.profitPercentage}%`} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 800, height: 24 }} />
+                    </Stack>
+                    <Typography variant="h5" fontWeight={800}>
+                       {formatCurrency(summary.profit)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.7, mt: 1, display: 'block' }}>
+                        انقر لتعديل النسبة
+                    </Typography>
+                 </CardContent>
+              </Card>
+           </Grid>
+        </Grid>
+
+        {/* Action Grid (Bento Style) */}
+        <Typography variant="h6" fontWeight={800} sx={{ mb: 2, px: 1 }}>إدارة العميل</Typography>
+        <Grid container spacing={2}>
+           {menuItems.map((item, index) => (
+             <Grid size={{ xs: 6, sm: 6, md: 3 }} key={index}>
+                <Card 
+                  onClick={item.onClick}
+                  sx={{ 
+                    cursor: 'pointer',
+                    bgcolor: theme.palette.background.paper,
+                    height: '100%',
+                    transition: 'all 0.2s',
+                    '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }
+                  }}
+                >
+                   <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
+                      <Box sx={{ 
+                         width: 56, height: 56, borderRadius: '20px', 
+                         bgcolor: item.bgColor, color: item.color,
+                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                         mx: 'auto', mb: 2,
+                         boxShadow: `0 8px 16px ${item.color}20`
+                      }}>
+                         <item.icon sx={{ fontSize: 28 }} />
+                      </Box>
+                      <Typography variant="subtitle2" fontWeight={700}>{item.title}</Typography>
+                   </CardContent>
+                </Card>
+             </Grid>
+           ))}
+        </Grid>
+      
       </Container>
 
       {/* Expenses List Dialog */}
@@ -1418,31 +1168,50 @@ export const ClientProfilePage = () => {
       >
         <Box
           sx={{
-            background:
-              theme.palette.mode === "light"
-                ? "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)"
-                : "linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)",
+            background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
             color: "white",
-            p: 2,
+            p: 3,
+            pb: 8,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: '0 10px 30px -10px rgba(239, 68, 68, 0.4)'
           }}
         >
+          {/* Decorative Elements */}
+          <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, rgba(0,0,0,0.1), transparent)' }} />
+
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
             spacing={2}
+             sx={{ position: 'relative', zIndex: 1 }}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={1}>
               <IconButton
                 onClick={() => setExpensesListDialogOpen(false)}
-                sx={{ color: "white" }}
+                sx={{ 
+                   color: "white", 
+                   bgcolor: 'rgba(255,255,255,0.15)',
+                   backdropFilter: 'blur(10px)',
+                   borderRadius: 3,
+                   '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' }
+                }}
               >
                 <ArrowBack />
               </IconButton>
-              <Typography variant="h5" fontWeight={800} sx={{ flexGrow: 1 }}>
-                المصروفات ({clientExpenses.length})
-              </Typography>
+              <Box>
+                 <Typography variant="h5" fontWeight={900} sx={{ letterSpacing: -0.5 }}>
+                   قائمة المصروفات
+                 </Typography>
+                 <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 500 }}>
+                    {clientExpenses.length} عملية صرف مسجلة
+                 </Typography>
+              </Box>
             </Stack>
+
             <Button
               variant="contained"
               onClick={() => {
@@ -1457,15 +1226,18 @@ export const ClientProfilePage = () => {
                 setExpenseDialogOpen(true);
               }}
               sx={{
-                bgcolor: "white",
-                color: "primary.main",
-                fontWeight: 700,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.9)" },
-                borderRadius: 2,
+                background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                color: "white",
+                fontWeight: 800,
+                boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
+                "&:hover": { transform: 'translateY(-2px)', boxShadow: '0 6px 20px rgba(239, 68, 68, 0.4)' },
+                borderRadius: 3,
+                px: 3,
+                py: 1
               }}
               startIcon={<Add />}
             >
-              جديدة
+              مصروف جديد
             </Button>
           </Stack>
         </Box>
@@ -1531,7 +1303,12 @@ export const ClientProfilePage = () => {
                     });
                     setExpenseDialogOpen(true);
                   }}
-                  sx={{ mt: 2, borderRadius: 2 }}
+                  sx={{ 
+                    mt: 2, borderRadius: 3, px: 4, py: 1.2,
+                    background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                    fontWeight: 800,
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                  }}
                 >
                   إضافة أول مصروف
                 </Button>
@@ -1637,6 +1414,12 @@ export const ClientProfilePage = () => {
                           >
                             {formatCurrency(expense.amount)}
                           </Typography>
+                          
+                          {expense.addedBy && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.7, fontSize: '0.65rem', mt: 0.5, display: 'block' }}>
+                              بواسطة: {expense.addedBy}
+                            </Typography>
+                          )}
                         </Box>
 
                         <Stack
@@ -1894,31 +1677,50 @@ export const ClientProfilePage = () => {
       >
         <Box
           sx={{
-            background:
-              theme.palette.mode === "light"
-                ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-                : "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
+            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
             color: "white",
-            p: 2,
+            p: 3,
+            pb: 8,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: '0 10px 30px -10px rgba(16, 185, 129, 0.4)'
           }}
         >
+          {/* Decorative Elements */}
+          <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, rgba(0,0,0,0.1), transparent)' }} />
+          
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
             spacing={2}
+            sx={{ position: 'relative', zIndex: 1 }}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={1}>
               <IconButton
                 onClick={() => setPaymentsListDialogOpen(false)}
-                sx={{ color: "white" }}
+                sx={{ 
+                   color: "white", 
+                   bgcolor: 'rgba(255,255,255,0.15)',
+                   backdropFilter: 'blur(10px)',
+                   borderRadius: 3,
+                   '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' }
+                }}
               >
                 <ArrowBack />
               </IconButton>
-              <Typography variant="h5" fontWeight={800} sx={{ flexGrow: 1 }}>
-                المدفوعات ({clientPayments.length})
-              </Typography>
+              <Box>
+                 <Typography variant="h5" fontWeight={900} sx={{ letterSpacing: -0.5 }}>
+                   المدفوعات
+                 </Typography>
+                 <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 500 }}>
+                    {clientPayments.length} عملية دفع مسجلة
+                 </Typography>
+              </Box>
             </Stack>
+
             <Button
               variant="contained"
               onClick={() => {
@@ -1933,15 +1735,18 @@ export const ClientProfilePage = () => {
                 setPaymentDialogOpen(true);
               }}
               sx={{
-                bgcolor: "white",
-                color: "success.main",
-                fontWeight: 700,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.9)" },
-                borderRadius: 2,
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "white",
+                fontWeight: 800,
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                "&:hover": { transform: 'translateY(-2px)', boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)' },
+                borderRadius: 3,
+                px: 3,
+                py: 1
               }}
               startIcon={<Add />}
             >
-              جديدة
+              دفعة جديدة
             </Button>
           </Stack>
         </Box>
@@ -2007,7 +1812,12 @@ export const ClientProfilePage = () => {
                     });
                     setPaymentDialogOpen(true);
                   }}
-                  sx={{ mt: 2, borderRadius: 2 }}
+                  sx={{ 
+                    mt: 2, borderRadius: 3, px: 4, py: 1.2,
+                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    fontWeight: 800,
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                  }}
                 >
                   إضافة أول دفعة
                 </Button>
@@ -2350,7 +2160,7 @@ export const ClientProfilePage = () => {
         </Box>
       </Dialog>
 
-      {/* Expense Dialog */}
+      {/* Expense Dialog - Premium Design */}
       <Dialog
         open={expenseDialogOpen}
         onClose={() => {
@@ -2358,147 +2168,216 @@ export const ClientProfilePage = () => {
           setEditingExpense(null);
         }}
         fullScreen
+        PaperProps={{
+          sx: { 
+             bgcolor: theme.palette.mode === 'dark' ? '#0f172a' : '#f8fafc',
+             backgroundImage: 'none'
+          }
+        }}
       >
         <form onSubmit={handleExpenseSubmit(onSubmitExpense)}>
           <Box
             sx={{
-              background: "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)",
+              background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
               color: "white",
-              p: 2,
+              p: 3,
+              pt: 2,
+              pb: 6,
+              borderBottomLeftRadius: 24,
+              borderBottomRightRadius: 24,
+              boxShadow: '0 10px 30px -10px rgba(239, 68, 68, 0.5)',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
+            {/* Decorative circles */}
+
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ position: 'relative', zIndex: 1 }}>
               <IconButton
                 onClick={() => {
                   setExpenseDialogOpen(false);
                   setEditingExpense(null);
                 }}
-                sx={{ color: "white" }}
+                sx={{ 
+                   color: "white",
+                   bgcolor: 'rgba(255,255,255,0.1)',
+                   '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                   borderRadius: 3
+                }}
               >
                 <ArrowBack />
               </IconButton>
-              <Typography variant="h6" fontWeight={700}>
-                {editingExpense ? "تعديل مصروف" : "إضافة مصروف"}
+              <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: 0.5 }}>
+                {editingExpense ? "تعديل المصروف" : "تسجيل مصروف جديد"}
               </Typography>
             </Stack>
           </Box>
 
-          <Box sx={{ p: 3.5 }}>
-            <Stack spacing={3.5}>
-              <Controller
-                name="description"
-                control={expenseControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="الوصف"
-                    placeholder="مثال: شراء إسمنت"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+          <Container maxWidth="sm" sx={{ mt: -4, px: 2, pb: 4, position: 'relative', zIndex: 2 }}>
+            <Card sx={{ borderRadius: 4, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.1)', overflow: 'visible' }}>
+               <CardContent sx={{ p: 4 }}>
+                <Stack spacing={3}>
+                  <Box sx={{ textAlign: 'center', mb: 2 }}>
+                     <Box sx={{ 
+                        width: 60, height: 60, borderRadius: '50%', 
+                        bgcolor: 'error.light', color: 'error.main',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        mx: 'auto', mb: 2,
+                        boxShadow: '0 8px 16px -4px rgba(239, 68, 68, 0.2)'
+                     }}>
+                        <TrendingDown fontSize="large" />
+                     </Box>
+                     <Typography variant="body2" color="text.secondary">
+                        أدخل تفاصيل المصروف بدقة
+                     </Typography>
+                  </Box>
+
+                  <Controller
+                    name="amount"
+                    control={expenseControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="المبلغ"
+                        type="number"
+                        placeholder="0.00"
+                        value={
+                          field.value === 0 || field.value === "" ? "" : field.value
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : value);
+                        }}
+                        InputProps={{
+                           startAdornment: <Typography color="text.secondary" fontWeight={700} sx={{ mr: 1 }}>د.ل</Typography>,
+                           sx: { fontSize: '1.5rem', fontWeight: 700, color: 'error.main' }
+                        }}
+                        sx={{ 
+                           "& .MuiOutlinedInput-root": { 
+                              borderRadius: 3,
+                              bgcolor: 'rgba(239, 68, 68, 0.04)',
+                              '& fieldset': { borderColor: 'rgba(239, 68, 68, 0.1)' },
+                              '&:hover fieldset': { borderColor: 'rgba(239, 68, 68, 0.3)' },
+                              '&.Mui-focused fieldset': { borderColor: 'error.main' }
+                           },
+                           "& .MuiInputLabel-root": { color: 'error.main' },
+                        }}
+                      />
+                    )}
                   />
-                )}
-              />
 
-              <Controller
-                name="amount"
-                control={expenseControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="المبلغ"
-                    type="number"
-                    placeholder="أدخل المبلغ"
-                    value={
-                      field.value === 0 || field.value === "" ? "" : field.value
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === "" ? "" : value);
-                    }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  <Stack direction="row" spacing={2}>
+                      <Controller
+                        name="date"
+                        control={expenseControl}
+                        render={({ field }) => (
+                          <TextField
+                            {...field}
+                            fullWidth
+                            label="التاريخ"
+                            type="date"
+                            InputLabelProps={{ shrink: true }}
+                            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                          />
+                        )}
+                      />
+                  </Stack>
+
+                  <Controller
+                    name="category"
+                    control={expenseControl}
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>الفئة</InputLabel>
+                        <Select 
+                           {...field} 
+                           label="الفئة" 
+                           sx={{ borderRadius: 3 }}
+                           MenuProps={{ PaperProps: { sx: { borderRadius: 3, mt: 1 } } }}
+                        >
+                          <MenuItem value="مواد"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">🧱</Box><Typography>مواد بناء</Typography></Stack></MenuItem>
+                          <MenuItem value="إسمنت"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">⚫</Box><Typography>إسمنت</Typography></Stack></MenuItem>
+                          <MenuItem value="حديد"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">🔩</Box><Typography>حديد</Typography></Stack></MenuItem>
+                          <MenuItem value="رمل"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">🏖️</Box><Typography>رمل وزلط</Typography></Stack></MenuItem>
+                          <MenuItem value="عمالة"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">👷</Box><Typography>عمالة</Typography></Stack></MenuItem>
+                          <MenuItem value="معدات"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">⚙️</Box><Typography>معدات</Typography></Stack></MenuItem>
+                          <MenuItem value="نقل"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">🚚</Box><Typography>نقل</Typography></Stack></MenuItem>
+                          <MenuItem value="وقود"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">⛽</Box><Typography>وقود</Typography></Stack></MenuItem>
+                          <MenuItem value="كهرباء"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">💡</Box><Typography>كهرباء</Typography></Stack></MenuItem>
+                          <MenuItem value="ماء"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">💧</Box><Typography>ماء</Typography></Stack></MenuItem>
+                          <MenuItem value="أخرى"><Stack direction="row" spacing={1} alignItems="center"><Box component="span">📋</Box><Typography>أخرى</Typography></Stack></MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
                   />
-                )}
-              />
 
-              <Controller
-                name="category"
-                control={expenseControl}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>الفئة</InputLabel>
-                    <Select {...field} label="الفئة" sx={{ borderRadius: 2 }}>
-                      <MenuItem value="مواد">🧱 مواد بناء</MenuItem>
-                      <MenuItem value="إسمنت">⚫ إسمنت</MenuItem>
-                      <MenuItem value="حديد">🔩 حديد</MenuItem>
-                      <MenuItem value="رمل">🏖️ رمل وزلط</MenuItem>
-                      <MenuItem value="عمالة">👷 عمالة</MenuItem>
-                      <MenuItem value="معدات">⚙️ معدات</MenuItem>
-                      <MenuItem value="نقل">🚚 نقل</MenuItem>
-                      <MenuItem value="وقود">⛽ وقود</MenuItem>
-                      <MenuItem value="كهرباء">💡 كهرباء</MenuItem>
-                      <MenuItem value="ماء">💧 ماء</MenuItem>
-                      <MenuItem value="أخرى">📋 أخرى</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-
-              <Controller
-                name="date"
-                control={expenseControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="التاريخ"
-                    type="date"
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  <Controller
+                    name="description"
+                    control={expenseControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="الوصف"
+                        placeholder="مثال: شراء 50 كيس خلطة"
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                      />
+                    )}
                   />
-                )}
-              />
 
-              <Controller
-                name="notes"
-                control={expenseControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="ملاحظات"
-                    multiline
-                    rows={3}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  <Controller
+                    name="notes"
+                    control={expenseControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="ملاحظات إضافية"
+                        multiline
+                        rows={3}
+                        placeholder="أي تفاصيل أخرى..."
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                      />
+                    )}
                   />
-                )}
-              />
-            </Stack>
+                  
+                  <Divider sx={{ borderStyle: 'dashed' }} />
 
-            <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
-              <Button
-                onClick={() => {
-                  setExpenseDialogOpen(false);
-                  setEditingExpense(null);
-                }}
-                fullWidth
-                size="large"
-                sx={{ borderRadius: 2, py: 1.5 }}
-              >
-                إلغاء
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-                sx={{ borderRadius: 2, py: 1.5 }}
-              >
-                {editingExpense ? "حفظ" : "إضافة"}
-              </Button>
-            </Stack>
-          </Box>
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      onClick={() => {
+                        setExpenseDialogOpen(false);
+                        setEditingExpense(null);
+                      }}
+                      fullWidth
+                      size="large"
+                      variant="outlined"
+                      color="inherit"
+                      sx={{ borderRadius: 3, py: 1.5, borderColor: 'divider' }}
+                    >
+                      إلغاء
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="error" // Red for expenses
+                      fullWidth
+                      size="large"
+                      startIcon={<Add />}
+                      sx={{ 
+                         borderRadius: 3, 
+                         py: 1.5,
+                         boxShadow: '0 8px 20px -4px rgba(239, 68, 68, 0.4)'
+                      }}
+                    >
+                      {editingExpense ? "حفظ التعديلات" : "إضافة المصروف"}
+                    </Button>
+                  </Stack>
+                </Stack>
+               </CardContent>
+            </Card>
+          </Container>
         </form>
       </Dialog>
 
@@ -2682,172 +2561,224 @@ export const ClientProfilePage = () => {
         <form onSubmit={handleDebtSubmit(onSubmitDebt)}>
           <Box
             sx={{
-              background:
-                theme.palette.mode === "light"
-                  ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
-                  : "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+              background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
               color: "white",
-              p: 2,
+              p: 3,
+              pt: 2,
+              pb: 6,
+              borderBottomLeftRadius: 24,
+              borderBottomRightRadius: 24,
+              boxShadow: '0 10px 30px -10px rgba(217, 119, 6, 0.5)',
+              position: 'relative',
+              overflow: 'hidden'
             }}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
+            {/* Decorative circles */}
+
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ position: 'relative', zIndex: 1 }}>
               <IconButton
                 onClick={() => {
                   setDebtDialogOpen(false);
                   setEditingDebt(null);
                 }}
-                sx={{ color: "white" }}
+                sx={{ 
+                   color: "white",
+                   bgcolor: 'rgba(255,255,255,0.1)',
+                   '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+                   borderRadius: 3
+                }}
               >
                 <ArrowBack />
               </IconButton>
-              <Typography variant="h6" fontWeight={700}>
-                {editingDebt ? "تعديل دين" : "إضافة دين جديد"}
+              <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: 0.5 }}>
+                {editingDebt ? "تعديل بيانات الدين" : "إضافة دين جديد"}
               </Typography>
             </Stack>
           </Box>
 
-          <Box sx={{ p: 3.5 }}>
-            <Stack spacing={3.5}>
-              <Controller
-                name="partyType"
-                control={debtControl}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>نوع الطرف</InputLabel>
-                    <Select
-                      {...field}
-                      label="نوع الطرف"
-                      sx={{ borderRadius: 2 }}
+          <Container maxWidth="sm" sx={{ mt: -4, px: 2, pb: 4, position: 'relative', zIndex: 2 }}>
+            <Card sx={{ borderRadius: 4, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.1)', overflow: 'visible' }}>
+               <CardContent sx={{ p: 4 }}>
+                <Stack spacing={3}>
+                  <Box sx={{ textAlign: 'center', mb: 2 }}>
+                     <Box sx={{ 
+                        width: 60, height: 60, borderRadius: '50%', 
+                        bgcolor: 'warning.light', color: 'warning.main',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        mx: 'auto', mb: 2,
+                        boxShadow: '0 8px 16px -4px rgba(217, 119, 6, 0.2)'
+                     }}>
+                        <CreditCard fontSize="large" />
+                     </Box>
+                     <Typography variant="body2" color="text.secondary">
+                        أدخل تفاصيل الدين بدقة
+                     </Typography>
+                  </Box>
+
+                  <Controller
+                    name="amount"
+                    control={debtControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="قيمة الدين"
+                        type="number"
+                        placeholder="0.00"
+                        value={
+                          field.value === 0 || field.value === "" ? "" : field.value
+                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === "" ? "" : value);
+                        }}
+                        InputProps={{
+                           startAdornment: <Typography color="text.secondary" fontWeight={700} sx={{ mr: 1 }}>د.ل</Typography>,
+                           sx: { fontSize: '1.5rem', fontWeight: 700, color: 'warning.main' }
+                        }}
+                        sx={{ 
+                           "& .MuiOutlinedInput-root": { 
+                              borderRadius: 3,
+                              bgcolor: 'rgba(217, 119, 6, 0.04)',
+                              '& fieldset': { borderColor: 'rgba(217, 119, 6, 0.1)' },
+                              '&:hover fieldset': { borderColor: 'rgba(217, 119, 6, 0.3)' },
+                              '&.Mui-focused fieldset': { borderColor: 'warning.main' }
+                           },
+                           "& .MuiInputLabel-root": { color: 'warning.main' },
+                        }}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="partyType"
+                    control={debtControl}
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>نوع الجهة</InputLabel>
+                        <Select
+                          {...field}
+                          label="نوع الجهة"
+                          sx={{ borderRadius: 3 }}
+                        >
+                          <MenuItem value="person">
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Person sx={{ fontSize: 18, color: 'warning.main' }} />
+                              <Typography>شخص</Typography>
+                            </Stack>
+                          </MenuItem>
+                          <MenuItem value="shop">
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Store sx={{ fontSize: 18, color: 'warning.main' }} />
+                              <Typography>محل تجاري</Typography>
+                            </Stack>
+                          </MenuItem>
+                          <MenuItem value="company">
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Business sx={{ fontSize: 18, color: 'warning.main' }} />
+                              <Typography>شركة</Typography>
+                            </Stack>
+                          </MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+
+                  <Controller
+                    name="partyName"
+                    control={debtControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="اسم الجهة (الشخص/المحل/الشركة)"
+                        placeholder="مثال: محمد أحمد، مؤسسة البناء..."
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="description"
+                    control={debtControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="تفاصيل الدين"
+                        placeholder="مثال: باقي حساب مواد سباكة"
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="date"
+                    control={debtControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="تاريخ الاستحقاق"
+                        type="date"
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    name="notes"
+                    control={debtControl}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="ملاحظات إضافية"
+                        multiline
+                        rows={3}
+                        placeholder="دون أي ملاحظات هامة هنا..."
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: 3 } }}
+                      />
+                    )}
+                  />
+
+                  <Divider sx={{ borderStyle: 'dashed' }} />
+
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      onClick={() => {
+                        setDebtDialogOpen(false);
+                        setEditingDebt(null);
+                      }}
+                      fullWidth
+                      size="large"
+                      variant="outlined"
+                      color="inherit"
+                      sx={{ borderRadius: 3, py: 1.5, borderColor: 'divider' }}
                     >
-                      <MenuItem value="person">
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Person sx={{ fontSize: 18 }} />
-                          <Typography>شخص</Typography>
-                        </Stack>
-                      </MenuItem>
-                      <MenuItem value="shop">
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Store sx={{ fontSize: 18 }} />
-                          <Typography>محل</Typography>
-                        </Stack>
-                      </MenuItem>
-                      <MenuItem value="company">
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Business sx={{ fontSize: 18 }} />
-                          <Typography>شركة</Typography>
-                        </Stack>
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-
-              <Controller
-                name="partyName"
-                control={debtControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="اسم الشخص/المحل/الشركة"
-                    placeholder="مثال: محمد أحمد، محل الأجهزة، شركة البناء"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                )}
-              />
-
-              <Controller
-                name="description"
-                control={debtControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="وصف الدين"
-                    placeholder="مثال: دين على مواد بناء"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                )}
-              />
-
-              <Controller
-                name="amount"
-                control={debtControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="المبلغ"
-                    type="number"
-                    placeholder="أدخل المبلغ"
-                    value={
-                      field.value === 0 || field.value === "" ? "" : field.value
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === "" ? "" : value);
-                    }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                )}
-              />
-
-              <Controller
-                name="date"
-                control={debtControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="تاريخ الدين"
-                    type="date"
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                )}
-              />
-
-              <Controller
-                name="notes"
-                control={debtControl}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label="ملاحظات"
-                    multiline
-                    rows={3}
-                    placeholder="أي ملاحظات إضافية..."
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                )}
-              />
-            </Stack>
-
-            <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
-              <Button
-                onClick={() => {
-                  setDebtDialogOpen(false);
-                  setEditingDebt(null);
-                }}
-                fullWidth
-                size="large"
-                sx={{ borderRadius: 2, py: 1.5 }}
-              >
-                إلغاء
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                color="warning"
-                fullWidth
-                size="large"
-                sx={{ borderRadius: 2, py: 1.5 }}
-              >
-                {editingDebt ? "حفظ" : "إضافة"}
-              </Button>
-            </Stack>
-          </Box>
+                      إلغاء
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="warning"
+                      fullWidth
+                      size="large"
+                      startIcon={<Add />}
+                      sx={{ 
+                         borderRadius: 3, 
+                         py: 1.5,
+                         boxShadow: '0 8px 20px -4px rgba(217, 119, 6, 0.4)'
+                      }}
+                    >
+                      {editingDebt ? "حفظ التعديلات" : "إضافة الدين"}
+                    </Button>
+                  </Stack>
+                </Stack>
+               </CardContent>
+            </Card>
+          </Container>
         </form>
       </Dialog>
 
@@ -2864,44 +2795,66 @@ export const ClientProfilePage = () => {
       >
         <Box
           sx={{
-            background:
-              theme.palette.mode === "light"
-                ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
-                : "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+            background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
             color: "white",
-            p: 2,
+            p: 3,
+            pb: 8,
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: '0 10px 30px -10px rgba(217, 119, 6, 0.4)'
           }}
         >
+          {/* Decorative Elements */}
+          <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '100px', background: 'linear-gradient(to top, rgba(0,0,0,0.1), transparent)' }} />
+          
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
             spacing={2}
+             sx={{ position: 'relative', zIndex: 1 }}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={1}>
               <IconButton
                 onClick={() => setDebtsListDialogOpen(false)}
-                sx={{ color: "white" }}
+                sx={{ 
+                   color: "white", 
+                   bgcolor: 'rgba(255,255,255,0.15)',
+                   backdropFilter: 'blur(10px)',
+                   borderRadius: 3,
+                   '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' }
+                }}
               >
                 <ArrowBack />
               </IconButton>
-              <Typography variant="h5" fontWeight={800} sx={{ flexGrow: 1 }}>
-                الديون ({filteredParties.length})
-              </Typography>
+              <Box>
+                 <Typography variant="h5" fontWeight={900} sx={{ letterSpacing: -0.5 }}>
+                   الديون المستحقة
+                 </Typography>
+                 <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 500 }}>
+                    {filteredParties.length} جهة دائنة مسجلة
+                 </Typography>
+              </Box>
             </Stack>
+
             <Button
               variant="contained"
               onClick={handleAddParty}
               sx={{
                 bgcolor: "white",
                 color: "primary.main",
-                fontWeight: 700,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.9)" },
-                borderRadius: 2,
+                fontWeight: 800,
+                boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                "&:hover": { bgcolor: "rgba(255,255,255,0.9)", transform: 'translateY(-2px)' },
+                borderRadius: 3,
+                px: 3,
+                py: 1
               }}
               startIcon={<Add />}
             >
-              إضافة
+              جهة جديدة
             </Button>
           </Stack>
         </Box>
@@ -3209,16 +3162,29 @@ export const ClientProfilePage = () => {
                           </Grid>
                         </Box>
 
-                        <Box
-                          sx={{
-                            flexShrink: 0,
-                            display: { xs: "none", sm: "block" },
-                          }}
-                        >
-                          <ChevronLeft
-                            sx={{ color: "text.secondary", fontSize: 28 }}
-                          />
-                        </Box>
+                        <Stack direction="column" spacing={1} alignItems="center">
+                          <Box sx={{ flexShrink: 0, display: { xs: "none", sm: "block" } }}>
+                            <ChevronLeft sx={{ color: "text.secondary", fontSize: 28 }} />
+                          </Box>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`هل أنت متأكد من حذف بروفايل الدين "${party.name}"؟ سيتم حذف جميع الديون المرتبطة به.`)) {
+                                party.debts.forEach(debt => {
+                                  deleteStandaloneDebt(debt.id);
+                                });
+                              }
+                            }}
+                            sx={{ 
+                               opacity: 0.7, 
+                               '&:hover': { opacity: 1, bgcolor: 'fee2e2' }
+                            }}
+                          >
+                             <Delete fontSize="small" />
+                          </IconButton>
+                        </Stack>
                       </Stack>
                     </CardContent>
                   </Card>
@@ -4265,19 +4231,25 @@ export const ClientProfilePage = () => {
 
             <Stack direction="row" spacing={2} sx={{ mt: 5 }}>
               <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDeleteClient}
+                startIcon={<Delete />}
+                sx={{ borderRadius: 2, py: 1.5, px: 3 }}
+              >
+                حذف العميل
+              </Button>
+              <Box sx={{ flexGrow: 1 }} />
+              <Button
                 onClick={() => setEditClientDialogOpen(false)}
-                fullWidth
-                size="large"
-                sx={{ borderRadius: 2, py: 1.5 }}
+                sx={{ borderRadius: 2, py: 1.5, px: 3 }}
               >
                 إلغاء
               </Button>
               <Button
                 type="submit"
                 variant="contained"
-                fullWidth
-                size="large"
-                sx={{ borderRadius: 2, py: 1.5 }}
+                sx={{ borderRadius: 2, py: 1.5, px: 4 }}
               >
                 حفظ التعديلات
               </Button>

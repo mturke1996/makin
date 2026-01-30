@@ -111,7 +111,7 @@ export const DashboardPage = () => {
       <Container maxWidth="sm" sx={{ mt: -2 }}>
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 5 }}>
-          <Grid item xs={6}>
+          <Grid size={{ xs: 6 }}>
             <Card
               sx={{
                 borderRadius: 2.5,
@@ -132,7 +132,7 @@ export const DashboardPage = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={6}>
+          <Grid size={{ xs: 6 }}>
             <Card
               sx={{
                 borderRadius: 2.5,
@@ -153,7 +153,7 @@ export const DashboardPage = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={6}>
+          <Grid size={{ xs: 6 }}>
             <Card
               sx={{
                 borderRadius: 2.5,
@@ -174,7 +174,7 @@ export const DashboardPage = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={6}>
+          <Grid size={{ xs: 6 }}>
             <Card
               sx={{
                 borderRadius: 2.5,
@@ -198,7 +198,7 @@ export const DashboardPage = () => {
 
         {/* Quick Info */}
         <Grid container spacing={3} sx={{ mb: 5 }}>
-          <Grid item xs={4}>
+          <Grid size={{ xs: 4 }}>
             <Card sx={{ borderRadius: 3, textAlign: 'center' }}>
               <CardContent sx={{ p: 3 }}>
                 <People sx={{ fontSize: 32, color: 'primary.main', mb: 1.5 }} />
@@ -211,7 +211,7 @@ export const DashboardPage = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={{ xs: 4 }}>
             <Card sx={{ borderRadius: 3, textAlign: 'center' }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
@@ -226,7 +226,7 @@ export const DashboardPage = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={4}>
+          <Grid size={{ xs: 4 }}>
             <Card sx={{ borderRadius: 3, textAlign: 'center' }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>

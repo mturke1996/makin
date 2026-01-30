@@ -34,6 +34,7 @@ import {
   Delete,
 } from "@mui/icons-material";
 import { useDataStore } from "@/store/useDataStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import type { Invoice, InvoiceItem, Client } from "@/types";
 import { formatCurrency } from "@/utils/calculations";
@@ -46,6 +47,7 @@ dayjs.locale("ar");
 export const InvoicesPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const user = useAuthStore((state) => state.user);
   const { clients, invoices, addInvoice, deleteInvoice } = useDataStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -270,117 +272,128 @@ export const InvoicesPage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        background: theme.palette.mode === "dark" ? "#0f172a" : "#f8fafc",
-        pb: 3,
+        background: theme.palette.background.default,
+        pb: 8,
+        position: 'relative'
       }}
     >
+      {/* Background Ambience */}
+      <Box sx={{
+         position: 'absolute', top: 0, left: 0, right: 0, height: 400,
+         background: theme.palette.mode === 'dark' 
+           ? 'linear-gradient(180deg, #1e293b 0%, transparent 100%)' 
+           : 'linear-gradient(180deg, #dbeafe 0%, transparent 100%)',
+         zIndex: 0,
+         opacity: 0.5
+      }} />
+
       {/* Header */}
-      <Box
-        sx={{
-          background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-          pt: 2,
-          pb: 3,
-          px: 2,
-        }}
-      >
-        <Container maxWidth="sm">
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-            <IconButton
-              onClick={() => navigate("/")}
-              sx={{ color: "white", marginLeft: "8px" }}
-            >
-              <ArrowBack />
-            </IconButton>
-            <Typography
-              variant="h5"
-              fontWeight={800}
-              sx={{ color: "white", flexGrow: 1 }}
-            >
-              الفواتير
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={handleOpenDialog}
-              sx={{
-                bgcolor: "white",
-                color: "#3b82f6",
-                fontWeight: 700,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.9)" },
-                borderRadius: 2,
-              }}
-              startIcon={<Add />}
-            >
-              جديدة
-            </Button>
+      <Box sx={{ position: 'relative', zIndex: 1, pt: 4, pb: 4, px: 2 }}>
+        <Container maxWidth="md">
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 4 }}>
+             <IconButton onClick={() => navigate('/')} sx={{ 
+                 bgcolor: theme.palette.background.paper,
+                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                 '&:hover': { bgcolor: theme.palette.background.default } 
+             }}>
+               <ArrowBack />
+             </IconButton>
+             
+             <Box flexGrow={1}>
+                <Typography variant="h4" fontWeight={800} sx={{ mb: 0.5 }}> الفواتير</Typography>
+                <Typography variant="body2" color="text.secondary">إدارة ومتابعة فواتير العملاء</Typography>
+             </Box>
+
+             <Button
+               variant="contained"
+               onClick={handleOpenDialog}
+               sx={{
+                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                 boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.5)',
+                 fontWeight: 700,
+                 px: 3, py: 1.5,
+                 borderRadius: 3,
+                 '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 24px -4px rgba(37, 99, 235, 0.6)' }
+               }}
+               startIcon={<Add />}
+             >
+               فاتورة جديدة
+             </Button>
           </Stack>
 
           {/* Search & Filter */}
-          <Stack spacing={2} sx={{ mt: 2 }}>
+          <Card sx={{ 
+             borderRadius: 4, 
+             p: 1, 
+             display: 'flex', 
+             alignItems: 'center', 
+             gap: 2,
+             mb: 4,
+             bgcolor: 'rgba(255,255,255,0.6)', 
+             backdropFilter: 'blur(20px)',
+             border: '1px solid rgba(255,255,255,0.3)',
+             boxShadow: '0 10px 40px -10px rgba(0,0,0,0.05)'
+          }}>
             <TextField
               fullWidth
-              placeholder="ابحث عن فاتورة..."
+              placeholder="ابحث عن فاتورة أو عميل..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              size="small"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  bgcolor: "white",
-                  borderRadius: 2,
-                  "& fieldset": { border: "none" },
-                },
-              }}
+              variant="standard"
               InputProps={{
+                disableUnderline: true,
                 startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
+                    <Search sx={{ color: "text.secondary", mr: 1.5, ml: 1 }} />
                 ),
               }}
+              sx={{ px: 1 }}
             />
-            <FormControl fullWidth size="small">
+            <Divider orientation="vertical" flexItem sx={{ height: 30, my: 'auto' }} />
+            <FormControl size="small" sx={{ minWidth: 120 }}>
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                sx={{
-                  bgcolor: "white",
-                  borderRadius: 2,
-                  "& fieldset": { border: "none" },
-                }}
+                variant="standard"
+                disableUnderline
+                displayEmpty
+                sx={{ fontWeight: 600, color: 'text.primary', '& .MuiSelect-select': { py: 1.5 } }}
               >
-                <MenuItem value="all">كل الفواتير</MenuItem>
+                <MenuItem value="all">الكل</MenuItem>
                 <MenuItem value="draft">مسودة</MenuItem>
                 <MenuItem value="sent">مرسلة</MenuItem>
                 <MenuItem value="paid">مدفوعة</MenuItem>
                 <MenuItem value="overdue">متأخرة</MenuItem>
               </Select>
             </FormControl>
-          </Stack>
+          </Card>
         </Container>
       </Box>
 
       {/* Invoices List */}
-      <Container maxWidth="sm" sx={{ mt: -2 }}>
-        <Stack spacing={3.5}>
+      <Container maxWidth="md" sx={{ mt: -2, position: 'relative', zIndex: 1 }}>
+        <Stack spacing={2}>
           {filteredInvoices.length === 0 ? (
-            <Card sx={{ borderRadius: 2.5, textAlign: "center", py: 6 }}>
-              <Receipt
-                sx={{
-                  fontSize: 48,
-                  color: "text.secondary",
-                  opacity: 0.3,
-                  mb: 2,
-                }}
-              />
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
-                لا توجد فواتير
+            <Card sx={{ borderRadius: 4, textAlign: "center", py: 8, bgcolor: 'background.paper', boxShadow: 'none', border: '1px dashed', borderColor: 'divider' }}>
+              <Box sx={{ 
+                 width: 80, height: 80, borderRadius: '50%', 
+                 bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                 mx: 'auto', mb: 3
+              }}>
+                 <Receipt sx={{ fontSize: 40, opacity: 0.5 }} />
+              </Box>
+              <Typography variant="h6" fontWeight={700} gutterBottom>لا توجد فواتير</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                 قم بإنشاء فاتورة جديدة لبدء تتبع المدفوعات
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={handleOpenDialog}
-              >
-                إنشاء أول فاتورة
-              </Button>
+               <Button
+                 variant="outlined"
+                 startIcon={<Add />}
+                 onClick={handleOpenDialog}
+                 sx={{ borderRadius: 3, px: 4 }}
+               >
+                 إنشاء أول فاتورة
+               </Button>
             </Card>
           ) : (
             filteredInvoices.map((invoice) => {
@@ -389,12 +402,13 @@ export const InvoicesPage = () => {
                 <Card
                   key={invoice.id}
                   sx={{
-                    borderRadius: 2.5,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                    border:
-                      theme.palette.mode === "dark"
-                        ? "1px solid rgba(255,255,255,0.1)"
-                        : "none",
+                    borderRadius: 4,
+                    bgcolor: 'background.paper',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                    transition: 'all 0.2s ease-in-out',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 12px 30px rgba(0,0,0,0.08)' }
                   }}
                 >
                   <CardContent sx={{ p: 3 }}>
@@ -404,26 +418,35 @@ export const InvoicesPage = () => {
                       alignItems="flex-start"
                       sx={{ mb: 2.5 }}
                     >
-                      <Box>
-                        <Typography variant="body1" fontWeight={700}>
-                          {invoice.invoiceNumber}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {client?.name}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          display="block"
-                        >
-                          {dayjs(invoice.issueDate).format("DD MMM YYYY")}
-                        </Typography>
-                      </Box>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                         <Box sx={{ 
+                            width: 48, height: 48, borderRadius: 3, 
+                            bgcolor: invoice.status === 'paid' ? 'success.lighter' : 'primary.lighter',
+                            color: invoice.status === 'paid' ? 'success.main' : 'primary.main',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                         }}>
+                            <Receipt />
+                         </Box>
+                         <Box>
+                             <Typography variant="subtitle1" fontWeight={800}>
+                               {invoice.invoiceNumber}<Typography component="span" variant="caption" sx={{ ml: 1, px: 1, py: 0.5, bgcolor: 'action.hover', borderRadius: 1 }}>{dayjs(invoice.issueDate).format("DD/MM/YYYY")}</Typography>
+                             </Typography>
+                             <Typography variant="body2" color="text.secondary">
+                               {client?.name || 'عميل غير معروف'}
+                             </Typography>
+                             {invoice.addedBy && (
+                               <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.8, fontSize: '0.7rem' }}>
+                                 بواسطة: {invoice.addedBy}
+                               </Typography>
+                             )}
+                         </Box>
+                      </Stack>
+
                       <Stack alignItems="flex-end" spacing={0.5}>
                         <Typography
                           variant="h6"
                           fontWeight={800}
-                          color="primary"
+                          sx={{ color: theme.palette.mode === 'dark' ? 'white' : 'black' }}
                         >
                           {formatCurrency(invoice.total)}
                         </Typography>
@@ -435,116 +458,63 @@ export const InvoicesPage = () => {
                               ? "متأخرة"
                               : invoice.status === "partially_paid"
                               ? "جزئية"
-                              : "نشطة"
+                              : "مسودة"
                           }
                           size="small"
-                          color={
-                            invoice.status === "paid"
-                              ? "success"
-                              : invoice.status === "overdue"
-                              ? "error"
-                              : "default"
-                          }
-                          sx={{ height: 22, fontSize: "0.7rem" }}
+                          sx={{ 
+                             height: 24, fontSize: "0.75rem", fontWeight: 700, borderRadius: 1.5,
+                             bgcolor: invoice.status === 'paid' ? '#dcfce7' : invoice.status === 'overdue' ? '#fee2e2' : '#f1f5f9',
+                             color: invoice.status === 'paid' ? '#166534' : invoice.status === 'overdue' ? '#991b1b' : '#334155'
+                          }}
                         />
                       </Stack>
                     </Stack>
 
-                    <Divider sx={{ my: 2.5 }} />
+                    <Divider sx={{ borderStyle: 'dashed', my: 2 }} />
 
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      gutterBottom
-                      display="block"
-                      sx={{ mb: 1.5 }}
-                    >
-                      العناصر:
-                    </Typography>
-                    <Stack spacing={1.5} sx={{ mb: 2.5 }}>
-                      {invoice.items.slice(0, 2).map((item, idx) => (
-                        <Stack
-                          key={`${invoice.id}-item-${idx}-${item.id}`}
-                          direction="row"
-                          justifyContent="space-between"
-                        >
-                          <Typography variant="caption">
-                            • {item.description} ({item.quantity})
-                          </Typography>
-                          <Typography variant="caption" fontWeight={600}>
-                            {formatCurrency(item.total)}
-                          </Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                       <Typography variant="body2" color="text.secondary">
+                          {invoice.items.length} عناصر
+                       </Typography>
+                       
+                        {/* Action Buttons */}
+                        <Stack direction="row" spacing={1}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoice(invoice);
+                              setPreviewDialogOpen(true);
+                            }}
+                            sx={{ bgcolor: 'action.hover', borderRadius: 2 }}
+                          >
+                            <Visibility fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                             size="small"
+                             onClick={(e) => {
+                              e.stopPropagation();
+                              if (client) {
+                                generateInvoicePDF(invoice, client);
+                              }
+                            }}
+                             sx={{ bgcolor: 'action.hover', borderRadius: 2, color: 'primary.main' }}
+                          >
+                             <PictureAsPdf fontSize="small" />
+                          </IconButton>
+                           <IconButton
+                             size="small"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               if (window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟")) {
+                                 deleteInvoice(invoice.id);
+                               }
+                             }}
+                             sx={{ bgcolor: 'fee2e2', borderRadius: 2, color: 'error.main', '&:hover': { bgcolor: '#fecaca' } }}
+                           >
+                             <Delete fontSize="small" />
+                           </IconButton>
                         </Stack>
-                      ))}
-                      {invoice.items.length > 2 && (
-                        <Typography variant="caption" color="text.secondary">
-                          + {invoice.items.length - 2} عنصر آخر
-                        </Typography>
-                      )}
-                    </Stack>
-
-                    {/* Action Buttons */}
-                    <Stack
-                      direction="row"
-                      spacing={2}
-                      sx={{
-                        mt: 2.5,
-                        pt: 2.5,
-                        borderTop: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<Visibility />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedInvoice(invoice);
-                          setPreviewDialogOpen(true);
-                        }}
-                        sx={{ flexGrow: 1, borderRadius: 1.5 }}
-                      >
-                        معاينة
-                      </Button>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (client) {
-                            generateInvoicePDF(invoice, client);
-                          }
-                        }}
-                        sx={{
-                          borderRadius: 1.5,
-                          width: 40,
-                          height: 40,
-                          marginLeft: "8px",
-                        }}
-                      >
-                        <PictureAsPdf fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (
-                            window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟")
-                          ) {
-                            deleteInvoice(invoice.id);
-                          }
-                        }}
-                        sx={{
-                          borderRadius: 1.5,
-                          width: 40,
-                          height: 40,
-                          marginLeft: "8px",
-                        }}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
                     </Stack>
                   </CardContent>
                 </Card>
@@ -564,20 +534,20 @@ export const InvoicesPage = () => {
         >
           <Box
             sx={{
-              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+              background: "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)",
               color: "white",
-              p: 2,
+              p: 3,
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2}>
               <IconButton
                 onClick={() => setDialogOpen(false)}
-                sx={{ color: "white" }}
+                sx={{ color: "white", bgcolor: 'rgba(255,255,255,0.1)' }}
               >
                 <ArrowBack />
               </IconButton>
               <Typography variant="h6" fontWeight={700}>
-                إنشاء فاتورة
+                إنشاء فاتورة جديدة
               </Typography>
             </Stack>
           </Box>

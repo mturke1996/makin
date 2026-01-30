@@ -17,6 +17,7 @@ import {
   Menu,
   MenuItem,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -30,9 +31,11 @@ import {
   Logout,
   AccountCircle,
 } from '@mui/icons-material';
+import { Icon } from '@iconify/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { BackupDialog } from './BackupDialog';
 
 const drawerWidth = 260;
 
@@ -48,6 +51,7 @@ export const Layout = ({ children }: LayoutProps) => {
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [backupDialogOpen, setBackupDialogOpen] = useState(false);
   
   const themeMode = useThemeStore((state) => state.mode);
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
@@ -83,7 +87,7 @@ export const Layout = ({ children }: LayoutProps) => {
     <Box>
       <Toolbar>
         <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
-          DebtFlow Pro
+          Makin Company
         </Typography>
       </Toolbar>
       <Divider />
@@ -151,12 +155,24 @@ export const Layout = ({ children }: LayoutProps) => {
           </IconButton>
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            نظام إدارة الديون والفواتير
+            شركة مكين للخدمات الهندسية
           </Typography>
 
-          <IconButton color="inherit" onClick={toggleTheme} sx={{ marginLeft: '8px' }}>
-            {themeMode === 'dark' ? <Brightness7 /> : <Brightness4 />}
-          </IconButton>
+          <Tooltip title="النسخ الاحتياطي">
+            <IconButton 
+              color="inherit" 
+              onClick={() => setBackupDialogOpen(true)} 
+              sx={{ marginLeft: '8px' }}
+            >
+              <Icon icon="mdi:database-export" width={24} height={24} />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title={themeMode === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}>
+            <IconButton color="inherit" onClick={toggleTheme} sx={{ marginLeft: '8px' }}>
+              {themeMode === 'dark' ? <Brightness7 /> : <Brightness4 />}
+            </IconButton>
+          </Tooltip>
 
           <IconButton color="inherit" onClick={handleMenuClick} sx={{ marginLeft: '8px' }}>
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
@@ -233,6 +249,12 @@ export const Layout = ({ children }: LayoutProps) => {
       >
         {children}
       </Box>
+
+      {/* Backup Dialog */}
+      <BackupDialog 
+        open={backupDialogOpen} 
+        onClose={() => setBackupDialogOpen(false)} 
+      />
     </Box>
   );
 };

@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDataStore } from '@/store/useDataStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -56,6 +57,7 @@ type ClientFormData = z.infer<typeof clientSchema>;
 export const ClientsPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const user = useAuthStore((state) => state.user);
   const { clients, expenses, standaloneDebts, payments, addClient, updateClient } = useDataStore();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,65 +158,86 @@ export const ClientsPage = () => {
       {/* Header */}
       <Box
         sx={{
-          background: theme.palette.mode === 'light' 
-            ? 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)'
-            : 'linear-gradient(135deg, #42a5f5 0%, #1976d2 100%)',
+          background: theme.palette.mode === 'dark' 
+            ? 'linear-gradient(135deg, #0f172a 0%, #000000 100%)'
+            : 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
           pt: 3,
-          pb: 4,
+          pb: 6,
           px: 2,
-          borderRadius: '0 0 32px 32px',
-          boxShadow: '0 8px 32px rgba(25, 118, 210, 0.25)',
+          borderBottomLeftRadius: 32,
+          borderBottomRightRadius: 32,
+          boxShadow: theme.palette.mode === 'dark' 
+             ? '0 10px 40px -10px rgba(0,0,0,0.5)'
+             : '0 10px 40px -10px rgba(59, 130, 246, 0.1)',
+          position: 'relative',
+          overflow: 'hidden',
+          mb: 3
         }}
       >
-        <Container maxWidth="sm">
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-            <IconButton onClick={() => navigate('/')} sx={{ color: 'white', marginLeft: '8px' }}>
-              <ArrowBack />
-            </IconButton>
-            <Typography variant="h5" fontWeight={800} sx={{ color: 'white', flexGrow: 1 }}>
-              العملاء ({clients.length})
-            </Typography>
-            <Button
+        {/* Abstract Background Shapes */}
+
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+             <Stack direction="row" alignItems="center" spacing={2}>
+                <IconButton onClick={() => navigate('/')} 
+                  sx={{ 
+                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'white',
+                     backdropFilter: 'blur(10px)',
+                     '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'white' }
+                  }}>
+                  <ArrowBack />
+                </IconButton>
+                <Box>
+                   <Typography variant="h5" fontWeight={800} color="text.primary">
+                     العملاء
+                   </Typography>
+                   <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                     {clients.length} عميل نشط
+                   </Typography>
+                </Box>
+             </Stack>
+             
+             <Button
               variant="contained"
               onClick={() => handleOpenDialog()}
-              sx={{
-                bgcolor: 'white',
-                color: 'primary.main',
-                fontWeight: 700,
-                '&:hover': { 
-                  bgcolor: 'rgba(255,255,255,0.95)',
-                  transform: 'scale(1.05)',
-                },
-                borderRadius: 2.5,
-                px: 2.5,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                transition: 'all 0.2s',
-              }}
               startIcon={<Add />}
+              sx={{
+                borderRadius: 50,
+                px: 3, py: 1,
+                background: theme.palette.primary.gradient,
+                boxShadow: '0 4px 15px rgba(37, 99, 235, 0.3)',
+                textTransform: 'none',
+              }}
             >
-              جديد
+              عميل جديد
             </Button>
           </Stack>
 
-          {/* Search */}
+          {/* Search Bar - Glassmorphism */}
           <TextField
             fullWidth
             placeholder="ابحث عن عميل بالاسم أو الهاتف..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             sx={{
-              mt: 2.5,
               '& .MuiOutlinedInput-root': {
-                bgcolor: 'white',
-                borderRadius: 3,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                bgcolor: theme.palette.background.glass,
+                backdropFilter: 'blur(12px)',
+                borderRadius: 4,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)'}`,
+                transition: 'all 0.2s',
+                '&.Mui-focused': {
+                   boxShadow: '0 8px 30px rgba(37, 99, 235, 0.15)',
+                   borderColor: theme.palette.primary.main
+                },
                 '& fieldset': { border: 'none' },
               },
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search sx={{ color: 'text.secondary' }} />
+                  <Search sx={{ color: theme.palette.primary.main }} />
                 </InputAdornment>
               ),
             }}
@@ -223,24 +246,22 @@ export const ClientsPage = () => {
       </Box>
 
       {/* Clients List */}
-      <Container maxWidth="sm" sx={{ mt: -2 }}>
-        <Stack spacing={3.5}>
+      <Container maxWidth="md">
+        <Stack spacing={2}>
           {filteredClients.length === 0 ? (
-            <Card sx={{ borderRadius: 2.5, textAlign: 'center', py: 6, bgcolor: 'background.paper' }}>
-              <People sx={{ fontSize: 60, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+               <Box sx={{ 
+                  width: 120, height: 120, borderRadius: '50%', 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  mx: 'auto', mb: 3
+               }}>
+                  <People sx={{ fontSize: 60, opacity: 0.3 }} />
+               </Box>
+              <Typography variant="h6" color="text.secondary" fontWeight={700}>
                 لا يوجد عملاء
               </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Add />}
-                onClick={() => handleOpenDialog()}
-                sx={{ mt: 2, borderRadius: 2 }}
-              >
-                إضافة أول عميل
-              </Button>
-            </Card>
+            </Box>
           ) : (
             filteredClients.map((client) => {
               return (
@@ -248,22 +269,17 @@ export const ClientsPage = () => {
                   key={client.id}
                   onClick={() => navigate(`/clients/${client.id}`)}
                   sx={{
-                    borderRadius: 3,
-                    boxShadow: theme.palette.mode === 'light'
-                      ? '0 4px 20px rgba(0,0,0,0.08)'
-                      : '0 4px 20px rgba(0,0,0,0.4)',
+                    borderRadius: 4,
+                    // Use theme-defined glassmorphism or fallback
+                    background: theme.palette.background.paper,
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    bgcolor: 'background.paper',
-                    border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: '1px solid transparent',
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
                     '&:hover': {
-                      boxShadow: theme.palette.mode === 'light'
-                        ? '0 12px 40px rgba(0,0,0,0.15)'
-                        : '0 12px 40px rgba(0,0,0,0.5)',
-                      transform: 'translateY(-4px) scale(1.01)',
-                    },
-                    '&:active': {
-                      transform: 'scale(0.98)',
+                      transform: 'translateY(-2px)',
+                      borderColor: theme.palette.primary.main,
+                      boxShadow: '0 10px 30px -5px rgba(37, 99, 235, 0.15)'
                     },
                   }}
                 >
