@@ -4,6 +4,7 @@ import { useDataStore } from '../../../stores/useDataStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { computeBoqLineTotal } from '../../../core/finance/projectBudget';
 import { clearField } from '../../../services/firebaseService';
+import { readProfitPercentage } from '../../../core/finance/profitRule';
 import { expenseHasQuantityLine, parseDecimalInput } from '../../../core/utils-formatters';
 import type {
   BoqLineItem,
@@ -390,14 +391,15 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
       });
     }, null);
 
-  /** Agreed percentage + its base. Same bounds as before: 0 up to (not including) 100. */
+  /** Agreed percentage + its base: from 0 up to (not including) 100; an emptied field removes the percentage. */
   const saveProfit = async (percentage: string, base: ClientProfitBase): Promise<boolean> => {
     if (!clientId) return false;
-    const pct = parseDecimalInput(percentage);
-    if (pct == null || pct < 0 || pct >= 100) {
-      toast.error('النسبة يجب أن تكون بين 0 وأقل من 100');
+    const read = readProfitPercentage(percentage);
+    if (!read.ok) {
+      toast.error(read.message);
       return false;
     }
+    const pct = read.value;
     return attempt(async () => {
       await updateClient(clientId, { profitPercentage: pct, profitBase: base });
       window.dispatchEvent(new Event('profitPercentageUpdated'));

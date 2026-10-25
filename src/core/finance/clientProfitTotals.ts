@@ -1,4 +1,5 @@
 import type { Client, ClientProfitBase, Expense, Payment } from '../../types';
+import { roundMoney } from './money';
 
 /** أساس احتساب النسبة الافتراضي عند عدم تحديده في سجل العميل. */
 export const DEFAULT_PROFIT_BASE: ClientProfitBase = 'expenses';
@@ -20,7 +21,8 @@ export function computeProfitAmount(
 ): number {
   if (!(pct > 0)) return 0;
   const baseAmount = base === 'payments' ? totals.totalPaid : totals.totalExpenses;
-  return baseAmount > 0 ? (baseAmount * pct) / 100 : 0;
+  // To the thousandth, like every other amount, so 33.3% of 73,390 is not 24,438.087000000003.
+  return baseAmount > 0 ? roundMoney((baseAmount * pct) / 100) : 0;
 }
 
 export type ClientAccountSummary = {

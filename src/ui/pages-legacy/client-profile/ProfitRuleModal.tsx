@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { Payment, ReceiptLong } from '../../../design-system/icons';
 import { Amount, Badge, Button, Input, Modal } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
-import { parseDecimalInput } from '../../../core/utils-formatters';
+import { readProfitPercentage } from '../../../core/finance/profitRule';
 import { computeProfitAmount } from '../../../core/finance/clientProfitTotals';
 import type { ClientProfitBase } from '../../../types';
 import { ChoiceOption } from './FormSheetKit';
@@ -53,7 +53,8 @@ export function ProfitRuleModal({
   onSave: () => void;
 }) {
   const groupName = useId();
-  const enteredPct = parseDecimalInput(percentage) ?? 0;
+  const read = readProfitPercentage(percentage);
+  const enteredPct = read.ok ? read.value : 0;
   const baseAmount = base === 'payments' ? totals.totalPaid : totals.totalExpenses;
   const previewProfit = computeProfitAmount(base, enteredPct, totals);
 
@@ -103,7 +104,8 @@ export function ProfitRuleModal({
           value={percentage}
           onChange={(e) => onPercentageChange(e.target.value)}
           placeholder="مثال: 10"
-          hint="أدخل نسبة بين 0 وأقل من 100"
+          hint="أدخل نسبة بين 0 وأقل من 100، أو اتركها فارغة لإلغاء النسبة"
+          error={read.ok ? undefined : read.message}
           fieldSize="lg"
           rightIcon={<span className="text-base font-semibold text-fg-muted">%</span>}
         />
@@ -132,7 +134,7 @@ export function ProfitRuleModal({
         </dl>
 
         <div className="flex gap-3">
-          <Button className="flex-[2]" onClick={onSave}>
+          <Button className="flex-[2]" onClick={onSave} disabled={!read.ok}>
             حفظ النسبة
           </Button>
           <Button variant="outline" className="flex-1" onClick={onClose}>

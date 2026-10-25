@@ -72,6 +72,40 @@ describe('computeClientAccount: percentage from payments', () => {
   });
 });
 
+describe('the percentage as an amount', () => {
+  it('is kept to the thousandth, never a float tail', () => {
+    expect(computeProfitAmount('expenses', 33.3, { totalExpenses: 73390, totalPaid: 0 })).toBe(24438.87);
+    expect(computeProfitAmount('expenses', 15, { totalExpenses: 73390, totalPaid: 0 })).toBe(11008.5);
+    expect(computeProfitAmount('payments', 7.77, { totalExpenses: 0, totalPaid: 1234.567 })).toBe(95.926);
+  });
+  it('is zero for no money, no percentage and bad numbers', () => {
+    expect(computeProfitAmount('expenses', 10, { totalExpenses: 0, totalPaid: 5 })).toBe(0);
+    expect(computeProfitAmount('payments', 10, { totalExpenses: 5, totalPaid: -20 })).toBe(0);
+    expect(computeProfitAmount('expenses', NaN, { totalExpenses: 100, totalPaid: 0 })).toBe(0);
+  });
+  it('follows the base the client was saved with, and falls back to expenses', () => {
+    const base = { totalExpenses: 1000, totalDebts: 0, totalPaid: 4000, profitPercentage: 10 };
+    expect(computeClientAccount({ ...base, profitBase: 'payments' }).profit).toBe(400);
+    expect(computeClientAccount({ ...base, profitBase: 'expenses' }).profit).toBe(100);
+    expect(computeClientAccount({ ...base }).profit).toBe(100);
+    expect(computeClientAccount({ ...base, profitBase: 'junk' as never }).profit).toBe(100);
+  });
+  it('is nothing at all when no percentage is set', () => {
+    for (const profitPercentage of [undefined, 0]) {
+      const a = computeClientAccount({ totalExpenses: 500, totalDebts: 100, totalPaid: 200, profitPercentage });
+      expect(a).toMatchObject({ profit: 0, agreedPercentageDeficit: 0, clientDeficit: 400, requiredCollection: 400, remaining: -400 });
+    }
+  });
+  it('collecting what is required closes the account, from either base', () => {
+    for (const profitBase of ['expenses', 'payments'] as const) for (const pct of [5, 12.5, 33.3]) for (const paid of [0, 3000, 9000]) {
+      const first = computeClientAccount({ totalExpenses: 10000, totalDebts: 500, totalPaid: paid, profitPercentage: pct, profitBase });
+      const after = computeClientAccount({ totalExpenses: 10000, totalDebts: 500, totalPaid: paid + first.requiredCollection, profitPercentage: pct, profitBase });
+      expect(after.remaining, `${profitBase} ${pct}% paid ${paid}`).toBeGreaterThanOrEqual(-0.002);
+      expect(after.requiredCollection).toBeLessThanOrEqual(0.002);
+    }
+  });
+});
+
 describe('computeClientsProfitSummary', () => {
   const client = (id: string, pct: number, base?: 'expenses' | 'payments'): Client => ({
     id, name: id, phone: '', address: '', type: 'company', profitPercentage: pct, profitBase: base, createdAt: '', updatedAt: '',
