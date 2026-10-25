@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Add, Check, HourglassEmpty, CancelOutlined, Receipt, Search, TrendingDown } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import toast from 'react-hot-toast';
 import { EXPENSE_CLOSED_MESSAGE, expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
 import { approvalCounts, expensePhrase, isAwaitingApproval, matchesApprovalFilter, type ApprovalFilter } from '../../core/finance/expenseApproval';
@@ -46,7 +46,7 @@ import { dayKey, dayLabel, groupBy, isSameMonthAsToday, matchesQuery, sumAmounts
 export const ExpensesPage = () => {
   const navigate = useNavigate();
   const access = useAccess();
-  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, projectPhases, isLoading } = useDataStore();
+  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, projectPhases, isLoading } = useDataSlice('expenses', 'addExpense', 'updateExpense', 'deleteExpense', 'approveExpenses', 'rejectExpense', 'clients', 'projectPhases', 'isLoading');
   const user = useAuthStore((s) => s.user);
   const myFundStats = useMyFundStats();
 

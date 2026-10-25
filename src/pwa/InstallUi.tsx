@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   AddBoxOutlined,
   Bolt,
@@ -15,7 +15,6 @@ import {
   WifiOff,
   Menu as MenuIcon,
 } from '../design-system/icons';
-import qrcode from 'qrcode-generator';
 import toast from 'react-hot-toast';
 import { useBrand } from '../config/BrandProvider';
 import { LogoMark } from '../ui/brand/LogoMark';
@@ -123,20 +122,28 @@ export function InstallSteps({ env, className }: { env: InstallEnv; className?: 
 
 /** رمز QR لرابط التثبيت، لمسحه من الجوال. */
 export function InstallQr({ url, size = 168, className }: { url: string; size?: number; className?: string }) {
-  const path = useMemo(() => {
-    try {
-      const qr = qrcode(0, 'M');
-      qr.addData(url);
-      qr.make();
-      const n = qr.getModuleCount();
-      let d = '';
-      for (let r = 0; r < n; r++) {
-        for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
-      }
-      return { d, n };
-    } catch {
-      return null;
-    }
+  // The QR library is only needed on the install screens, so it is fetched when one of them is drawn, not with the app.
+  const [path, setPath] = useState<{ d: string; n: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void import('qrcode-generator')
+      .then(({ default: qrcode }) => {
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        const n = qr.getModuleCount();
+        let d = '';
+        for (let r = 0; r < n; r++) {
+          for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+        }
+        if (alive) setPath({ d, n });
+      })
+      .catch(() => {
+        if (alive) setPath(null);
+      });
+    return () => {
+      alive = false;
+    };
   }, [url]);
   if (!path) return null;
   const pad = 2;

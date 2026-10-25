@@ -9,7 +9,7 @@ vi.mock('react-hot-toast', () => ({ default: { error: mocks.error, success: vi.f
 vi.mock('../../../config/firebase', () => ({ firebaseConfig: { projectId: 'demo-profit' } }));
 vi.mock('../../../services/firebaseService', () => ({ clearField: null }));
 vi.mock('../../../stores/useAuthStore', () => ({ useAuthStore: (select: (s: unknown) => unknown) => select({ user: { id: 'u1', displayName: 'م. أحمد' } }) }));
-vi.mock('../../../stores/useDataStore', () => ({ useDataStore: () => ({ workers: [], updateClient: mocks.updateClient }) }));
+vi.mock('../../../stores/useDataStore', () => ({ useDataSlice: () => ({ workers: [], updateClient: mocks.updateClient }) }));
 
 type Saves = ReturnType<typeof useClientSaves>;
 let root: Root;

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { useDataStore } from '../../../stores/useDataStore';
+import { useDataStore, useDataSlice } from '../../../stores/useDataStore';
 import { useAccess } from '../../../core/access/useAccess';
 import { EXPENSE_CLOSED_MESSAGE, isExpenseLocked } from '../../../core/finance/expenseLock';
 import { formatCurrencyDisplay, formatDate } from '../../../core/utils-formatters';
@@ -25,17 +25,7 @@ export function useClientDeletes({ closeForm }: { closeForm: () => void }) {
   const navigate = useNavigate();
   const access = useAccess();
   const { ask, modal, isOpen: confirmOpen } = useConfirm();
-  const {
-    deleteExpense,
-    deletePayment,
-    deleteStandaloneDebt,
-    deleteUserBalance,
-    deleteProjectPhase,
-    deleteBoqItem,
-    deletePaymentMilestone,
-    deleteSiteReport,
-    deleteClient,
-  } = useDataStore();
+  const { deleteExpense, deletePayment, deleteStandaloneDebt, deleteUserBalance, deleteProjectPhase, deleteBoqItem, deletePaymentMilestone, deleteSiteReport, deleteClient } = useDataSlice('deleteExpense', 'deletePayment', 'deleteStandaloneDebt', 'deleteUserBalance', 'deleteProjectPhase', 'deleteBoqItem', 'deletePaymentMilestone', 'deleteSiteReport', 'deleteClient');
 
   const afterClose = (fromForm?: boolean) => (fromForm ? closeForm : undefined);
 

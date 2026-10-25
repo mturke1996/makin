@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Add, PeopleOutline, Search } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import {
   Button, EmptyState, Input, ListGroup, PageHeader, PageShell, Segmented, Skeleton,
@@ -43,7 +43,7 @@ function clientCountLabel(n: number): string {
 
 export const ClientsPage = () => {
   const navigate = useNavigate();
-  const { clients, expenses, payments, standaloneDebts, isLoading } = useDataStore();
+  const { clients, expenses, payments, standaloneDebts, isLoading } = useDataSlice('clients', 'expenses', 'payments', 'standaloneDebts', 'isLoading');
   const access = useAccess();
   const canManage = access.can('clients.manage');
   // Per-client figures need every expense, payment and debt of the client; without all three the rows show identity only.

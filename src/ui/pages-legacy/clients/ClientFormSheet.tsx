@@ -3,7 +3,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DeleteOutline } from '../../../design-system/icons';
 import { Button, Input, Modal, Segmented, Sheet, Textarea } from '../../../design-system/primitives';
-import { useDataStore } from '../../../stores/useDataStore';
+import { useDataSlice } from '../../../stores/useDataStore';
 import { useAccess } from '../../../core/access/useAccess';
 import { clearField } from '../../../services/firebaseService';
 import { ClientProjectFields } from '../client-profile/details/ClientProjectFields';
@@ -32,7 +32,7 @@ interface ClientFormSheetProps {
 
 /** Add / edit a client. Keeps what was typed when saving fails. */
 export function ClientFormSheet({ open, onClose, client, onSaved }: ClientFormSheetProps) {
-  const { addClient, updateClient, deleteClient } = useDataStore();
+  const { addClient, updateClient, deleteClient } = useDataSlice('addClient', 'updateClient', 'deleteClient');
   const access = useAccess();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Add, ArrowBack, Receipt } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
 import { formatCurrencyDisplay, formatDate } from '../../core/utils-formatters';
@@ -37,7 +37,7 @@ export function ExpenseInvoicesPage() {
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
   const canManage = access.can('expenses.edit.all');
-  const { expenseInvoices, expenses, clients, isLoading, createExpenseInvoiceBatch, deleteExpenseInvoice } = useDataStore();
+  const { expenseInvoices, expenses, clients, isLoading, createExpenseInvoiceBatch, deleteExpenseInvoice } = useDataSlice('expenseInvoices', 'expenses', 'clients', 'isLoading', 'createExpenseInvoiceBatch', 'deleteExpenseInvoice');
 
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<{ open: boolean; invoice: ExpenseInvoice | null }>({ open: false, invoice: null });

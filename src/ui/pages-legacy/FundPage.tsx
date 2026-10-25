@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useGlobalFundStore } from '../../stores/useGlobalFundStore';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
 import { Button, EmptyState, PageShell } from '../../design-system/primitives';
@@ -38,7 +38,7 @@ export const FundPage = () => {
   /** قائمة المستخدمين تُقرأ فقط لمن يرى عهد الجميع (وهو من يحتاجها) وتسمح له قواعد الخادم بقراءتها. */
   const canListUsers = canManage && access.canViewDirectory;
   const { transactions, addTransaction, updateTransaction, deleteTransaction, isLoading: fundLoading } = useGlobalFundStore();
-  const { expenses, clients, isLoading: dataLoading } = useDataStore();
+  const { expenses, clients, isLoading: dataLoading } = useDataSlice('expenses', 'clients', 'isLoading');
 
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();

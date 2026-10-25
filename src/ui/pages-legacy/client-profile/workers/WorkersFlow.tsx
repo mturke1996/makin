@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useDataStore } from '../../../../stores/useDataStore';
+import { useDataSlice } from '../../../../stores/useDataStore';
 import { useAuthStore } from '../../../../stores/useAuthStore';
 import { useAccess } from '../../../../core/access/useAccess';
 import { formatCurrencyDisplay } from '../../../../core/utils-formatters';
@@ -54,7 +54,7 @@ interface WorkersFlowProps {
 export function WorkersFlow({
   open, onClose, clientId, clientName, entries, fundStats, pdfLoading, onDownloadPdf, onSharePdf, onStatementPdf, onShareStatement, initialWorkerId,
 }: WorkersFlowProps) {
-  const { addWorker, updateWorker, addExpense, updateExpense, deleteExpense, isLoading } = useDataStore();
+  const { addWorker, updateWorker, addExpense, updateExpense, deleteExpense, isLoading } = useDataSlice('addWorker', 'updateWorker', 'addExpense', 'updateExpense', 'deleteExpense', 'isLoading');
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
 

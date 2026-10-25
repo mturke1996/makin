@@ -16,7 +16,7 @@ import {
   Segmented,
   Select,
 } from '../../design-system/primitives';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import {
   buildWorkforce,
@@ -27,7 +27,7 @@ import { summarizeWorkerLedgers } from '../../core/finance/workerLedger';
 import { LEDGER_STATUS_META } from '../pages-legacy/client-profile/workers/format';
 
 export function WorkersPage() {
-  const { workers, expenses, clients, isLoading } = useDataStore();
+  const { workers, expenses, clients, isLoading } = useDataSlice('workers', 'expenses', 'clients', 'isLoading');
   const access = useAccess();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');

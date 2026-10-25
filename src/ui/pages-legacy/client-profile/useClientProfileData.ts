@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import dayjs from 'dayjs';
-import { useDataStore } from '../../../stores/useDataStore';
+import { useDataSlice } from '../../../stores/useDataStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useGlobalFundStore } from '../../../stores/useGlobalFundStore';
 import { useAccess } from '../../../core/access/useAccess';
@@ -26,19 +26,7 @@ export function useClientProfileData(clientId: string | undefined) {
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
   const fundTransactions = useGlobalFundStore((s) => s.transactions);
-  const {
-    clients,
-    payments,
-    expenses,
-    standaloneDebts,
-    workers,
-    userBalances,
-    projectPhases,
-    boqItems,
-    siteReports,
-    paymentMilestones,
-    isLoading,
-  } = useDataStore();
+  const { clients, payments, expenses, standaloneDebts, workers, userBalances, projectPhases, boqItems, siteReports, paymentMilestones, isLoading } = useDataSlice('clients', 'payments', 'expenses', 'standaloneDebts', 'workers', 'userBalances', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'isLoading');
 
   const client = clients.find((c) => c.id === clientId);
 

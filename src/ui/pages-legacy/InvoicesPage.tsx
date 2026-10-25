@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Add, Receipt, Search } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import {
   Amount, Button, EmptyState, FigureStrip, Input, ListGroup, PageHeader, PageShell, Segmented, Skeleton,
@@ -43,7 +43,7 @@ function InvoicesSkeleton() {
 
 export const InvoicesPage = () => {
   const navigate = useNavigate();
-  const { invoices, clients, payments, isLoading } = useDataStore();
+  const { invoices, clients, payments, isLoading } = useDataSlice('invoices', 'clients', 'payments', 'isLoading');
   const access = useAccess();
   const canCreate = access.can('invoices.manage');
   // What was collected and what is left come from the payments; without them those figures are left out.

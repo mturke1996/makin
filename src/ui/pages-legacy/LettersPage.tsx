@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Add, DescriptionOutlined, Search } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import { downloadPdf, sharePdf } from '../../features/pdf/pdfService';
 import { LetterPDF } from '../../features/pdf/LetterPDF';
@@ -36,7 +36,7 @@ function LettersSkeleton() {
 
 export const LettersPage = () => {
   const { user } = useAuthStore();
-  const { clients, letters, addLetter, updateLetter, deleteLetter, isLoading } = useDataStore();
+  const { clients, letters, addLetter, updateLetter, deleteLetter, isLoading } = useDataSlice('clients', 'letters', 'addLetter', 'updateLetter', 'deleteLetter', 'isLoading');
   const access = useAccess();
   // Writing, editing and deleting letters all sit under `letters.manage`; the clients list needs `clients.view`.
   const canManage = access.can('letters.manage');

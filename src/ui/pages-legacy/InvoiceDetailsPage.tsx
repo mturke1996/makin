@@ -7,7 +7,7 @@ import {
 } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { PrintableInvoice } from '../../features/print/PrintableInvoice';
 import { InvoicePDF } from '../../features/pdf/InvoicePDF';
 import { downloadPdf, sharePdf } from '../../features/pdf/pdfService';
@@ -57,7 +57,7 @@ export const InvoiceDetailsPage = () => {
   // left" would just be the whole total.
   const hasPayments = access.can('payments.view');
   const canPay = access.can('payments.manage');
-  const { invoices, clients, payments, updateInvoice, deleteInvoice, addPayment, isLoading } = useDataStore();
+  const { invoices, clients, payments, updateInvoice, deleteInvoice, addPayment, isLoading } = useDataSlice('invoices', 'clients', 'payments', 'updateInvoice', 'deleteInvoice', 'addPayment', 'isLoading');
 
   const [actionsOpen, setActionsOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);

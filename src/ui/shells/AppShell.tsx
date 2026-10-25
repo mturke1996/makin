@@ -1,11 +1,12 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Sidebar } from '../nav/Sidebar';
 import { TopBar } from '../nav/TopBar';
 import { MobileBottomNav } from '../nav/MobileBottomNav';
 import { NotificationPanel } from '../notifications/NotificationPanel';
 import { SmartAlertsBootstrap } from '../notifications/SmartAlertsBootstrap';
 import { InstallBanner } from '../../pwa/InstallUi';
+import { PageFallback } from '../feedback/PageFallback';
 
 /**
  * AppShell: authenticated layout.
@@ -34,7 +35,10 @@ export function AppShell() {
           lg+: .app-shell-main gets overflow-y auto + min-height 0 so the sidebar/content split scrolls correctly.
         */}
         <main className="app-shell-main flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
-          <Outlet />
+          {/* The shell stays on screen while a page's code loads: only this block waits. */}
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <MobileBottomNav />
