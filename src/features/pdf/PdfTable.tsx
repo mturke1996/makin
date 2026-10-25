@@ -1,10 +1,12 @@
 // @ts-nocheck
 /**
- * PdfTable — a quiet ledger table.
+ * PdfTable — a clear, printable ledger table.
  *
- * - Header: bold words between a hairline above and an ink rule below. No fill, no colour block.
- * - Rows: hairline separators only. Amounts are set in even-width digits, right-aligned, with one number of
- *   decimals per column so the decimal points line up; the currency is named once, in the header.
+ * - Header: bold ink words on a warm tint, between an ink rule above and a gold rule below, so it is unmistakable
+ *   on paper and on screen without a dark block.
+ * - Rows: alternating tints, hairline separators and a light frame on both sides, so the eye can follow a row
+ *   across the page. Amounts are set in even-width digits, right-aligned, with one number of
+ *   decimals per column so the decimal points line up; the currency is named once, above the table.
  * - Columns are given in reading order (first = rightmost); money ends up on the physical left.
  * - A cell of kind `stack` carries a title and a muted second line, so a category or a worker
  *   sits under the description instead of taking a column of its own.
@@ -42,7 +44,7 @@ const alignOf = (kind: PdfColKind = 'text') => (kind === 'num' || kind === 'date
 
 export function PdfTh({ flex, kind = 'text', children }: { flex: number; kind?: PdfColKind; children: string }) {
   return (
-    <Text style={{ flex, color: INK.text, fontSize: 8.2, fontWeight: 'bold', textAlign: alignOf(kind), lineHeight: 1.35, fontFamily: FF, paddingLeft: 4 }}>
+    <Text style={{ flex, color: INK.text, fontSize: 8.4, fontWeight: 'bold', textAlign: alignOf(kind), lineHeight: 1.35, fontFamily: FF, paddingHorizontal: 5 }}>
       {ar(children)}
     </Text>
   );
@@ -52,7 +54,7 @@ function PdfTd({ flex, kind = 'text', color, bold, children }: { flex: number; k
   if (kind === 'stack') {
     const v: PdfStack = typeof children === 'object' && children ? children : { t: String(children ?? '') };
     return (
-      <View style={{ flex, alignItems: 'flex-end', paddingLeft: 4 }}>
+      <View style={{ flex, alignItems: 'flex-end', paddingHorizontal: 5 }}>
         <Text style={{ fontSize: 9, fontWeight: bold ? 'bold' : 'normal', color: color || INK.text, textAlign: 'right', lineHeight: 1.45, fontFamily: FF }}>{ar(v.t)}</Text>
         {v.s ? <Text style={{ fontSize: 7.6, color: INK.faint, textAlign: 'right', lineHeight: 1.5, marginTop: 1, fontFamily: FF }}>{ar(v.s)}</Text> : null}
       </View>
@@ -71,7 +73,7 @@ function PdfTd({ flex, kind = 'text', color, bold, children }: { flex: number; k
         color: color || (raw === '—' || raw === '-' ? INK.faint : INK.text),
         textAlign: alignOf(kind),
         lineHeight: isMulti ? 1.6 : 1.45,
-        paddingLeft: 4,
+        paddingHorizontal: 5,
       }}
     >
       {figures ? raw : raw === '—' ? raw : ar(raw)}
@@ -81,7 +83,7 @@ function PdfTd({ flex, kind = 'text', color, bold, children }: { flex: number; k
 
 function PdfTdMoney({ flex, amount, decimals, color, bold }: { flex: number; amount: number; decimals: number; color?: string; bold?: boolean }) {
   return (
-    <View style={{ flex, justifyContent: 'center', paddingLeft: 4 }}>
+    <View style={{ flex, justifyContent: 'center', paddingHorizontal: 5 }}>
       <PdfAmount amount={amount} decimals={decimals} bare size={9.2} bold={!!bold} color={color} />
     </View>
   );
@@ -89,14 +91,30 @@ function PdfTdMoney({ flex, amount, decimals, color, bold }: { flex: number; amo
 
 const headRow = {
   flexDirection: 'row',
-  paddingVertical: 7,
+  paddingVertical: 8,
   paddingHorizontal: 6,
-  alignItems: 'flex-end',
-  borderTopWidth: 0.6,
-  borderTopColor: INK.border,
-  borderBottomWidth: 1,
-  borderBottomColor: INK.text,
+  alignItems: 'center',
+  backgroundColor: INK.head,
+  borderTopWidth: 1,
+  borderTopColor: INK.text,
+  borderBottomWidth: 1.4,
+  borderBottomColor: INK.gold,
 };
+
+/** A body row: tinted on every other line, ruled below, and framed on both sides so the table reads as one block. */
+const bodyRow = (index: number, last: boolean) => ({
+  flexDirection: 'row',
+  paddingVertical: 8,
+  paddingHorizontal: 6,
+  alignItems: 'center',
+  backgroundColor: index % 2 === 1 ? INK.stripe : INK.white,
+  borderLeftWidth: 0.6,
+  borderLeftColor: INK.border,
+  borderRightWidth: 0.6,
+  borderRightColor: INK.border,
+  borderBottomWidth: last ? 0.9 : 0.5,
+  borderBottomColor: last ? INK.muted : INK.hair,
+});
 
 const numberOf = (val: any) => (typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, '')));
 
@@ -138,13 +156,14 @@ export function PdfTable({
   const repeat = repeatHeader ?? rows.length > 12;
   const whole = rows.length <= 6;
   const renderRow = (row, i) => (
-    <View key={i} style={{ flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 6, borderBottomWidth: 0.5, borderBottomColor: INK.hair, alignItems: 'flex-start' }} wrap={false}>
+    <View key={i} style={bodyRow(i, i === rows.length - 1)} wrap={false}>
       {cols.map((c) => {
         const kind = c.kind ?? 'text';
         const val = row[c.key] ?? '';
         if (kind === 'money') {
           const n = numberOf(val);
-          return <PdfTdMoney key={c.key} flex={c.flex} amount={Number.isFinite(n) ? n : 0} decimals={decimals[c.key]} color={moneyColor} bold={c.bold} />;
+          // A figure below zero (an overspent budget, a shortfall) is red unless the table sets its own colour.
+          return <PdfTdMoney key={c.key} flex={c.flex} amount={Number.isFinite(n) ? n : 0} decimals={decimals[c.key]} color={moneyColor ?? (n < 0 ? INK.danger : undefined)} bold={c.bold} />;
         }
         return <PdfTd key={c.key} flex={c.flex} kind={kind} bold={c.bold}>{val}</PdfTd>;
       })}
@@ -181,19 +200,19 @@ export function PdfTable({
         </View>
       )}
       {rows.length === 0 ? (
-        <Text style={{ fontSize: 9, color: INK.muted, textAlign: 'center', paddingVertical: 16, fontFamily: FF }}>{ar(emptyMessage)}</Text>
+        <Text style={{ fontSize: 9, color: INK.muted, textAlign: 'center', paddingVertical: 16, fontFamily: FF, borderWidth: 0.6, borderColor: INK.border, borderTopWidth: 0 }}>{ar(emptyMessage)}</Text>
       ) : (
         (repeat ? rows : rows.slice(1)).map((row, i) => renderRow(row, repeat ? i : i + 1))
       )}
 
       {footer ? (
-        <View style={{ flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 6, borderTopWidth: 1, borderTopColor: INK.text, alignItems: 'center' }} wrap={false} minPresenceAhead={PDF_PAGINATION.totalBar}>
+        <View style={{ flexDirection: 'row', paddingVertical: 9, paddingHorizontal: 6, backgroundColor: INK.panel, borderTopWidth: 1, borderTopColor: INK.text, borderBottomWidth: 1, borderBottomColor: INK.text, alignItems: 'center' }} wrap={false} minPresenceAhead={PDF_PAGINATION.totalBar}>
           {cols
             .filter((c) => c.kind === 'money' && footer.values[c.key] != null)
             .map((c) => (
               <PdfTdMoney key={c.key} flex={c.flex} amount={footer.values[c.key]} decimals={decimals[c.key]} color={footer.colors?.[c.key]} bold />
             ))}
-          <Text style={{ flex: 1, fontSize: 9, fontWeight: 'bold', color: INK.text, textAlign: 'right', fontFamily: FF }}>{ar(footer.label)}</Text>
+          <Text style={{ flex: 1, fontSize: 9.4, fontWeight: 'bold', color: INK.text, textAlign: 'right', fontFamily: FF, paddingHorizontal: 5 }}>{ar(footer.label)}</Text>
         </View>
       ) : null}
     </View>

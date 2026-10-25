@@ -25,6 +25,7 @@ import {
   makePdfStyles,
 } from './pdfKit';
 import { PdfTable, type PdfColumn } from './PdfTable';
+import { shareOfTotal, usedPercentLabel } from './pdfPercent';
 import { workerSummaryRow } from './workerReportModel';
 import { WorkerStatementPages } from './WorkerStatementPDF';
 
@@ -115,7 +116,6 @@ const BUDGET_COLS: PdfColumn[] = [
 ];
 
 const BUDGET_STATE_LABEL = { over: 'تجاوز', near: 'قارب النفاد', unbudgeted: 'بلا تقدير', ok: '', none: '' } as const;
-const usedText = (ratio: number | null) => (ratio == null ? '—' : `${Math.round(ratio)}%`);
 
 const phaseBudgetRow = (r: PhaseBudgetRow) => {
   const state = budgetState(r.budget, r.actual);
@@ -124,7 +124,7 @@ const phaseBudgetRow = (r: PhaseBudgetRow) => {
     budget: r.budget,
     actual: r.actual,
     left: r.variance,
-    used: usedText(r.budget > 0 ? (r.actual / r.budget) * 100 : null),
+    used: usedPercentLabel(r.actual, r.budget),
   };
 };
 
@@ -133,7 +133,7 @@ const categoryBudgetRow = (r: CategoryBudgetRow) => ({
   budget: r.budget,
   actual: r.actual,
   left: r.state === 'unbudgeted' ? 0 : r.variance,
-  used: usedText(r.ratio),
+  used: usedPercentLabel(r.actual, r.budget),
 });
 
 /** The agreed payment schedule: what was agreed, by when, how much of it is covered. */
@@ -180,12 +180,12 @@ const ClientCard = ({ s, client, period }: { s: any; client: Client; period?: st
   />
 );
 
-const Breakdown = ({ s, title, hint, groups, total, color }: any) =>
+const Breakdown = ({ s, title, hint, groups, color }: any) =>
   groups.length > 1 ? (
     <View wrap={false}>
       <PdfSectionHeading s={s}>{title}</PdfSectionHeading>
       {hint ? <Text style={{ fontSize: 7.8, color: INK.faint, textAlign: 'right', marginBottom: 6, fontFamily: PDF_FONT_FAMILY }}>{ar(hint)}</Text> : null}
-      <PdfBreakdown rows={groups} total={total} color={color} />
+      <PdfBreakdown rows={groups} color={color} />
     </View>
   ) : null;
 
@@ -214,10 +214,10 @@ export const ExpensesPDF: React.FC<{ client: Client; expenses: Expense[]; total:
             },
             { label: 'عدد السجلات', value: expenses.length, count: true },
             { label: 'متوسط السجل', value: average },
-            { label: 'أكبر تصنيف', value: groups[0]?.label ?? '—', count: true, hint: groups[0] && total > 0 ? `${Math.round((groups[0].amount / total) * 100)} بالمئة من الإجمالي` : undefined },
+            { label: 'أكبر تصنيف', value: groups[0]?.label ?? '—', count: true, hint: groups[0] && total > 0 ? `${shareOfTotal(groups.map((g) => g.amount))[0]} بالمئة من الإجمالي` : undefined },
           ]}
         />
-        <Breakdown s={s} title="توزيع المصروفات حسب التصنيف" groups={groups} total={total} color={INK.text} />
+        <Breakdown s={s} title="توزيع المصروفات حسب التصنيف" groups={groups} color={INK.text} />
         <PdfTable s={s} heading="تفاصيل المصروفات" hint={countWord(expenses.length, REC)} columns={EXP_COLS} rows={expenses.map(expenseRow)} />
       </PdfPage>
     </Document>
@@ -245,7 +245,7 @@ export const PaymentsPDF: React.FC<{ client: Client; payments: Payment[]; total:
             { label: 'آخر دفعة', value: last ? arDate(last.paymentDate) : '—', count: true, hint: last ? formatCurrencyDisplay(last.amount) : undefined },
           ]}
         />
-        <Breakdown s={s} title="توزيع المدفوعات حسب الطريقة" groups={groups} total={total} color={INK.success} />
+        <Breakdown s={s} title="توزيع المدفوعات حسب الطريقة" groups={groups} color={INK.success} />
         <PdfTable s={s} heading="تفاصيل الدفعات" hint={countWord(payments.length, PAYW)} columns={PAY_COLS} rows={payments.map(paymentRow)} />
       </PdfPage>
     </Document>
@@ -364,7 +364,7 @@ export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, 
           </Text>
         ) : null}
 
-        <Breakdown s={s} title="توزيع المصروفات حسب التصنيف" groups={groups} total={summary.totalExpenses} color={INK.text} />
+        <Breakdown s={s} title="توزيع المصروفات حسب التصنيف" groups={groups} color={INK.text} />
 
         {budget && budget.phases.some((r) => r.budget > 0) ? (
           <PdfTable

@@ -16,7 +16,8 @@ import { PDF_FONT_FAMILY, PDF_NUM_FONT } from './pdfFonts';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand, type PdfBrandSnapshot } from './pdfBrand';
 import { getPdfCompanyInfo } from './pdfCompanyInfo';
-import { usePdfLogoDataUri } from './pdf-logo-context';
+import { usePdfLogoDataUri, usePdfLogoRatio } from './pdf-logo-context';
+import { percentLabel, shareOfTotal } from './pdfPercent';
 
 export const INK = {
   text: '#1F2633',
@@ -25,6 +26,10 @@ export const INK = {
   border: '#DAD6CB',
   hair: '#E9E6DE',
   zebra: '#FBFAF7',
+  /** Every other table row. */
+  stripe: '#FAF8F3',
+  /** A table's header row. */
+  head: '#EFEADC',
   panel: '#F6F3EC',
   white: '#FFFFFF',
   gold: '#C9972B',
@@ -42,8 +47,9 @@ export const PDF_PAGINATION = {
   footerReserve: 52,
 } as const;
 
-/** The logo file is 1600 x 416. */
-const LOGO_RATIO = 416 / 1600;
+/** Widths the logo is drawn at; the height follows the file's own shape. */
+const LETTERHEAD_LOGO_WIDTH = 200;
+const RUNNING_LOGO_WIDTH = 84;
 const FF = PDF_FONT_FAMILY;
 const NUM = PDF_NUM_FONT;
 
@@ -114,8 +120,8 @@ export function makePdfStyles(_B: PdfBrandSnapshot) {
     /* ── Key figures: one ruled band, figures divided by hairlines ── */
     keyBand: {
       flexDirection: 'row-reverse',
-      borderTopWidth: 0.9,
-      borderTopColor: INK.text,
+      borderTopWidth: 1.4,
+      borderTopColor: INK.gold,
       borderBottomWidth: 0.6,
       borderBottomColor: INK.border,
       marginBottom: 6,
@@ -221,9 +227,10 @@ const isNumeric = (value?: string | null) => !!value && /^[\d\s+\-/–.:,]+$/.te
 /** The letterhead: the logo, then the company line, the services line and the phones, centred. First page only. */
 export const PdfLetterhead = ({ s, logo }: { s: any; logo?: string | null }) => {
   const info = getPdfCompanyInfo();
+  const ratio = usePdfLogoRatio();
   return (
     <View style={s.letterhead} wrap={false}>
-      {logo ? <Image src={logo} style={{ width: 176, height: 176 * LOGO_RATIO }} /> : <Text style={{ fontSize: 26, fontWeight: 'bold', letterSpacing: 4 }}>MAKIN</Text>}
+      {logo ? <Image src={logo} style={{ width: LETTERHEAD_LOGO_WIDTH, height: LETTERHEAD_LOGO_WIDTH * ratio }} /> : <Text style={{ fontSize: 26, fontWeight: 'bold', letterSpacing: 4 }}>MAKIN</Text>}
       <Text style={s.lhName}>{info.nameEn}</Text>
       <Text style={s.lhServices}>{info.servicesEn}</Text>
       {info.phones.length > 0 ? <Text style={s.lhPhones}>{info.phones.join('   |   ')}</Text> : null}
@@ -253,6 +260,7 @@ export const PdfPage = ({
   children: React.ReactNode;
 }) => {
   const logo = usePdfLogoDataUri();
+  const ratio = usePdfLogoRatio();
   return (
     <Page size="A4" style={s.page} wrap>
       <View
@@ -262,7 +270,7 @@ export const PdfPage = ({
           letterhead && subPageNumber === 1 ? null : (
             <View style={s.runHead}>
               <Text style={s.runTitle}>{ar(runningTitle)}</Text>
-              {logo ? <Image src={logo} style={{ width: 72, height: 72 * LOGO_RATIO }} /> : <Text style={{ fontSize: 10, fontWeight: 'bold', letterSpacing: 2 }}>MAKIN</Text>}
+              {logo ? <Image src={logo} style={{ width: RUNNING_LOGO_WIDTH, height: RUNNING_LOGO_WIDTH * ratio }} /> : <Text style={{ fontSize: 10, fontWeight: 'bold', letterSpacing: 2 }}>MAKIN</Text>}
             </View>
           )
         }
@@ -354,34 +362,39 @@ export const PdfSummaryStrip = ({
   );
 };
 
-/** Section heading over a full-width hairline; an optional count sits on the far side. */
+/** Section heading over a full-width hairline, marked with a short gold bar; an optional note sits on the far side. */
 export const PdfSectionHeading = ({ s, children, hint }: { s: any; children: string; hint?: string }) => (
-  <View style={{ marginTop: 18, marginBottom: 6 }} minPresenceAhead={PDF_PAGINATION.section + PDF_PAGINATION.minRowHeight}>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: 5, borderBottomWidth: 0.6, borderBottomColor: INK.border }}>
+  <View style={{ marginTop: 18, marginBottom: 8 }} minPresenceAhead={PDF_PAGINATION.section + PDF_PAGINATION.minRowHeight}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 0.6, borderBottomColor: INK.border }}>
       <Text style={{ fontSize: 7.8, color: INK.faint }}>{hint ? ar(hint) : ''}</Text>
-      <Text style={s.sectionTitle}>{ar(children)}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={s.sectionTitle}>{ar(children)}</Text>
+        <View style={{ width: 3.5, height: 13, backgroundColor: INK.gold, marginLeft: 7 }} />
+      </View>
     </View>
   </View>
 );
 
 /**
- * Share of a total as quiet horizontal bars: where the money went (categories) or how it came in (methods).
- * Rows are sorted largest first by the caller; `total` is the whole the bars are a share of.
+ * Share of the whole as quiet horizontal bars: where the money went (categories) or how it came in (methods).
+ * Rows are sorted largest first by the caller. Shares are of the rows shown, and the labels add up to 100.
  */
-export const PdfBreakdown = ({ rows, total, color = INK.text }: { rows: { label: string; amount: number }[]; total: number; color?: string }) => {
+export const PdfBreakdown = ({ rows, color = INK.text }: { rows: { label: string; amount: number }[]; color?: string; /** @deprecated shares are of the rows shown. */ total?: number }) => {
   const decimals = decimalsFor(rows.map((r) => r.amount));
+  const whole = rows.reduce((sum, r) => sum + (Number.isFinite(r.amount) && r.amount > 0 ? r.amount : 0), 0);
+  const shares = shareOfTotal(rows.map((r) => r.amount));
   return (
-    <View style={{ gap: 6 }}>
-      {rows.map((row) => {
-        const share = total > 0 ? Math.max(0, Math.min(1, row.amount / total)) : 0;
+    <View style={{ gap: 7 }}>
+      {rows.map((row, i) => {
+        const exact = whole > 0 ? Math.max(0, row.amount) / whole : 0;
         return (
           <View key={row.label} wrap={false} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ width: 64 }}>
               <PdfAmount amount={row.amount} decimals={decimals} bare bold={false} size={8.6} />
             </View>
-            <Text style={{ width: 28, fontFamily: NUM, fontSize: 7.8, color: INK.muted, textAlign: 'left' }}>{`${Math.round(share * 100)}%`}</Text>
-            <View style={{ flex: 1, height: 3, backgroundColor: INK.hair, flexDirection: 'row-reverse' }}>
-              <View style={{ width: `${Math.max(share * 100, share > 0 ? 1.5 : 0)}%`, height: 3, backgroundColor: color }} />
+            <Text style={{ width: 28, fontFamily: NUM, fontSize: 7.8, color: INK.muted, textAlign: 'left' }}>{percentLabel(shares[i], exact * 100)}</Text>
+            <View style={{ flex: 1, height: 4, backgroundColor: INK.hair, flexDirection: 'row-reverse' }}>
+              <View style={{ width: `${Math.max(exact * 100, exact > 0 ? 1.5 : 0)}%`, height: 4, backgroundColor: color }} />
             </View>
             <Text style={{ width: 120, fontSize: 8.8, color: INK.text, textAlign: 'right' }}>{ar(row.label)}</Text>
           </View>

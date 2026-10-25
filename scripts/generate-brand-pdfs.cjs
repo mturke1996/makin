@@ -1,5 +1,7 @@
 /**
- * Builds MAKIN's brand PDFs (logo sheet + visual identity guide) and the letterhead PNG.
+ * Builds MAKIN's brand PDFs (logo sheet + visual identity guide).
+ * The letterhead logo of the in-app PDFs is public/brand/logo-pdf.png, cut from brand/MAKIN-Logo-Building.png; this
+ * script no longer writes it.
  * Chromium shapes the Arabic, so no manual reshaping is needed.
  *   PHOSPHOR_DIR=/path/to/@phosphor-icons/core/assets/regular node scripts/generate-brand-pdfs.cjs
  */
@@ -231,12 +233,5 @@ const guide = doc(`
   await pdf(logoSheet, 'MAKIN-Logo.pdf');
   await pdf(guide, 'MAKIN-Brand-Identity.pdf');
 
-  // Letterhead PNG used by the in-app PDFs (public/brand/logo-pdf.png)
-  await page.setViewportSize({ width: 900, height: 200 });
-  await page.setContent(`<style>${css}</style><body style="background:transparent;padding:20px 24px">${lockupH(C.ink, C.gold, 120)}</body>`, { waitUntil: 'networkidle' });
-  await page.evaluate(() => document.fonts.ready);
-  const el = await page.$('body > div');
-  await el.screenshot({ path: path.join(ROOT, 'public', 'brand', 'logo-pdf.png'), omitBackground: true });
-  console.log('wrote public/brand/logo-pdf.png');
   await browser.close();
 })();

@@ -6,6 +6,7 @@ import { Font, renderToBuffer } from '@react-pdf/renderer';
 import type { DocumentProps } from '@react-pdf/renderer';
 import type { Client, Expense, Invoice, Letter, Payment, PaymentMilestone, StandaloneDebt, Worker } from '../../types';
 import { buildWorkerLedgers } from '../../core/finance/workerLedger';
+import { computeClientAccount } from '../../core/finance/clientProfitTotals';
 import { buildPaymentSchedule } from '../../core/finance/paymentSchedule';
 import { DebtsPDF, ExpensesPDF, FullReportPDF, PaymentsPDF, WorkersPDF } from './ClientReportsPDF';
 import { InvoicePDF } from './InvoicePDF';
@@ -62,7 +63,11 @@ const payments: Payment[] = [
 const debts: StandaloneDebt[] = [
   { id: 'd1', clientId: client.id, partyType: 'client', partyName: client.name, description: 'سلفة مواد على الحساب', amount: 8000, paidAmount: 3000, remainingAmount: 5000, status: 'partially_paid', date: '2026-09-28', dueDate: '2026-11-15', createdAt: at, updatedAt: at },
 ];
-const summary = { totalPaid: 85000, totalExpenses: 73390, totalDebts: 5000, totalObligations: 78390, profit: 8908.5, remaining: -2298.5, totalWorkersAgreed: 32000, totalWorkersPaid: 20000, totalWorkersDue: 12000, profitPercentage: 15, profitBase: 'expenses' as const };
+// The figures the client page hands the report: 15% of the 73,390 spent is 11,008.5, so the account is short by 4,398.5.
+const summary = {
+  ...computeClientAccount({ totalExpenses: 73390, totalDebts: 5000, totalPaid: 85000, profitPercentage: 15 }),
+  totalPaid: 85000, totalExpenses: 73390, totalDebts: 5000, totalWorkersAgreed: 32000, totalWorkersPaid: 20000, totalWorkersDue: 12000,
+};
 
 const budget = {
   phases: [
@@ -100,7 +105,7 @@ const letter: Letter = {
 describe('MAKIN PDF documents', () => {
   const cases: [string, () => ReactElement, number][] = [
     ['expenses.pdf', () => createElement(ExpensesPDF, { client, expenses, total: expenses.reduce((s, e) => s + e.amount, 0) }), 1],
-    ['expenses-long.pdf', () => createElement(ExpensesPDF, { client, expenses: Array.from({ length: 4 }, (_, k) => expenses.map((e) => ({ ...e, id: `${e.id}-${k}` }))).flat(), total: 1 }), 2],
+    ['expenses-long.pdf', () => { const many = Array.from({ length: 4 }, (_, k) => expenses.map((e) => ({ ...e, id: `${e.id}-${k}` }))).flat(); return createElement(ExpensesPDF, { client, expenses: many, total: many.reduce((s, e) => s + e.amount, 0) }); }, 2],
     ['payments.pdf', () => createElement(PaymentsPDF, { client, payments, total: 85000 }), 1],
     ['debts.pdf', () => createElement(DebtsPDF, { client, debts, total: 5000 }), 1],
     ['workers.pdf', () => createElement(WorkersPDF, { client, workers: [elec, plumb], expenses }), 2],
