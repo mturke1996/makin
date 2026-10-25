@@ -43,6 +43,8 @@ export interface HomeGates {
   schedule: boolean;
   /** The manager is reminded to keep a backup copy. */
   backup: boolean;
+  /** Price rises: needs every expense. */
+  prices: boolean;
 
   /** The pooled fund balance next to the custody shortcut belongs to whoever manages custody. */
   pooledFund: boolean;
@@ -84,6 +86,7 @@ export function homeGates(p: Principal | null | undefined): HomeGates {
     budgets: can(p, 'projects.view') && scope === 'all',
     schedule: payments,
     backup: isAdmin(p),
+    prices: scope === 'all',
     pooledFund: can(p, 'custody.manage'),
     newInvoice: can(p, 'invoices.manage'),
     newExpense: can(p, 'expenses.create'),
@@ -120,6 +123,7 @@ function areaOfPath(path: string): AppModule | 'admin' | null | undefined {
     workers: 'workers',
     invoices: 'invoices',
     payments: 'payments',
+    suppliers: 'expenses',
     receivables: 'payments',
     debts: 'debts',
     expenses: 'expenses',

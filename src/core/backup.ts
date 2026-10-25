@@ -24,6 +24,7 @@ export const BACKUP_SETS = [
   { key: 'projectPhases', label: 'مراحل المشاريع' },
   { key: 'boqItems', label: 'جدول الكميات' },
   { key: 'siteReports', label: 'تقارير الموقع' },
+  { key: 'suppliers', label: 'المورّدون' },
   { key: 'letters', label: 'الرسائل والخطابات' },
 ] as const;
 

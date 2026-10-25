@@ -110,6 +110,16 @@ service cloud.firestore {
       allow create, update, delete: if can('payments.manage');
     }
 
+    // The supplier directory: read and added to by whoever records expenses (they pick the supplier on site),
+    // changed or removed only by whoever may edit everyone's expenses.
+    match /suppliers/{id} {
+      allow read: if can('expenses.create') || can('expenses.view.all');
+      allow create: if (can('expenses.create') || can('expenses.edit.all'))
+        && request.resource.data.get('name', null) is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120;
+      allow update, delete: if can('expenses.edit.all');
+    }
+
     // Daily attendance of workers: one record per worker per day (the id says so). Seen by whoever sees workers,
     // marked by whoever manages them.
     match /worker_attendance/{id} {

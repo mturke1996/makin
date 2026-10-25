@@ -16,6 +16,7 @@ import {
   siteReportsService,
   paymentMilestonesService,
   workerAttendanceService,
+  suppliersService,
   globalFundTransactionsService,
   createExpenseInvoiceAtomic,
   deleteExpenseInvoiceAtomic,
@@ -39,6 +40,7 @@ import type {
   SiteReport,
   PaymentMilestone,
   WorkerAttendance,
+  Supplier,
 } from '../types';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from './useNotificationStore';
@@ -63,7 +65,7 @@ import type { Principal } from '../core/access/principal';
 const CACHE_PREFIX = 'app-cache-';
 const CACHE_OWNER_KEY = 'app-cache-owner';
 type StoreKey = Exclude<DataKey, 'fundTransactions'>;
-const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance'];
+const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance', 'suppliers'];
 
 const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: any[], onError?: (e: any) => void) => () => void }> = {
   clients: clientsService,
@@ -81,6 +83,7 @@ const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: an
   siteReports: siteReportsService,
   paymentMilestones: paymentMilestonesService,
   workerAttendance: workerAttendanceService,
+  suppliers: suppliersService,
 };
 
 const cacheOwnerTag = (principal: Principal | null) => (principal ? `${principal.id}|${JSON.stringify(planFor(principal))}` : '');
@@ -162,6 +165,7 @@ interface DataState {
   siteReports: SiteReport[];
   paymentMilestones: PaymentMilestone[];
   workerAttendance: WorkerAttendance[];
+  suppliers: Supplier[];
   isLoading: boolean;
 
   // Initialization
@@ -241,6 +245,10 @@ interface DataState {
   markAttendance: (record: WorkerAttendance) => Promise<void>;
   clearAttendance: (id: string) => Promise<void>;
 
+  addSupplier: (supplier: Supplier) => Promise<void>;
+  updateSupplier: (id: string, data: Partial<Supplier>) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
+
   addSiteReport: (report: SiteReport) => Promise<void>;
   updateSiteReport: (id: string, data: Partial<SiteReport>) => Promise<void>;
   deleteSiteReport: (id: string) => Promise<void>;
@@ -282,6 +290,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   siteReports: [],
   paymentMilestones: [],
   workerAttendance: [],
+  suppliers: [],
   isLoading: true,
 
   reset: () => {
@@ -289,7 +298,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({
       clients: [], invoices: [], payments: [], expenses: [], expenseInvoices: [], standaloneDebts: [],
       debtParties: [], workers: [], userBalances: [], letters: [], projectPhases: [], boqItems: [],
-      siteReports: [], paymentMilestones: [], workerAttendance: [], isLoading: true,
+      siteReports: [], paymentMilestones: [], workerAttendance: [], suppliers: [], isLoading: true,
     });
   },
 
@@ -671,6 +680,16 @@ export const useDataStore = create<DataState>((set, get) => ({
       throw error;
     }
   },
+  addSupplier: async (supplier) => {
+    await handleAsync(() => suppliersService.add(supplier), 'تمت إضافة المورّد');
+  },
+  updateSupplier: async (id, data) => {
+    await handleAsync(() => suppliersService.update(id, data), 'تم تحديث المورّد');
+  },
+  deleteSupplier: async (id) => {
+    await handleAsync(() => suppliersService.delete(id), 'تم حذف المورّد');
+  },
+
   clearAttendance: async (id) => {
     try {
       await workerAttendanceService.delete(id);

@@ -16,6 +16,8 @@ import { ReceiptPDF } from './ReceiptPDF';
 import { buildReceipt } from '../../core/finance/receipt';
 import { WorkerStatementPDF } from './WorkerStatementPDF';
 import { WorkerVoucherPDF } from './WorkerVoucherPDF';
+import { SupplierStatementPDF } from './SupplierStatementPDF';
+import { buildSupplierRows, supplierExpenses } from '../../core/finance/supplierLedger';
 import { buildWorkerVoucher } from '../../core/finance/workerVoucher';
 
 Font.register({ family: 'MakinPdf', fonts: [{ src: resolve('public/fonts/Tajawal-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Tajawal-Bold.ttf'), fontWeight: 700 }] });
@@ -116,6 +118,12 @@ describe('MAKIN PDF documents', () => {
       const entry = buildWorkerLedgers([elec], expenses)[0];
       const voucher = buildWorkerVoucher({ payment: entry.ledger.payments[0], worker: { ...elec, nationalId: '119900112233', workProgressPercent: 25 }, ledger: entry.ledger, projectName: client.name, advances: 0 });
       return createElement(WorkerVoucherPDF, { voucher });
+    }, 1],
+    ['supplier-statement.pdf', () => {
+      const supplier = { id: 's-noor', name: 'مؤسسة النور لمواد البناء', phone: '0912223344', supplies: 'أسمنت وحديد ورمل', createdAt: at, updatedAt: at };
+      const bought = expenses.slice(0, 6).map((e, i) => ({ ...e, supplierId: supplier.id, clientId: i % 2 ? 'c2' : client.id }));
+      const row = buildSupplierRows([supplier], bought)[0];
+      return createElement(SupplierStatementPDF, { supplier, row, expenses: supplierExpenses(supplier.id, bought), clientName: (id) => (id === client.id ? client.name : 'شركة النور للتجارة') });
     }, 1],
     ['full-report.pdf', () => createElement(FullReportPDF, { client, expenses, payments, debts, workers: [elec, plumb], summary, budget, schedule }), 3],
     ['receipt.pdf', () => createElement(ReceiptPDF, { receipt: buildReceipt({ payment: payments[1], number: 'RC-2026-0007', client, invoice, allPayments: payments }) }), 1],

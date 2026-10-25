@@ -72,6 +72,7 @@ describe('sidebar and drawer visibility', () => {
       'receivables',
       'expenses',
       'expense-invoices',
+      'suppliers',
       'fund',
       'debts',
       'letters',
@@ -83,6 +84,11 @@ describe('sidebar and drawer visibility', () => {
     expect(sidebarIds(viewer)).not.toContain('new-invoice');
     expect(sidebarIds(viewer)).toContain('expense-invoices');
     expect(sidebarIds(salem)).not.toContain('expense-invoices');
+  });
+
+  it('lists the suppliers only for whoever sees every expense', () => {
+    for (const access of [admin, fatima, viewer]) expect(sidebarIds(access)).toContain('suppliers');
+    for (const access of [salem, ali, nobody]) expect(sidebarIds(access)).not.toContain('suppliers');
   });
 
   it('lists the receivables for whoever sees payments, and for nobody else', () => {

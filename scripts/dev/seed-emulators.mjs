@@ -125,6 +125,11 @@ const ex = [
 // Approval: what the admin records is approved on the spot; what the site employee records waits for review
 // (one of them was already sent back with a reason).
 // Which phase each villa expense belongs to: the foundations are over their budget, the structure is close to it.
+const suppliers = [
+  ['s-noor', 'مؤسسة النور لمواد البناء', '0912223344', 'أسمنت وحديد ورمل'],
+  ['s-sharq', 'مصنع الشرق للأسمنت', '0925556677', 'أسمنت'],
+];
+const supplierOf = { e1: 's-noor', e2: 's-noor', e3: 's-noor' };
 const phaseOf = { e1: 'p1', e5: 'p1', e8: 'p1', e2: 'p2', e3: 'p2', e4: 'p2', e6: 'p2' };
 const byStaff = { e4: { approvalStatus: 'pending' }, e11: { approvalStatus: 'pending' }, e6: { approvalStatus: 'rejected', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now, rejectionReason: 'لا توجد فاتورة، أرفق إيصال النقل' } };
 for (const [id, clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName] of ex) {
@@ -132,9 +137,25 @@ for (const [id, clientId, description, amount, category, date, quantity, unitPri
   await put('expenses', id, {
     clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName, isClosed: false,
     phaseId: phaseOf[id],
+    ...(supplierOf[id] ? { supplierId: supplierOf[id], supplierName: suppliers.find((x) => x[0] === supplierOf[id])[1] } : {}),
     createdBy: staff ? 'سالم (موقع)' : adminName, userId: staff ? staffUid : adminUid, createdByRole: staff ? 'employee' : 'admin',
     ...(staff ? byStaff[id] : { approvalStatus: 'approved', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now }),
     ...stamp(),
+  });
+}
+
+// ── Suppliers, and a purchase history of one material so the price tracking has something to say ──────────
+for (const [id, name, phone, supplies] of suppliers) await put('suppliers', id, { name, phone, supplies, createdBy: adminName, ...stamp() });
+const cement = [
+  ['e20', 'c-villa', 100, 28, '2026-08-10', 's-noor'],
+  ['e21', 'c-villa', 150, 29, '2026-09-05', 's-sharq'],
+  ['e22', 'c-shop', 80, 36, '2026-10-22', 's-noor'],
+];
+for (const [id, clientId, quantity, unitPrice, date, supplierId] of cement) {
+  await put('expenses', id, {
+    clientId, description: 'إسمنت ومونة', amount: quantity * unitPrice, category: 'cement', date, quantity, unitPrice, unit: 'sack', isClosed: false,
+    supplierId, supplierName: suppliers.find((x) => x[0] === supplierId)[1],
+    createdBy: adminName, userId: adminUid, createdByRole: 'admin', approvalStatus: 'approved', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now, ...stamp(),
   });
 }
 

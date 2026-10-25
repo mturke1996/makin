@@ -43,6 +43,12 @@ describe('homeGates', () => {
     expect(g).toMatchObject({ newInvoice: true, newPayment: true, newExpense: true });
   });
 
+  it('price rises need every expense', () => {
+    expect(homeGates(admin).prices).toBe(true);
+    expect(homeGates(fatima).prices).toBe(true);
+    expect(homeGates(salem).prices).toBe(false);
+  });
+
   it('only the manager is reminded to back up', () => {
     expect(homeGates(admin).backup).toBe(true);
     expect(homeGates(fatima).backup).toBe(false);
@@ -290,6 +296,27 @@ describe('buildAttentionItems', () => {
       expect(buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 300)], allow: { ...all, budgets: true } })).toEqual([]);
     });
   });
+  describe('price rises', () => {
+    const buy = (id: string, unitPrice: number, ago: number): Expense =>
+      ({ id, clientId: 'c1', description: 'حديد 12', category: 'materials', unit: 'كجم', quantity: 100, unitPrice, amount: unitPrice * 100, date: day(ago), createdAt: day(ago), isClosed: false }) as Expense;
+    const history = [buy('h1', 3.2, 60), buy('h2', 3.3, 40), buy('h3', 3.25, 20)];
+    const none = { invoices: [], debts: [], payments: [] };
+
+    it('names the material bought lately above its usual price, with how far above', () => {
+      const items = buildAttentionItems({ ...base, ...none, expenses: [...history, buy('new', 4.5, 2)], allow: { ...all, prices: true } });
+      expect(items.map((i) => i.kind)).toEqual(['price-rise']);
+      expect(items[0]).toMatchObject({ tone: 'warning', path: '/suppliers?tab=prices' });
+      expect(items[0].title).toContain('حديد 12');
+      expect(items[0].subtitle).toContain('38%');
+    });
+
+    it('stays quiet for a normal price, an old rise, or without the gate', () => {
+      expect(buildAttentionItems({ ...base, ...none, expenses: [...history, buy('ok', 3.3, 2)], allow: { ...all, prices: true } })).toEqual([]);
+      expect(buildAttentionItems({ ...base, ...none, expenses: [...history, buy('old', 4.5, 30)], allow: { ...all, prices: true } })).toEqual([]);
+      expect(buildAttentionItems({ ...base, ...none, expenses: [...history, buy('new', 4.5, 2)], allow: all })).toEqual([]);
+    });
+  });
+
   describe('backup reminder', () => {
     const none = { invoices: [], debts: [], payments: [] };
     const allowed = { ...all, backup: true };

@@ -27,6 +27,7 @@ export type DataKey =
   | 'siteReports'
   | 'paymentMilestones'
   | 'workerAttendance'
+  | 'suppliers'
   | 'fundTransactions';
 
 export interface WhereSpec {
@@ -59,6 +60,7 @@ export const SOURCES: Record<DataKey, SourceDef> = {
   siteReports: { collection: 'site_reports', sort: { field: 'reportDate', dir: 'desc' } },
   paymentMilestones: { collection: 'payment_milestones', sort: { field: 'order', dir: 'asc' } },
   workerAttendance: { collection: 'worker_attendance', sort: { field: 'date', dir: 'desc' } },
+  suppliers: { collection: 'suppliers', sort: { field: 'name', dir: 'asc' } },
   fundTransactions: { collection: 'global_fund_transactions', sort: { field: 'createdAt', dir: 'desc' } },
 };
 
@@ -106,6 +108,9 @@ export function queriesFor(p: Principal | null | undefined, key: DataKey): Query
       return whole(can(p, 'payments.view'));
     case 'workerAttendance':
       return whole(can(p, 'workers.view'));
+    // Whoever records expenses picks the supplier, so they read the directory; the statements need every expense.
+    case 'suppliers':
+      return whole(can(p, 'expenses.create') || can(p, 'expenses.view.all'));
     case 'projectPhases':
     case 'boqItems':
     case 'siteReports':

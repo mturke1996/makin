@@ -102,6 +102,7 @@ export function HomePage() {
           budgets: gates.budgets,
           schedule: gates.schedule,
           backup: gates.backup,
+          prices: gates.prices,
         },
         t,
       }),

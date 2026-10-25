@@ -36,6 +36,7 @@ export const expenseSchema = z.object({
   category: z.string().min(1),
   date: z.string().min(1, 'اختر تاريخ المصروف'),
   invoiceNumber: z.string(),
+  supplierId: z.string(),
   notes: z.string(),
   workerId: z.string(),
   phaseId: z.string(),

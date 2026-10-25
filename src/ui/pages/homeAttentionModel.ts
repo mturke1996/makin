@@ -5,13 +5,14 @@ import type { MyFundStats } from '../../core/hooks/useMyFundStats';
 import { approvalCounts, approvalStatusOf, expensePhrase } from '../../core/finance/expenseApproval';
 import { budgetState } from '../../core/finance/budgetStatus';
 import { buildPhaseBudgetRows } from '../../core/finance/projectBudget';
+import { recentPriceSpikes } from '../../core/finance/priceTracking';
 import { backupAgeDays, backupDue } from '../../core/backup';
 import { buildReceivables } from '../../core/finance/paymentSchedule';
 import type { Client, Expense, Invoice, Payment, PaymentMilestone, ProjectPhase } from '../../types';
 
 type Translate = (ar: string, en: string) => string;
 
-export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near' | 'schedule-overdue' | 'backup-due';
+export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near' | 'schedule-overdue' | 'backup-due' | 'price-rise';
 
 export interface AttentionItem {
   key: string;
@@ -43,6 +44,8 @@ export interface AttentionAllow {
   schedule?: boolean;
   /** The manager: reminded to keep a copy of the data. */
   backup?: boolean;
+  /** Material prices: needs every expense (the history is the whole company's). */
+  prices?: boolean;
 }
 
 interface BuildArgs {
@@ -235,6 +238,24 @@ export function buildAttentionItems({
         subtitle: t('تجاوزت موعد السداد', 'Past their due date'),
         amount: sumMoney(overdueDebts.map((d) => d.remainingAmount)),
         path: '/debts',
+      });
+    }
+  }
+
+  if (allow.prices) {
+    const spikes = recentPriceSpikes(expenses, now ?? new Date());
+    if (spikes.length > 0) {
+      const worst = spikes[0];
+      items.push({
+        key: 'price-rise',
+        tone: 'warning',
+        kind: 'price-rise',
+        title:
+          spikes.length === 1
+            ? t(`ارتفع سعر ${worst.material}`, `${worst.material} cost more than usual`)
+            : t(`${spikes.length} مواد اشتُريت بسعر أعلى من المعتاد`, `${spikes.length} materials bought above their usual price`),
+        subtitle: `${worst.material}: ${Math.round(worst.change * 100)}% ${t('فوق المعتاد', 'above usual')}${spikes.length > 1 ? ` · ${t('الأشد', 'worst')}` : ''}`,
+        path: '/suppliers?tab=prices',
       });
     }
   }

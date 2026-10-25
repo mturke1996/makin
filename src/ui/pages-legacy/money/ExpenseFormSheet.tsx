@@ -23,6 +23,9 @@ import { CustodyOverdraftNotice } from '../client-profile/profileBanners';
 import { ProfileCallout } from '../client-profile/profileUi';
 import { ExpenseReviewPanel } from './ExpenseReviewPanel';
 import { FormBody, FormSection } from './moneyUi';
+import { PriceHint } from './PriceHint';
+import { SupplierField } from './SupplierField';
+import { useSupplierPicker } from './useSupplierPicker';
 import { isoDay } from './moneyUtils';
 
 export interface ExpenseFormData {
@@ -41,6 +44,8 @@ export interface ExpenseFormData {
   unit?: string;
   /** Editing an expense that had a quantity line and the user removed it. */
   clearQuantity: boolean;
+  /** The supplier picked ('' for none). The name is copied onto the expense by the caller. */
+  supplierId: string;
 }
 
 interface Props {
@@ -72,6 +77,7 @@ type FormState = {
   clientId: string;
   phaseId: string;
   invoiceNumber: string;
+  supplierId: string;
   notes: string;
   quantity: string;
   unit: string;
@@ -87,6 +93,7 @@ const blank = (clientId: string): FormState => ({
   clientId,
   phaseId: '',
   invoiceNumber: '',
+  supplierId: '',
   notes: '',
   quantity: '',
   unit: '',
@@ -98,6 +105,7 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
   const [form, setForm] = useState<FormState>(() => blank(''));
   const [attempted, setAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const pick = useSupplierPicker();
 
   const firstClientId = clients[0]?.id || '';
   useEffect(() => {
@@ -114,6 +122,7 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
             clientId: edit.clientId,
             phaseId: edit.phaseId || '',
             invoiceNumber: edit.invoiceNumber || '',
+            supplierId: edit.supplierId || '',
             notes: edit.notes || '',
             quantity: edit.quantity != null ? String(edit.quantity) : '',
             unit: edit.unit || '',
@@ -167,6 +176,7 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
         clientId: form.clientId,
         phaseId: clientPhases.some((p) => p.id === form.phaseId) ? form.phaseId : '',
         invoiceNumber: form.invoiceNumber.trim(),
+        supplierId: form.supplierId,
         notes: form.notes.trim(),
         ...(hasQty ? { quantity, unitPrice, unit: form.unit.trim() || undefined } : {}),
         clearQuantity: !hasQty && !!edit && expenseHasQuantityLine({ quantity: edit.quantity, unitPrice: edit.unitPrice }),
@@ -340,6 +350,15 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
                         <span className="text-sm text-fg-muted">يظهر بعد إدخال الكمية والسعر</span>
                       )}
                     </div>
+                    <PriceHint
+                      expenses={pick.expenses}
+                      complete={pick.complete}
+                      description={form.description}
+                      category={form.category}
+                      unit={form.unit}
+                      unitPrice={unitPrice ?? undefined}
+                      excludeId={edit?.id}
+                    />
                   </div>
                 </div>
               </div>
@@ -370,6 +389,7 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
                 ))}
               </Select>
             )}
+            <SupplierField suppliers={pick.suppliers} value={form.supplierId} onChange={(id) => set('supplierId', id)} onCreate={pick.create} disabled={!!readOnlyNotice} />
             <Input
               label="رقم الفاتورة"
               autoComplete="off"

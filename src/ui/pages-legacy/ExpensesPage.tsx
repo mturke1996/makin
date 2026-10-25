@@ -51,7 +51,7 @@ import { useVisibleCount } from './client-profile/activity/useVisibleCount';
 export const ExpensesPage = () => {
   const navigate = useNavigate();
   const access = useAccess();
-  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, projectPhases, isLoading } = useDataSlice('expenses', 'addExpense', 'updateExpense', 'deleteExpense', 'approveExpenses', 'rejectExpense', 'clients', 'projectPhases', 'isLoading');
+  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, projectPhases, suppliers, isLoading } = useDataSlice('expenses', 'addExpense', 'updateExpense', 'deleteExpense', 'approveExpenses', 'rejectExpense', 'clients', 'projectPhases', 'suppliers', 'isLoading');
   const user = useAuthStore((s) => s.user);
   const myFundStats = useMyFundStats();
 
@@ -172,6 +172,9 @@ export const ExpensesPage = () => {
         : data.clearQuantity
           ? { quantity: 0, unitPrice: 0, unit: '' }
           : {};
+    // The supplier's name is copied onto the expense so it still reads for someone who cannot open the directory.
+    const supplier = data.supplierId ? suppliers.find((s) => s.id === data.supplierId) : undefined;
+    const cleared = null as unknown as undefined;
     const payload = {
       description: data.description,
       amount: data.amount,
@@ -183,6 +186,7 @@ export const ExpensesPage = () => {
       // A removed phase is cleared with null on an edit; on a new expense there is simply none.
       ...(data.phaseId ? { phaseId: data.phaseId } : editing?.phaseId ? { phaseId: null as unknown as undefined } : {}),
       ...qtyFields,
+      ...(supplier ? { supplierId: supplier.id, supplierName: supplier.name } : editing?.supplierId ? { supplierId: cleared, supplierName: cleared } : {}),
       updatedAt: new Date().toISOString(),
     };
     if (editing) {

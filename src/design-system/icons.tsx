@@ -28,6 +28,8 @@ import {
   Buildings as PhBuildings,
   Calculator as PhCalculator,
   UserCheck as PhUserCheck,
+  Storefront as PhStorefront,
+  TrendUp as PhTrendUp,
   CalendarBlank as PhCalendarBlank,
   CalendarX as PhCalendarX,
   CaretDown as PhCaretDown,
@@ -198,6 +200,8 @@ export const Flag = glyph(PhFlag, 'Flag');
 export const GetApp = glyph(PhDownloadSimple, 'GetApp');
 export const Groups = glyph(PhUsersThree, 'Groups');
 export const HowToReg = glyph(PhUserCheck, 'HowToReg');
+export const Storefront = glyph(PhStorefront, 'Storefront');
+export const TrendingUp = glyph(PhTrendUp, 'TrendingUp');
 export const History = glyph(PhClockCounterClockwise, 'History');
 export const HourglassEmpty = glyph(PhHourglass, 'HourglassEmpty');
 export const Home = glyph(PhHouse, 'Home');

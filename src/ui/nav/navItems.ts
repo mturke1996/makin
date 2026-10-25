@@ -15,6 +15,7 @@ import {
   Groups,
   HourglassEmpty,
   CloudUpload,
+  Storefront,
 } from '../../design-system/icons';
 import { ComponentType } from 'react';
 import type { AppModule } from '../../core/access/modules';
@@ -71,6 +72,8 @@ const DEBTS: NavItem = { id: 'debts', label: 'الديون', labelEn: 'Debts', p
 const LETTERS: NavItem = { id: 'letters', label: 'الرسائل', labelEn: 'Letters', path: '/letters', icon: Description, module: 'letters' };
 const USERS: NavItem = { id: 'users', label: 'المستخدمين', labelEn: 'Users', path: '/users', icon: ManageAccounts, module: 'users' };
 const AUDIT: NavItem = { id: 'audit', label: 'سجل التدقيق', labelEn: 'Audit log', path: '/settings/audit', icon: History, adminOnly: true };
+/** Statements and prices of suppliers need every expense, so it follows `expenses.view.all`. */
+const SUPPLIERS: NavItem = { id: 'suppliers', label: 'المورّدون', labelEn: 'Suppliers', path: '/suppliers', icon: Storefront, module: 'expenses', permission: 'expenses.view.all' };
 const BACKUP: NavItem = { id: 'backup', label: 'النسخ الاحتياطي', labelEn: 'Backup', path: '/settings/backup', icon: CloudUpload, adminOnly: true };
 const SETTINGS: NavItem = { id: 'settings', label: 'الإعدادات', labelEn: 'Settings', path: '/settings/branding', icon: Settings, adminOnly: true };
 
@@ -81,7 +84,7 @@ export const PRIMARY_NAV: NavItem[] = [HOME, CLIENTS, EXPENSES, PAYMENTS, FUND];
 export const BOTTOM_NAV_FALLBACKS: NavItem[] = [INVOICES, DEBTS, LETTERS];
 
 /** Additional destinations: shown in the sidebar (desktop) and the drawer (mobile). */
-export const SECONDARY_NAV: NavItem[] = [WORKERS, NEW_INVOICE, RECEIVABLES, DEBTS, EXPENSES, EXPENSE_INVOICES, LETTERS, USERS, AUDIT, BACKUP, SETTINGS];
+export const SECONDARY_NAV: NavItem[] = [WORKERS, NEW_INVOICE, RECEIVABLES, DEBTS, EXPENSES, EXPENSE_INVOICES, SUPPLIERS, LETTERS, USERS, AUDIT, BACKUP, SETTINGS];
 
 export interface NavGroupDef {
   key: string;
@@ -97,7 +100,7 @@ export interface NavGroupDef {
 export const NAV_GROUPS: readonly NavGroupDef[] = [
   { key: 'overview', titleAr: 'عام', titleEn: 'Overview', items: [HOME, CLIENTS, WORKERS] },
   { key: 'revenue', titleAr: 'الفواتير والمدفوعات', titleEn: 'Invoices & payments', items: [INVOICES, NEW_INVOICE, PAYMENTS, RECEIVABLES] },
-  { key: 'spending', titleAr: 'المصروفات والعهد', titleEn: 'Expenses & custody', items: [EXPENSES, EXPENSE_INVOICES, FUND, DEBTS] },
+  { key: 'spending', titleAr: 'المصروفات والعهد', titleEn: 'Expenses & custody', items: [EXPENSES, EXPENSE_INVOICES, SUPPLIERS, FUND, DEBTS] },
   { key: 'admin', titleAr: 'المستندات والإدارة', titleEn: 'Documents & admin', items: [LETTERS, USERS, AUDIT, BACKUP, SETTINGS] },
 ];
 

@@ -12,7 +12,7 @@ vi.mock('../../../services/firebaseService', () => {
   return {
     clientsService: service(), invoicesService: service(), paymentsService: service(), expensesService: service(), standaloneDebtsService: service(),
     debtPartiesService: service(), expenseInvoicesService: service(), workersService: service(), userBalancesService: service(), lettersService: service(),
-    projectPhasesService: service(), boqItemsService: service(), siteReportsService: service(), paymentMilestonesService: service(), workerAttendanceService: service(),
+    projectPhasesService: service(), boqItemsService: service(), siteReportsService: service(), paymentMilestonesService: service(), workerAttendanceService: service(), suppliersService: service(),
     globalFundTransactionsService: service(), createExpenseInvoiceAtomic: vi.fn(), deleteExpenseInvoiceAtomic: vi.fn(), toConstraints: () => [],
     clearField: () => null,
   };

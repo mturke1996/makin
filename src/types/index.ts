@@ -115,6 +115,20 @@ export interface WorkerAttendance {
   createdBy?: string;
 }
 
+/** مورّد مواد أو خدمات: يُربط به المصروف فيُعرف كم اشتُري منه وبأي أسعار. */
+export interface Supplier {
+  id: string;
+  name: string;
+  phone?: string;
+  /** ما يورّده، مثل: حديد، أسمنت، رمل. */
+  supplies?: string;
+  notes?: string;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+
 // Invoice Types
 export interface InvoiceItem {
   id: string;
@@ -187,6 +201,9 @@ export interface Expense {
   userId?: string; // Firebase Auth UID للمستخدم الذي سجل المصروف (للربط بالعهدة)
   workerId?: string; // ربط المصروف بعامل إذا كان دفعة له
   workerName?: string;
+  /** المورّد الذي اشتُريت منه المادة (اختياري)، والاسم منسوخ ليبقى ظاهراً لمن لا يرى الدليل. */
+  supplierId?: string;
+  supplierName?: string;
   /** دفعة العامل سلفة: مال يُدفع قبل إنجاز العمل ويُخصم تلقائياً مما يستحقه بالإنجاز. */
   isWorkerAdvance?: boolean;
   /** رابط صورة/PDF للفاتورة أو الإيصال */

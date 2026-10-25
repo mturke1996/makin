@@ -23,6 +23,9 @@ import {
 import { CustodyOverdraftNotice, UserBalanceBanner } from './profileBanners';
 import { ProfileCallout } from './profileUi';
 import { ExpenseReviewPanel } from '../money/ExpenseReviewPanel';
+import { PriceHint } from '../money/PriceHint';
+import { SupplierField } from '../money/SupplierField';
+import { useSupplierPicker } from '../money/useSupplierPicker';
 import { isoDay } from './ledgerUtils';
 import { expenseSchema, type ExpenseFormValues } from './schemas';
 import type { FundStats, UserBalanceInfo } from './types';
@@ -80,6 +83,7 @@ export function ExpenseFormSheet({
       category: edit?.category ?? 'materials',
       date: edit?.date ? isoDay(edit.date) : isoDay(),
       invoiceNumber: edit?.invoiceNumber ?? '',
+      supplierId: edit?.supplierId ?? '',
       notes: edit?.notes ?? '',
       workerId: edit?.workerId ?? '',
       phaseId: edit?.phaseId ?? '',
@@ -89,6 +93,9 @@ export function ExpenseFormSheet({
   const quantity = useWatch({ control, name: 'quantity' });
   const measureUnit = useWatch({ control, name: 'unit' });
   const unitPrice = useWatch({ control, name: 'unitPrice' });
+  const description = useWatch({ control, name: 'description' });
+  const category = useWatch({ control, name: 'category' });
+  const pick = useSupplierPicker();
 
   // Quantity x price drives the total, but only when one of them actually changes: opening an edit
   // (or React re-running the effect) must never rewrite an amount that was typed by hand.
@@ -165,6 +172,17 @@ export function ExpenseFormSheet({
               Boolean(edit?.unit)
             }
             onClear={clearQuantity}
+          />
+        )}
+        {hasQuantityLine && !readOnlyNotice && (
+          <PriceHint
+            expenses={pick.expenses}
+            complete={pick.complete}
+            description={description}
+            category={category}
+            unit={measureUnit}
+            unitPrice={parseDecimalInput(unitPrice) ?? undefined}
+            excludeId={edit?.id}
           />
         )}
         <Controller
@@ -248,6 +266,13 @@ export function ExpenseFormSheet({
       </FormSection>
 
       <FormSection title="التوثيق">
+        <Controller
+          name="supplierId"
+          control={control}
+          render={({ field }) => (
+            <SupplierField suppliers={pick.suppliers} value={field.value} onChange={field.onChange} onCreate={pick.create} disabled={!!readOnlyNotice} />
+          )}
+        />
         <Controller
           name="invoiceNumber"
           control={control}

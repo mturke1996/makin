@@ -68,7 +68,7 @@ interface Options {
 export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, milestoneCount }: Options) {
   const user = useAuthStore((s) => s.user);
   const receipt = useReceipt();
-  const { workers, updateClient, addPayment, updatePayment, addExpense, updateExpense, addStandaloneDebt, updateStandaloneDebt, addUserBalance, updateUserBalance, addProjectPhase, updateProjectPhase, addBoqItem, updateBoqItem, addPaymentMilestone, addPaymentMilestones, updatePaymentMilestone, addSiteReport, updateSiteReport } = useDataSlice('workers', 'updateClient', 'addPayment', 'updatePayment', 'addExpense', 'updateExpense', 'addStandaloneDebt', 'updateStandaloneDebt', 'addUserBalance', 'updateUserBalance', 'addProjectPhase', 'updateProjectPhase', 'addBoqItem', 'updateBoqItem', 'addPaymentMilestone', 'addPaymentMilestones', 'updatePaymentMilestone', 'addSiteReport', 'updateSiteReport');
+  const { workers, suppliers, updateClient, addPayment, updatePayment, addExpense, updateExpense, addStandaloneDebt, updateStandaloneDebt, addUserBalance, updateUserBalance, addProjectPhase, updateProjectPhase, addBoqItem, updateBoqItem, addPaymentMilestone, addPaymentMilestones, updatePaymentMilestone, addSiteReport, updateSiteReport } = useDataSlice('workers', 'suppliers', 'updateClient', 'addPayment', 'updatePayment', 'addExpense', 'updateExpense', 'addStandaloneDebt', 'updateStandaloneDebt', 'addUserBalance', 'updateUserBalance', 'addProjectPhase', 'updateProjectPhase', 'addBoqItem', 'updateBoqItem', 'addPaymentMilestone', 'addPaymentMilestones', 'updatePaymentMilestone', 'addSiteReport', 'updateSiteReport');
 
   const author = user?.displayName || 'المستخدم';
   const nowIso = () => new Date().toISOString();
@@ -119,6 +119,13 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
       const workerName = workerId
         ? (workers.find((w) => w.id === workerId)?.name ?? (edit?.workerId === workerId ? edit.workerName : undefined))
         : undefined;
+      // The supplier's name is copied onto the expense; an edit that removes the supplier clears both fields.
+      const supplier = data.supplierId ? suppliers.find((s) => s.id === data.supplierId) : undefined;
+      const supplierPatch: Partial<Pick<Expense, 'supplierId' | 'supplierName'>> = supplier
+        ? { supplierId: supplier.id, supplierName: supplier.name }
+        : edit?.supplierId
+          ? { supplierId: null as unknown as undefined, supplierName: null as unknown as undefined }
+          : {};
       const phaseId = data.phaseId || undefined;
       const hasQuantity = expenseHasQuantityLine({ quantity, unitPrice });
       const unit = data.unit.trim() || undefined;
@@ -133,6 +140,7 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
           category: data.category as ExpenseCategory,
           date: data.date,
           invoiceNumber: data.invoiceNumber,
+          ...supplierPatch,
           notes: data.notes,
           workerId: workerId ?? cleared,
           workerName: workerName ?? cleared,
@@ -155,6 +163,7 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
           category: data.category as ExpenseCategory,
           date: data.date,
           invoiceNumber: data.invoiceNumber || '',
+          ...(supplierPatch.supplierId ? supplierPatch : {}),
           notes: data.notes,
           isClosed: false,
           phaseId,
