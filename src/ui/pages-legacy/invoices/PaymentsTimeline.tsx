@@ -1,4 +1,4 @@
-import { PaymentsOutlined } from '@mui/icons-material';
+import { PaymentsOutlined } from '../../../design-system/icons';
 import { Amount, EmptyState, ListGroup, ListRow } from '../../../design-system/primitives';
 import { formatCurrencyDisplay, formatDate } from '../../../core/utils-formatters';
 import type { Payment } from '../../../types';

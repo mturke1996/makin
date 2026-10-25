@@ -1,5 +1,5 @@
 import type { ElementType } from 'react';
-import { CallOutlined, PlaceOutlined, WhatsApp } from '@mui/icons-material';
+import { CallOutlined, PlaceOutlined, WhatsApp } from '../../../../design-system/icons';
 import { cn } from '../../../../design-system/primitives/cn';
 import { mapsHref, phoneHref, whatsappHref } from './contactLinks';
 

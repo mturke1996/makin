@@ -1,4 +1,4 @@
-import { Notifications } from '@mui/icons-material';
+import { Notifications } from '../../design-system/icons';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useNotificationPanelStore } from '../../stores/useNotificationPanelStore';
 import { useBrand } from '../../config/BrandProvider';

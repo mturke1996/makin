@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Delete } from '@mui/icons-material';
+import { Delete } from '../../../design-system/icons';
 import { Button, Input, Select, Sheet } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { formatAmountDisplay } from '../../../core/utils-formatters';

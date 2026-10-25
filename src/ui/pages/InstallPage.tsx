@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowBack, GetApp } from '@mui/icons-material';
+import { ArrowBack, GetApp } from '../../design-system/icons';
 import { useBrand } from '../../config/BrandProvider';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { LogoMark } from '../brand/LogoMark';

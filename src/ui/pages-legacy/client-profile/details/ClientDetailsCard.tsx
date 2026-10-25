@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { EditOutlined, EventOutlined } from '@mui/icons-material';
+import { EditOutlined, EventOutlined } from '../../../../design-system/icons';
 import { Amount, Badge, Button, IconButton, ProgressBar, Card, CardHeader, CardTitle } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import {

@@ -2,7 +2,7 @@ import {
   forwardRef, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes,
   useCallback, useId, useRef,
 } from 'react';
-import { ExpandMore } from '@mui/icons-material';
+import { ExpandMore } from '../icons';
 import { cn } from './cn';
 import { CalculatorButton } from './CalculatorPad';
 

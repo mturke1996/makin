@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Info } from '@mui/icons-material';
+import { Info } from '../../../../design-system/icons';
 import { Button, Skeleton } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 

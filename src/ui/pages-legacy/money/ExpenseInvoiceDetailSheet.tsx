@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Delete } from '@mui/icons-material';
+import { Delete } from '../../../design-system/icons';
 import { Amount, Badge, Button, ListGroup, Sheet } from '../../../design-system/primitives';
 import { formatDate, getExpenseCategoryLabel } from '../../../core/utils-formatters';
 import type { Expense, ExpenseInvoice } from '../../../types';

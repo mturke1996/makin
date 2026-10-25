@@ -141,8 +141,8 @@ html[dir='rtl'] { --dir-sign: -1; }
 }
 .client-profile-frame.hero-bezel {
   padding: 2px;
-  border: 1px solid color-mix(in srgb, var(--brand-primary-base) 18%, transparent);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-primary-base) 28%, transparent), color-mix(in srgb, var(--brand-primary-base) 8%, transparent));
+  border: 1px solid color-mix(in srgb, var(--brand-secondary-base) 30%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-secondary-base) 55%, transparent), color-mix(in srgb, var(--brand-primary-base) 10%, transparent));
 }
 .client-profile-frame > .client-profile-hero { border-radius: calc(var(--radius-hero) - 2px); }
 .client-profile-hero .hero-action-btn { width: 2.75rem; height: 2.75rem; }

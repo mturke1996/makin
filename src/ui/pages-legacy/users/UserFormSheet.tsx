@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DeleteOutline, MailOutline, Visibility, VisibilityOff } from '@mui/icons-material';
+import { DeleteOutline, MailOutline, Visibility, VisibilityOff } from '../../../design-system/icons';
 import { Badge, Button, IconButton, Input, Segmented, Sheet } from '../../../design-system/primitives';
 import type { Permission, Role } from '../../../core/access';
 import { AdminAccessNote } from './AccessSummary';

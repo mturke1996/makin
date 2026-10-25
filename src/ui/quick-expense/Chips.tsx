@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, type KeyboardEvent, type ReactNode } from 'react';
-import { Check } from '@mui/icons-material';
+import { Check } from '../../design-system/icons';
 import { cn } from '../../design-system/primitives/cn';
 
 /**

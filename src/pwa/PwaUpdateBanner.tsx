@@ -1,4 +1,4 @@
-import { SystemUpdateAlt } from '@mui/icons-material';
+import { SystemUpdateAlt } from '../design-system/icons';
 import { Button } from '../design-system/primitives';
 
 /**

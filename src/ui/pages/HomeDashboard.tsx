@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AccountBalanceWallet, EventBusy, Engineering, ReceiptLong, RequestQuote } from '@mui/icons-material';
+import { AccountBalanceWallet, EventBusy, Engineering, ReceiptLong, RequestQuote } from '../../design-system/icons';
 import { Skeleton } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import {

@@ -10,7 +10,7 @@ import {
   GetApp,
   NotificationsNone,
   NotificationsActive,
-} from '@mui/icons-material';
+} from '../../design-system/icons';
 import { useShallow } from 'zustand/react/shallow';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';

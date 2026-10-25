@@ -1,4 +1,4 @@
-import { Search } from '@mui/icons-material';
+import { Search } from '../../../../design-system/icons';
 import { Input, Segmented } from '../../../../design-system/primitives';
 import { CustomRange, PeriodSelect, type PeriodState } from './PeriodFilter';
 

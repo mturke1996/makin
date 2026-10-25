@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Add, AccountBalanceWallet, Search } from '@mui/icons-material';
+import { Add, AccountBalanceWallet, Search } from '../../../design-system/icons';
 import { Amount, Button, EmptyState, Input, ListGroup, PageHeader, Section } from '../../../design-system/primitives';
 import { toMilli, type CustodyOverviewTotals, type UserCustodyProfile } from '../../../core/finance/custodyProfile';
 import { HeroButton, HeroPanel, type HeroSegment } from './HeroPanel';

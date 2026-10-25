@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LockOutlined } from '@mui/icons-material';
+import { LockOutlined } from '../../design-system/icons';
 import { useAccess } from '../../core/access/useAccess';
 import type { AppModule } from '../../core/access/modules';
 import type { Permission } from '../../core/access/permissions';

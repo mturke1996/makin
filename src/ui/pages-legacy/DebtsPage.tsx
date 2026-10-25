@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Add, RequestQuote, Search } from '@mui/icons-material';
+import { Add, RequestQuote, Search } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { clearField } from '../../services/firebaseService';

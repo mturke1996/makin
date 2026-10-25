@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { ExpandMore, Insights } from '@mui/icons-material';
+import { ExpandMore, Insights } from '../../../../design-system/icons';
 import { Button, EmptyState } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import { buildOverviewTrend, localDay } from '../../../../core/finance/clientAnalytics';

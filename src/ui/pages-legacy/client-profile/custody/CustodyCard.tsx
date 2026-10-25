@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
-import { Delete, Edit, ExpandMore, WarningAmber } from '@mui/icons-material';
+import { Delete, Edit, ExpandMore, WarningAmber } from '../../../../design-system/icons';
 import { Amount, Badge, IconButton } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import type { ClientCustodyRow } from '../../../../core/finance/clientCustody';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowBack, Menu as MenuIcon, Search } from '@mui/icons-material';
+import { ArrowBack, Menu as MenuIcon, Search } from '../../design-system/icons';
 import { LogoMark } from '../brand/LogoMark';
 import { IconButton } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';

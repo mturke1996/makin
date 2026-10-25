@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Add, ReceiptLong } from '@mui/icons-material';
+import { Add, ReceiptLong } from '../../../design-system/icons';
 import { Amount, Button, EmptyState, Segmented, Sheet } from '../../../design-system/primitives';
 import { useAccess } from '../../../core/access/useAccess';
 import {

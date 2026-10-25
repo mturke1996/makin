@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FilterAltOff, History, Search } from '@mui/icons-material';
+import { FilterAltOff, History, Search } from '../../../../design-system/icons';
 import { Amount, Button, EmptyState, Sheet } from '../../../../design-system/primitives';
 import {
   ACTIVITY_KIND_FILTER_LABEL,

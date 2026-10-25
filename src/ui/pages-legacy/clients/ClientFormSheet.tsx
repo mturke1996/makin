@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { DeleteOutline } from '@mui/icons-material';
+import { DeleteOutline } from '../../../design-system/icons';
 import { Button, Input, Modal, Segmented, Sheet, Textarea } from '../../../design-system/primitives';
 import { useDataStore } from '../../../stores/useDataStore';
 import { useAccess } from '../../../core/access/useAccess';

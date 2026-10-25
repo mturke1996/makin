@@ -12,6 +12,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "emulators": "npx -y firebase-tools@15.15.0 emulators:start --only auth,firestore,storage --project demo-makin",
+    "seed:emulators": "node scripts/dev/seed-emulators.mjs",
+    "dev:emulators": "vite --mode emulators",
     "test:rules": "npx -y firebase-tools@15.15.0 emulators:exec --only firestore,storage --project demo-saas-rules \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
@@ -21,6 +24,7 @@
     "@hookform/resolvers": "^5.9.2",
     "@mui/icons-material": "^7.3.11",
     "@mui/material": "^7.3.11",
+    "@phosphor-icons/react": "^2.1.10",
     "@react-pdf/renderer": "^4.9.0",
     "buffer": "^6.0.3",
     "dayjs": "^1.11.23",
@@ -46,13 +50,13 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.30",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "vite": "^7.3.7",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "4.1.11",
-    "jsdom": "^26.1.0",
     "workbox-build": "^7.4.1",
     "workbox-window": "^7.4.1"
   },

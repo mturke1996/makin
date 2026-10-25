@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Brightness4, Brightness7, Logout } from '@mui/icons-material';
+import { Brightness4, Brightness7, Logout } from '../../design-system/icons';
 import { LogoMark } from '../brand/LogoMark';
 import { Avatar, IconButton } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';

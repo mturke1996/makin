@@ -14,7 +14,7 @@ import {
   summarizeCustodyProfiles,
   type CustodyBatch,
 } from '../../core/finance/custodyProfile';
-import { PersonOff } from '@mui/icons-material';
+import { PersonOff } from '../../design-system/icons';
 import { CustodyFormSheet, type CustodyFormValues } from './fund/CustodyFormSheet';
 import { DeleteCustodyModal } from './fund/DeleteCustodyModal';
 import { FundOverview } from './fund/FundOverview';

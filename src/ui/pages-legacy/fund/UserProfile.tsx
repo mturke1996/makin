@@ -1,4 +1,4 @@
-import { Add, AccountBalanceWallet, ArrowBack, ArrowForward } from '@mui/icons-material';
+import { Add, AccountBalanceWallet, ArrowBack, ArrowForward } from '../../../design-system/icons';
 import { Amount, Avatar, Button, EmptyState, ListGroup, PageHeader, Section } from '../../../design-system/primitives';
 import { toMilli, type CustodyBatch, type TimelineEntry, type UserCustodyProfile } from '../../../core/finance/custodyProfile';
 import { CustodySection } from './CustodySection';

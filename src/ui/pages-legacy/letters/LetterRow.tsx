@@ -1,4 +1,4 @@
-import { DeleteOutline, DescriptionOutlined, EditOutlined, ExpandMore, PictureAsPdfOutlined, ShareOutlined } from '@mui/icons-material';
+import { DeleteOutline, DescriptionOutlined, EditOutlined, ExpandMore, PictureAsPdfOutlined, ShareOutlined } from '../../../design-system/icons';
 import dayjs from 'dayjs';
 import { Badge, Button, cn } from '../../../design-system/primitives';
 import type { Letter } from '../../../types';

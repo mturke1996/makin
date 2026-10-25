@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Payment, ReceiptLong } from '@mui/icons-material';
+import { Payment, ReceiptLong } from '../../../design-system/icons';
 import { Amount, Badge, Button, Input, Modal } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { parseDecimalInput } from '../../../core/utils-formatters';

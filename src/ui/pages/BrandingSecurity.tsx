@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { CloudDone, CloudOff, ManageAccounts, Remove } from '@mui/icons-material';
+import { CloudDone, CloudOff, ManageAccounts, Remove } from '../../design-system/icons';
 import { Badge, Button, ListGroup, Section } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import { hasValidFirebase, firebaseConfig } from '../../config/firebase';

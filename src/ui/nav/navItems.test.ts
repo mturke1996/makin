@@ -103,16 +103,16 @@ describe('mobile bottom bar', () => {
   const bar = (access: NavAccess) => ids(bottomNavItems(access));
 
   it('is the standard five for an admin', () => {
-    expect(bar(admin)).toEqual(['home', 'clients', 'invoices', 'payments', 'fund']);
+    expect(bar(admin)).toEqual(['home', 'clients', 'payments', 'expenses', 'fund']);
   });
 
-  it('swaps in expenses for an employee who may not open invoices or payments', () => {
+  it('shows an employee only the destinations they may open', () => {
     expect(bar(salem)).toEqual(['home', 'clients', 'expenses', 'fund']);
     expect(bar(ali)).toEqual(['home', 'clients', 'expenses', 'fund']);
   });
 
   it('keeps the accountant on the standard five', () => {
-    expect(bar(fatima)).toEqual(['home', 'clients', 'invoices', 'payments', 'fund']);
+    expect(bar(fatima)).toEqual(['home', 'clients', 'payments', 'expenses', 'fund']);
   });
 
   it('tops up with debts and letters when a standard destination is missing', () => {

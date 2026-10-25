@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search } from '@mui/icons-material';
+import { Search } from '../../design-system/icons';
 import { Avatar, Input } from '../../design-system/primitives';
 import { ChipGroup } from './Chips';
 import { matchesQuery, PEOPLE_SEARCH_THRESHOLD, type Person } from './quickExpenseLogic';

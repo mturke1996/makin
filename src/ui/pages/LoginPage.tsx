@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ErrorOutline, GetApp, Lock, Mail, Visibility, VisibilityOff } from '@mui/icons-material';
+import { ErrorOutline, GetApp, Lock, Mail, Visibility, VisibilityOff } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useBrand } from '../../config/BrandProvider';
 import { hasValidFirebase } from '../../config/firebase';

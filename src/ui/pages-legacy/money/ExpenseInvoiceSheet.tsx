@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { Receipt } from '@mui/icons-material';
+import { Receipt } from '../../../design-system/icons';
 import {
   Amount,
   Button,

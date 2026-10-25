@@ -1,4 +1,4 @@
-import { WarningAmber } from '@mui/icons-material';
+import { WarningAmber } from '../../../../design-system/icons';
 import { Amount, Badge, Button, ProgressBar } from '../../../../design-system/primitives';
 import { displayProgress, type WorkerLedger } from '../../../../core/finance/workerLedger';
 import { LEDGER_STATUS_META, formatDay } from './format';

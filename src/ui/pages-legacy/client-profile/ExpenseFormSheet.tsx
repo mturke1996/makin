@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LockOutlined } from '@mui/icons-material';
+import { LockOutlined } from '../../../design-system/icons';
 import { Input } from '../../../design-system/primitives';
 import {
   expenseCategories,

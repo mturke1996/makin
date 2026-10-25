@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Backspace, Dialpad } from "@mui/icons-material";
+import { Backspace, Dialpad } from '../../design-system/icons';
 import { Input } from "../../design-system/primitives";
 import { isPartialDecimalInput } from "../../core/utils-formatters";
 import { pressAmountKey, type PadKey } from "./quickExpenseLogic";

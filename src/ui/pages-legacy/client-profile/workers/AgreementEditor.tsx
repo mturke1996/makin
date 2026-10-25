@@ -1,4 +1,4 @@
-import { Add, Delete } from '@mui/icons-material';
+import { Add, Delete } from '../../../../design-system/icons';
 import { Amount, Button, IconButton, Input, Segmented } from '../../../../design-system/primitives';
 import { NumberField } from './fields';
 import {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { WarningAmber } from '@mui/icons-material';
+import { WarningAmber } from '../../../../design-system/icons';
 import { Amount, Button, Input, Sheet, Textarea } from '../../../../design-system/primitives';
 import { formatCurrencyDisplay } from '../../../../core/utils-formatters';
 import { fromMilli, subtractMoney, toMilli, type WorkerLedger, type WorkerLedgerPayment } from '../../../../core/finance/workerLedger';

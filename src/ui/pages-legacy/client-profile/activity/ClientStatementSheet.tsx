@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Balance, ContentCopy, FilterAltOff, IosShare } from '@mui/icons-material';
+import { Balance, ContentCopy, FilterAltOff, IosShare } from '../../../../design-system/icons';
 import { Amount, Button, EmptyState, Segmented, Sheet } from '../../../../design-system/primitives';
 import { monthTitle, periodRange, todayDay } from '../../../../core/finance/clientActivity';
 import {

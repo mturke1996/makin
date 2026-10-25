@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { ArrowBack, ErrorOutline, InfoOutlined, TaskAlt, WarningAmber } from '@mui/icons-material';
+import { ArrowBack, ErrorOutline, InfoOutlined, TaskAlt, WarningAmber } from '../icons';
 import { Card, CardDescription, CardHeader, CardTitle } from './Card';
 import { cn } from './cn';
 

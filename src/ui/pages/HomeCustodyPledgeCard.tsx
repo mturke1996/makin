@@ -1,4 +1,4 @@
-import { AccountBalanceWallet, ChevronRight } from '@mui/icons-material';
+import { AccountBalanceWallet, ChevronRight } from '../../design-system/icons';
 import { Amount, Badge, ProgressBar } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import type { MyFundStats } from '../../core/hooks/useMyFundStats';

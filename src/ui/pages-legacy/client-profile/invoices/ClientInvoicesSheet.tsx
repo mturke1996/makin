@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, PostAdd, ReceiptLong } from '@mui/icons-material';
+import { ChevronRight, PostAdd, ReceiptLong } from '../../../../design-system/icons';
 import {
   Amount,
   Badge,

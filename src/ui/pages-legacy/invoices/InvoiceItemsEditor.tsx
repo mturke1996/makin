@@ -1,4 +1,4 @@
-import { Add, DeleteOutline } from '@mui/icons-material';
+import { Add, DeleteOutline } from '../../../design-system/icons';
 import { Amount, Button, IconButton, Input, ListGroup, Textarea } from '../../../design-system/primitives';
 import { lineTotal, parseAmount } from './invoiceMath';
 

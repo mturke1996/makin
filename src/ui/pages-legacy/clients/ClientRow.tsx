@@ -1,4 +1,4 @@
-import { ChevronRight, EditOutlined } from '@mui/icons-material';
+import { ChevronRight, EditOutlined } from '../../../design-system/icons';
 import { Amount, Avatar, Badge, IconButton, cn } from '../../../design-system/primitives';
 import type { Client } from '../../../types';
 import { hasDeficit, type ClientFigure } from './clientFigures';

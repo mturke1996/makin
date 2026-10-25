@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
-import { Brightness4, Brightness7, Close, Logout } from '@mui/icons-material';
+import { Brightness4, Brightness7, Close, Logout } from '../../design-system/icons';
 import { Avatar, IconButton } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import { useMountTransition } from '../../design-system/utils/useMountTransition';

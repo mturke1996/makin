@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExpandMore } from '@mui/icons-material';
+import { ExpandMore } from '../../../design-system/icons';
 import { Amount, Badge, Button, ProgressBar, cn } from '../../../design-system/primitives';
 
 export interface CategoryTotal {

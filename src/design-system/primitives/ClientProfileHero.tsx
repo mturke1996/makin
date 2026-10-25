@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Business, Person, Phone, LocationOn, Settings } from '@mui/icons-material';
+import { Business, Person, Phone, LocationOn, Settings } from '../icons';
 import { cn } from './cn';
 
 export type ClientProfileStat = {
@@ -56,7 +56,7 @@ export function ClientProfileHero({
         {...(reveal ? { 'data-reveal': '' as const } : {})}
         className={cn('client-profile-hero hero-bezel-inner relative overflow-hidden text-white', className)}
         style={{
-          background: 'linear-gradient(152deg, #070b14 0%, var(--brand-primary-base) 48%, #1a3268 100%)',
+          background: 'linear-gradient(152deg, #0d1017 0%, var(--brand-primary-base) 55%, #2b3444 100%)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(255,255,255,0.04)',
         }}
       >

@@ -1,6 +1,6 @@
 import { ReactNode, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Close, ArrowBack, ArrowForward } from '@mui/icons-material';
+import { Close, ArrowBack, ArrowForward } from '../icons';
 import { cn } from './cn';
 import { IconButton } from './IconButton';
 import { useScrollLockCounter } from '../../ui/hooks/useScrollLockCounter';

@@ -1,4 +1,4 @@
-import { WarningAmber } from '@mui/icons-material';
+import { WarningAmber } from '../../design-system/icons';
 import { Amount } from '../../design-system/primitives';
 import { custodyWarning, type CustodyPreview } from './quickExpenseLogic';
 

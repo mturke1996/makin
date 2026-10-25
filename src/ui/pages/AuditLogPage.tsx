@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Close, History, Lock, Search } from '@mui/icons-material';
+import { Close, History, Lock, Search } from '../../design-system/icons';
 import { useAuditStore } from '../../stores/useAuditStore';
 import { useAccess } from '../../core/access/useAccess';
 import type { AuditAction, AuditLogEntry } from '../../types';

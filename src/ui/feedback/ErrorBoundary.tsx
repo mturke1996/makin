@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { ErrorOutline } from '@mui/icons-material';
+import { ErrorOutline } from '../../design-system/icons';
 import { Button } from '../../design-system/primitives';
 
 interface Props {

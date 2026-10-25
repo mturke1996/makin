@@ -1,4 +1,4 @@
-import { ChevronRight } from '@mui/icons-material';
+import { ChevronRight } from '../../../design-system/icons';
 import { Amount, Badge, ProgressBar, cn } from '../../../design-system/primitives';
 import { formatCurrencyDisplay, formatDate, getStatusLabel } from '../../../core/utils-formatters';
 import type { Invoice } from '../../../types';

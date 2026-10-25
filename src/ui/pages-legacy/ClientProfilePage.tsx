@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowForward, ExpandMore, PostAdd, Payment as PaymentIcon, PersonOff, ReceiptLong } from '@mui/icons-material';
+import { ArrowForward, ExpandMore, PostAdd, Payment as PaymentIcon, PersonOff, ReceiptLong } from '../../design-system/icons';
 import { Button, Card, CardHeader, CardTitle, CardDescription, ClientProfileHero, EmptyState, PageShell } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import { expenseReadOnlyNotice } from '../../core/finance/expenseLock';

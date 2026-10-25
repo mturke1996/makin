@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Add, AttachFile, Edit, Delete, Engineering, ExpandMore, WarningAmber } from '@mui/icons-material';
+import { Add, AttachFile, Edit, Delete, Engineering, ExpandMore, WarningAmber } from '../../../design-system/icons';
 import { Button, EmptyState, IconButton, ProgressBar, Segmented, Sheet } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { formatDayText, groupRecords, limitGroups } from '../../../core/finance/clientRecords';

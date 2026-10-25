@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Add, Edit, Delete, Timeline, FileDownload } from '@mui/icons-material';
+import { Add, Edit, Delete, Timeline, FileDownload } from '../../../design-system/icons';
 import { Amount, Badge, Button, EmptyState, IconButton, ListGroup, ProgressBar, Sheet } from '../../../design-system/primitives';
 import { formatDayText } from '../../../core/finance/clientRecords';
 import { exportPhaseBudgetToExcel, PHASE_STATUS_LABELS } from '../../../features/export/excelExport';

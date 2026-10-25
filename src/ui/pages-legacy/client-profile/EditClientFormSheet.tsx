@@ -1,6 +1,6 @@
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Phone } from '@mui/icons-material';
+import { Phone } from '../../../design-system/icons';
 import { Input, Segmented } from '../../../design-system/primitives';
 import type { Client } from '../../../types';
 import { ClientProjectFields } from './details/ClientProjectFields';

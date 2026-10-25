@@ -1,4 +1,4 @@
-import { VerifiedUserOutlined } from '@mui/icons-material';
+import { VerifiedUserOutlined } from '../../../design-system/icons';
 import type { Permission } from '../../../core/access';
 import { cn } from '../../../design-system/primitives/cn';
 import { EXPENSE_VISIBILITY_LABEL, describeAccess, permissionCountLabel } from './accessSummaryModel';

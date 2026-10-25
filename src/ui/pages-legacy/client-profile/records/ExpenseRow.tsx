@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { AttachFile, Lock, PersonOutline, Shield, Visibility } from '@mui/icons-material';
+import { AttachFile, Lock, PersonOutline, Shield, Visibility } from '../../../../design-system/icons';
 import { Amount, Avatar, Badge } from '../../../../design-system/primitives';
 import type { Role } from '../../../../core/access/principal';
 import { formatDayText } from '../../../../core/finance/clientRecords';

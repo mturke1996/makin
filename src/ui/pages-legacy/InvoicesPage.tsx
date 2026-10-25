@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Add, ReceiptLong, Search } from '@mui/icons-material';
+import { Add, ReceiptLong, Search } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import {

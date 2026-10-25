@@ -13,7 +13,7 @@ import {
   TableChart,
   Timeline,
   TrendingDown,
-} from '@mui/icons-material';
+} from '../../../design-system/icons';
 import { Section } from '../../../design-system/primitives';
 import { PROFIT_BASE_LABELS } from '../../../core/finance/clientProfitTotals';
 import { subtractMoney } from '../../../core/finance/workerLedger';

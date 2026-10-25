@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Delete, Edit, PictureAsPdf, Share } from '@mui/icons-material';
+import { Delete, Edit, PictureAsPdf, Share } from '../../../design-system/icons';
 import { Button, IconButton, ListGroup } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { RECORDS_BAR_OFFSET } from './records/RecordsFilterBar';

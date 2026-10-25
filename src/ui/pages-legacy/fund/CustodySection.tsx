@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react';
-import { EditOutlined, ExpandMore } from '@mui/icons-material';
+import { EditOutlined, ExpandMore } from '../../../design-system/icons';
 import { Amount, Badge, Button, IconButton } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { formatAmountDisplay } from '../../../core/utils-formatters';

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Add, DescriptionOutlined, Search } from '@mui/icons-material';
+import { Add, DescriptionOutlined, Search } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';

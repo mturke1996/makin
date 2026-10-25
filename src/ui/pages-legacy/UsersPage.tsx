@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Add, PersonAddAlt1, Search } from '@mui/icons-material';
+import { Add, PersonAddAlt1, Search } from '../../design-system/icons';
 import { collection, query, orderBy, onSnapshot, setDoc, doc, updateDoc } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, updateProfile, signOut, sendPasswordResetEmail } from 'firebase/auth';

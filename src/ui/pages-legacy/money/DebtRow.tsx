@@ -1,4 +1,4 @@
-import { Delete, Edit } from '@mui/icons-material';
+import { Delete, Edit } from '../../../design-system/icons';
 import { Amount, Avatar, Badge, Button, IconButton, ProgressBar } from '../../../design-system/primitives';
 import { formatCurrencyDisplay, formatDate } from '../../../core/utils-formatters';
 import type { StandaloneDebt } from '../../../types';

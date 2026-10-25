@@ -1,4 +1,4 @@
-import { CheckCircle } from '@mui/icons-material';
+import { CheckCircle } from '../../design-system/icons';
 import { Amount } from '../../design-system/primitives';
 import { custodyWarning, type CustodyPreview } from './quickExpenseLogic';
 

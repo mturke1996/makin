@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { Add, LockOutlined } from '@mui/icons-material';
+import { Add, LockOutlined } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';

@@ -14,7 +14,7 @@ import {
   Share,
   WifiOff,
   Menu as MenuIcon,
-} from '@mui/icons-material';
+} from '../design-system/icons';
 import qrcode from 'qrcode-generator';
 import toast from 'react-hot-toast';
 import { useBrand } from '../config/BrandProvider';

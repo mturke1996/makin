@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ExpandMore } from '@mui/icons-material';
+import { ExpandMore } from '../../../../design-system/icons';
 import { Button } from '../../../../design-system/primitives';
 import { AttentionPanel, AttentionRow } from '../../../../design-system/primitives/AttentionPanel';
 import type { ClientInsight, InsightAction } from '../../../../core/finance/clientInsights';

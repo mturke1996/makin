@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState, type ElementType } from 'react';
-import { Add, AccountBalance, CreditCard, PhoneAndroid, Payments, RequestQuote } from '@mui/icons-material';
+import { Add, AccountBalance, CreditCard, PhoneAndroid, Payments, RequestQuote } from '../../../design-system/icons';
 import { Amount, Button, EmptyState, Segmented, Sheet } from '../../../design-system/primitives';
 import {
   EMPTY_PAYMENT_QUERY,

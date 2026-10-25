@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { ChevronLeft } from '@mui/icons-material';
+import { ChevronLeft } from '../../../design-system/icons';
 import { cn } from '../../../design-system/primitives/cn';
 
 export type ProfileTone = 'brand' | 'success' | 'danger' | 'warning' | 'info' | 'amber';

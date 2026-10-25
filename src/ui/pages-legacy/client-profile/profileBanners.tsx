@@ -1,4 +1,4 @@
-import { AccountBalanceWallet, WarningAmber } from '@mui/icons-material';
+import { AccountBalanceWallet, WarningAmber } from '../../../design-system/icons';
 import { formatCurrencyDisplay, parseDecimalInput } from '../../../core/utils-formatters';
 import { Amount } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';

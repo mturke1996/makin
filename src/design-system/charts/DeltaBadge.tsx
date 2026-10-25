@@ -1,4 +1,4 @@
-import { NorthEast, SouthEast, Remove } from '@mui/icons-material';
+import { NorthEast, SouthEast, Remove } from '../icons';
 import { cn } from '../primitives/cn';
 
 interface DeltaBadgeProps {

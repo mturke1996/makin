@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Add, Edit, Delete, TableChart, FileDownload } from '@mui/icons-material';
+import { Add, Edit, Delete, TableChart, FileDownload } from '../../../design-system/icons';
 import { Amount, Badge, Button, EmptyState, IconButton, Segmented, Sheet } from '../../../design-system/primitives';
 import { buildShares } from '../../../core/finance/clientRecords';
 import { formatDecimalNumber } from '../../../core/utils-formatters';

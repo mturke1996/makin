@@ -1,4 +1,4 @@
-import { AccountBalanceWallet, WarningAmber } from '@mui/icons-material';
+import { AccountBalanceWallet, WarningAmber } from '../../../../design-system/icons';
 import { Amount } from '../../../../design-system/primitives';
 import type { ClientCustodyTotals } from '../../../../core/finance/clientCustody';
 import { ProfileModuleHero } from '../profileUi';

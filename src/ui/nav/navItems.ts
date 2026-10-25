@@ -13,7 +13,7 @@ import {
   AddCircleOutline,
   History,
   Groups,
-} from '@mui/icons-material';
+} from '../../design-system/icons';
 import { ComponentType } from 'react';
 import type { AppModule } from '../../core/access/modules';
 import type { Permission } from '../../core/access/permissions';
@@ -70,10 +70,10 @@ const AUDIT: NavItem = { id: 'audit', label: 'سجل التدقيق', labelEn: '
 const SETTINGS: NavItem = { id: 'settings', label: 'الإعدادات', labelEn: 'Settings', path: '/settings/branding', icon: Settings, adminOnly: true };
 
 /** Mobile bottom bar: the standard five destinations (the bar swaps in others when one is not allowed). */
-export const PRIMARY_NAV: NavItem[] = [HOME, CLIENTS, INVOICES, PAYMENTS, FUND];
+export const PRIMARY_NAV: NavItem[] = [HOME, CLIENTS, EXPENSES, PAYMENTS, FUND];
 
 /** Substitutes for a standard bottom-bar destination the person cannot open, in order of preference. */
-export const BOTTOM_NAV_FALLBACKS: NavItem[] = [EXPENSES, DEBTS, LETTERS];
+export const BOTTOM_NAV_FALLBACKS: NavItem[] = [INVOICES, DEBTS, LETTERS];
 
 /** Additional destinations: shown in the sidebar (desktop) and the drawer (mobile). */
 export const SECONDARY_NAV: NavItem[] = [WORKERS, NEW_INVOICE, DEBTS, EXPENSES, EXPENSE_INVOICES, LETTERS, USERS, AUDIT, SETTINGS];
@@ -121,7 +121,7 @@ export function visibleNavGroups(access: NavAccess): { def: NavGroupDef; items: 
 
 /**
  * The mobile bottom bar for this person: the standard destinations they may open, topped up with
- * the next allowed ones (expenses, debts, letters) until there are five, kept in sidebar order.
+ * the next allowed ones (invoices, debts, letters) until there are five, kept in sidebar order.
  * An employee who can record expenses and see their custody gets Home, Clients, Expenses, Fund.
  */
 export function bottomNavItems(access: NavAccess): NavItem[] {

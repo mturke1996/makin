@@ -1,5 +1,5 @@
 import { ReactNode, useRef } from 'react';
-import { Check, Delete, Edit } from '@mui/icons-material';
+import { Check, Delete, Edit } from '../../../design-system/icons';
 import {
   Button,
   IconButton,

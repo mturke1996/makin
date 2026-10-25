@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Add, AccountBalanceWallet } from '@mui/icons-material';
+import { Add, AccountBalanceWallet } from '../../../design-system/icons';
 import { Button, EmptyState, Segmented, Sheet } from '../../../design-system/primitives';
 import type { Client, UserBalance } from '../../../types';
 import { chargedCustody, summarizeClientCustody } from '../../../core/finance/clientCustody';

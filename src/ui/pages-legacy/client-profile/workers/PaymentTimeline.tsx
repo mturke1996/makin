@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Delete, Edit, ReceiptLong } from '@mui/icons-material';
+import { Delete, Edit, ReceiptLong } from '../../../../design-system/icons';
 import {
   Amount,
   Badge,

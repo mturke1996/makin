@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Controller, useFormState, type Control } from 'react-hook-form';
-import { ExpandMore } from '@mui/icons-material';
+import { ExpandMore } from '../../../../design-system/icons';
 import { Input, Segmented, Textarea } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import { CLIENT_STATUS_LABEL } from '../../../../core/finance/clientProject';

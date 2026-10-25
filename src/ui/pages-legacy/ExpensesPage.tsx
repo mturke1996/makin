@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Add, Receipt, Search, TrendingDown } from '@mui/icons-material';
+import { Add, Receipt, Search, TrendingDown } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import toast from 'react-hot-toast';
 import { EXPENSE_CLOSED_MESSAGE, expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';

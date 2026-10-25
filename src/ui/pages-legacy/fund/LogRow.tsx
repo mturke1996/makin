@@ -1,4 +1,4 @@
-import { ArrowDownward, ArrowUpward, RemoveCircleOutline, Sync } from '@mui/icons-material';
+import { ArrowDownward, ArrowUpward, RemoveCircleOutline, Sync } from '../../../design-system/icons';
 import { Amount } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { toMilli, type CustodyLogRow } from '../../../core/finance/custodyProfile';

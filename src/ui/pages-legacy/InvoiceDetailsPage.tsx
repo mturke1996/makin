@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   MoreHoriz, PictureAsPdfOutlined, PrintOutlined, ReceiptLong, ShareOutlined, Add,
-} from '@mui/icons-material';
+} from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
 import { useDataStore } from '../../stores/useDataStore';

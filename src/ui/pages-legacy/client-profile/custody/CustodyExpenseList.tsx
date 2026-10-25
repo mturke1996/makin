@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { WarningAmber } from '@mui/icons-material';
+import { WarningAmber } from '../../../../design-system/icons';
 import { Amount, Badge, Button } from '../../../../design-system/primitives';
 import type { ClientCustodyExpense } from '../../../../core/finance/clientCustody';
 import { formatDate, getExpenseCategoryLabel } from '../../../../core/utils-formatters';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Add, Payments as PaymentsIcon, Search } from '@mui/icons-material';
+import { Add, Payments as PaymentsIcon, Search } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { clearField } from '../../services/firebaseService';

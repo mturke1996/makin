@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Add, PersonAdd, PictureAsPdf, Share } from '@mui/icons-material';
+import { Add, PersonAdd, PictureAsPdf, Share } from '../../../../design-system/icons';
 import {
   Amount,
   Avatar,

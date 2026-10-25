@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
-import { Close, Search, Tune } from '@mui/icons-material';
+import { Close, Search, Tune } from '../../../../design-system/icons';
 import { Button, IconButton, Input } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 

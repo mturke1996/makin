@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AttachFile, Delete, LockOutlined } from '@mui/icons-material';
+import { AttachFile, Delete, LockOutlined } from '../../../design-system/icons';
 import {
   Amount,
   Button,

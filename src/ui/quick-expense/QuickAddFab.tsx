@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
-import { Add } from '@mui/icons-material';
+import { Add } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
 import { cn } from '../../design-system/primitives/cn';

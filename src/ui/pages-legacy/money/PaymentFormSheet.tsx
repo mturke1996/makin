@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AccountBalance, EditNote, PhoneAndroid, Payments as PaymentsIcon } from '@mui/icons-material';
+import { AccountBalance, EditNote, PhoneAndroid, Payments as PaymentsIcon } from '../../../design-system/icons';
 import { Input, Select, Sheet, Textarea } from '../../../design-system/primitives';
 import { getInvoicePaymentSummary } from '../../../core/finance/invoicePayments';
 import { formatCurrencyDisplay, isPartialDecimalInput, parseDecimalInput } from '../../../core/utils-formatters';

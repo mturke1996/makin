@@ -1,4 +1,4 @@
-import { CancelOutlined, CheckCircleOutline, DeleteOutline, EditOutlined, MailOutline } from '@mui/icons-material';
+import { CancelOutlined, CheckCircleOutline, DeleteOutline, EditOutlined, MailOutline } from '../../../design-system/icons';
 import { ListGroup, ListRow, Sheet } from '../../../design-system/primitives';
 import type { Invoice } from '../../../types';
 

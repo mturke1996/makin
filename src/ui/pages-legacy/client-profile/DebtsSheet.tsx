@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Add, RequestQuote } from '@mui/icons-material';
+import { Add, RequestQuote } from '../../../design-system/icons';
 import { Amount, Avatar, Badge, Button, EmptyState, ProgressBar, Segmented, Sheet } from '../../../design-system/primitives';
 import {
   EMPTY_DEBT_QUERY,

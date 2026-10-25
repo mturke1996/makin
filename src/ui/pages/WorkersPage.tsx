@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Groups, Search } from '@mui/icons-material';
+import { Groups, Search } from '../../design-system/icons';
 import {
   Amount,
   Avatar,

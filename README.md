@@ -113,8 +113,19 @@ MIT.
 4. Put the project id in `.firebaserc`, then deploy the rules: `npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage`.
 5. `npm install && npm run dev`.
 
+## Try it locally without Firebase
+
+```
+npm run emulators          # terminal 1: local Auth + Firestore + Storage (needs Java)
+npm run seed:emulators     # terminal 2: sample clients, expenses, payments, workers
+npm run dev:emulators      # terminal 2: app on http://localhost:3000
+```
+
+Sign in with `admin@makin.test` / `Makin#1234`. All data is invented and lives only in the emulator.
+
 ## Brand
 
 - Identity guide and logo sheet: `brand/MAKIN-Brand-Identity.pdf`, `brand/MAKIN-Logo.pdf`.
+- Icons: Phosphor, one Regular weight (`src/design-system/icons.tsx`, same names the screens already used).
 - Palette follows Linda Shop (deep ink `#1F2633`, gold `#C9972B`, warm neutrals), Cairo font.
 - Regenerate icons: `node scripts/generate-brand-assets.cjs`. Regenerate PDFs: `PHOSPHOR_DIR=<@phosphor-icons/core>/assets/regular node scripts/generate-brand-pdfs.cjs`.

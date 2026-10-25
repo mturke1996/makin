@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Add, ArrowBack, Receipt } from '@mui/icons-material';
+import { Add, ArrowBack, Receipt } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';

@@ -1,5 +1,5 @@
 import { forwardRef, ReactNode, HTMLAttributes } from 'react';
-import { ChevronRight } from '@mui/icons-material';
+import { ChevronRight } from '../icons';
 import { cn } from './cn';
 
 /** One surface, rows separated by hairlines. Replaces stacks of individual cards. */

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Search, Star, StarBorder, ExpandMore } from "@mui/icons-material";
+import { Check, Search, Star, StarBorder, ExpandMore } from '../../design-system/icons';
 import {
   Button,
   IconButton,

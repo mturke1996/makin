@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Search, ExpandMore } from '@mui/icons-material';
+import { Check, Search, ExpandMore } from '../../design-system/icons';
 import { Avatar, Button, Input, ListGroup, ListRow, Sheet } from '../../design-system/primitives';
 import type { Client } from '../../types';
 import { matchesQuery } from './quickExpenseLogic';

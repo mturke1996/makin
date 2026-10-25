@@ -1,4 +1,4 @@
-import { Search } from '@mui/icons-material';
+import { Search } from '../../../../design-system/icons';
 import { Button, EmptyState } from '../../../../design-system/primitives';
 import type { RecordGroup } from '../../../../core/finance/clientRecords';
 import { dayLabel, monthKeyLabel } from '../ledgerUtils';

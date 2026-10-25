@@ -10,7 +10,7 @@ import {
   ReplayCircleFilled,
   Share,
   Unarchive,
-} from '@mui/icons-material';
+} from '../../../../design-system/icons';
 import {
   Avatar,
   Badge,

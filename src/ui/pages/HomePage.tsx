@@ -13,7 +13,7 @@ import {
   ManageAccounts,
   WavingHand,
   Groups,
-} from '@mui/icons-material';
+} from '../../design-system/icons';
 import { useBrand } from '../../config/BrandProvider';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataStore } from '../../stores/useDataStore';

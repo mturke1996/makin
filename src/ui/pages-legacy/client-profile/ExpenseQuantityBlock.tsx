@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Control, Controller } from 'react-hook-form';
-import { Add, Close } from '@mui/icons-material';
+import { Add, Close } from '../../../design-system/icons';
 import { Amount, Badge, IconButton, Input, Select } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import {

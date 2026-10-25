@@ -1,4 +1,4 @@
-import { ChevronRight } from '@mui/icons-material';
+import { ChevronRight } from '../../../design-system/icons';
 import { Amount, Avatar } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import type { UserCustodyProfile } from '../../../core/finance/custodyProfile';

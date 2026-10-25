@@ -1,7 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { CheckCircle, CloudUpload, Download, History, Restore, Upload } from '@mui/icons-material';
+import { CheckCircle, CloudUpload, Download, History, Restore, Upload } from '../../design-system/icons';
 import { useBrandStore } from '../../stores/useBrandStore';
 import { useBrand } from '../../config/BrandProvider';
 import DEFAULT_BRAND from '../../config/brand.config';

@@ -1,5 +1,5 @@
 import React, { createContext, forwardRef, ReactNode, useContext, useEffect, useId, useRef, useState } from 'react';
-import { AccountBalance, Check, CreditCard, Delete, PhoneAndroid, Payments, RequestQuote, Search } from '@mui/icons-material';
+import { AccountBalance, Check, CreditCard, Delete, PhoneAndroid, Payments, RequestQuote, Search } from '../../../design-system/icons';
 import { Amount, Avatar, Button, Field, Input, ListGroup, Select, Sheet, Textarea } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { formatDecimalNumber, parseDecimalInput, CURRENCY_SYMBOL } from '../../../core/utils-formatters';

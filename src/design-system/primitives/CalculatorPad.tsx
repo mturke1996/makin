@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { Backspace, Calculate, Close } from '@mui/icons-material';
+import { Backspace, Calculate, Close } from '../icons';
 import { cn } from './cn';
 import { incrementLock, decrementLock } from '../utils/useScrollLock';
 import {

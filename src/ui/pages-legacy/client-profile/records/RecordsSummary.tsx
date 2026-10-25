@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ExpandMore, InfoOutlined } from '@mui/icons-material';
+import { ExpandMore, InfoOutlined } from '../../../../design-system/icons';
 import { Amount, ProgressBar } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import { collapseShares, type ShareRow } from '../../../../core/finance/clientRecords';

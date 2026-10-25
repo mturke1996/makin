@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import { Add, DeleteOutline } from '@mui/icons-material';
+import { Add, DeleteOutline } from '../../../design-system/icons';
 import { Button, IconButton, Input, Section, Segmented, Select, Sheet, Textarea, cn } from '../../../design-system/primitives';
 import type { Client, Letter, LetterType } from '../../../types';
 import { CLOSINGS, GREETINGS, createDefaultLetter, presetLabel } from './letterPresets';

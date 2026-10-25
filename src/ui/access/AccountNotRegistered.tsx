@@ -1,4 +1,4 @@
-import { PersonOffOutlined } from '@mui/icons-material';
+import { PersonOffOutlined } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Button, EmptyState } from '../../design-system/primitives';
 

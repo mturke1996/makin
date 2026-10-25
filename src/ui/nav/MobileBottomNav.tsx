@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { Menu as MenuIcon } from '../../design-system/icons';
 import { BOTTOM_NAV_MIN, activeNavPath, navLabel } from './navItems';
 import { useBottomNavItems } from './useNavAccess';
 import { useNavDrawer } from './useNavDrawer';

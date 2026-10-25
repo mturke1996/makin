@@ -1,4 +1,4 @@
-import { AccountBalanceWallet } from '@mui/icons-material';
+import { AccountBalanceWallet } from '../../../design-system/icons';
 import { Amount, Badge, ProgressBar } from '../../../design-system/primitives';
 import { formatCurrencyDisplay } from '../../../core/utils-formatters';
 

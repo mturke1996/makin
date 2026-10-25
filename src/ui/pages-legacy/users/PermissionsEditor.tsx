@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check } from '@mui/icons-material';
+import { Check } from '../../../design-system/icons';
 import {
   PERMISSIONS,
   PERMISSION_GROUPS,

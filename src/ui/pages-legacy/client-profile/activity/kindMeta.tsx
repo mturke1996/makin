@@ -1,5 +1,5 @@
 import type { ElementType } from 'react';
-import { AccountBalanceWallet, Assignment, Engineering, Flag, Payments, ReceiptLong, RequestQuote } from '@mui/icons-material';
+import { AccountBalanceWallet, Assignment, Engineering, Flag, Payments, ReceiptLong, RequestQuote } from '../../../../design-system/icons';
 import type { ActivityKind } from '../../../../core/finance/clientActivity';
 
 interface KindMeta {

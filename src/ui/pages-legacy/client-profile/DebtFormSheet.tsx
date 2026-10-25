@@ -1,6 +1,6 @@
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Person } from '@mui/icons-material';
+import { Person } from '../../../design-system/icons';
 import { Input } from '../../../design-system/primitives';
 import type { StandaloneDebt } from '../../../types';
 import { FormDateInput, FormField, FormSection, FormSheetShell, FormTextArea, MoneyField } from './FormSheetKit';

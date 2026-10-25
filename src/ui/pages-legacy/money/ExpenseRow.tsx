@@ -1,4 +1,4 @@
-import { AttachFile, PersonOutline, Shield, VisibilityOutlined } from '@mui/icons-material';
+import { AttachFile, PersonOutline, Shield, VisibilityOutlined } from '../../../design-system/icons';
 import { Amount, Avatar, Badge } from '../../../design-system/primitives';
 import {
   expenseHasQuantityLine,

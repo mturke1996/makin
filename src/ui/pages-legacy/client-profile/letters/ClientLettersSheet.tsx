@@ -6,7 +6,7 @@ import {
   OpenInNew,
   PictureAsPdfOutlined,
   ShareOutlined,
-} from '@mui/icons-material';
+} from '../../../../design-system/icons';
 import { Badge, Button, EmptyState, ListGroup, Segmented, Sheet, Skeleton } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import { downloadPdf, sharePdf } from '../../../../features/pdf/pdfService';
