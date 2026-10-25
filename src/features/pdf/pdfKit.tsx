@@ -1,397 +1,180 @@
 // @ts-nocheck
 /**
- * pdfKit — Shared building blocks for ALL PDF documents.
- * Layout aligned with debtflow-pro (PdfBrandedReportHeader, totalsBox, tables).
+ * pdfKit — the building blocks of every MAKIN document.
+ *
+ * One rule runs through all of it: each fact is printed once.
+ *  - The letterhead (logo, company line, services, phones) is on the first page only.
+ *  - Continuation pages carry a slim running header (small logo + what this is) and a footer
+ *    that holds nothing but the document reference and the page number.
+ *  - A total is shown in one place (the summary strip), not again under the table.
  */
 import React from 'react';
-import { Text, View, StyleSheet, Svg, Rect, Line, Circle, Path, G } from '@react-pdf/renderer';
+import { Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import './pdfFonts';
 import { PDF_FONT_FAMILY } from './pdfFonts';
-import { ar, arDate, arMoney } from './arabicPDF';
-import { getPdfBrand, buildFooterPhones, buildFooterAddressLine, type PdfBrandSnapshot } from './pdfBrand';
+import { ar, arDate } from './arabicPDF';
+import { getPdfBrand, type PdfBrandSnapshot } from './pdfBrand';
 import { getPdfCompanyInfo } from './pdfCompanyInfo';
+import { usePdfLogoDataUri } from './pdf-logo-context';
 
 export const INK = {
-  text: '#0F2340',
-  muted: '#4A6080',
-  faint: '#7A8FA8',
-  border: '#D8E0EA',
-  zebra: '#F4F7FB',
-  totalBg: '#EEF2F8',
-  cardBg: '#FAFBFD',
-  paleGold: '#FFFCF5',
+  text: '#1F2633',
+  muted: '#5E6472',
+  faint: '#8B909B',
+  border: '#E4E0D6',
+  hair: '#EDEAE2',
+  zebra: '#FBFAF7',
+  panel: '#F6F3EC',
+  totalBg: '#F6F3EC',
+  cardBg: '#FFFFFF',
+  paleGold: '#FBF6E9',
+  gold: '#C9972B',
   white: '#FFFFFF',
-  success: '#0D9488',
+  success: '#0F766E',
   warning: '#B45309',
-  danger: '#B91C1C',
+  danger: '#B42318',
 };
 
 export const PDF_PAGINATION = {
-  tableHead: 32,
-  totalBar: 36,
-  minRowHeight: 28,
+  tableHead: 28,
+  totalBar: 30,
+  minRowHeight: 26,
   section: 36,
-  /** Reserved space so flowing content does not overlap the fixed branded footer */
-  footerReserve: 88,
+  /** Space kept clear above the fixed footer so flowing content never runs into it. */
+  footerReserve: 52,
 } as const;
+
+/** The logo file is 1600 x 416. */
+const LOGO_RATIO = 416 / 1600;
+const FF = PDF_FONT_FAMILY;
 
 export function makePdfStyles(B: PdfBrandSnapshot) {
   return StyleSheet.create({
     page: {
-      fontFamily: PDF_FONT_FAMILY,
+      fontFamily: FF,
       fontSize: 9,
       color: INK.text,
       backgroundColor: INK.white,
-      paddingTop: 30,
-      paddingBottom: PDF_PAGINATION.footerReserve,
-      paddingHorizontal: 36,
+      paddingTop: 62,
+      paddingBottom: PDF_PAGINATION.footerReserve + 8,
+      paddingHorizontal: 40,
     },
 
-    /* ── Header (debtflow-pro) ── */
-    headerTop: {
+    /* ── Letterhead (first page only) ── */
+    letterhead: { alignItems: 'center', marginTop: -26, marginBottom: 16 },
+    lhName: { marginTop: 9, fontSize: 10.5, fontWeight: 'bold', letterSpacing: 2.4, color: INK.text, textAlign: 'center' },
+    lhServices: { marginTop: 3, fontSize: 7.8, letterSpacing: 0.7, color: INK.muted, textAlign: 'center' },
+    lhPhones: { marginTop: 4, fontSize: 8.6, fontWeight: 'bold', letterSpacing: 0.6, color: INK.text, textAlign: 'center' },
+    lhRule: { marginTop: 11, width: '100%', borderTopWidth: 1.6, borderTopColor: INK.gold },
+    lhRuleThin: { marginTop: 2, width: '100%', borderTopWidth: 0.5, borderTopColor: INK.text },
+
+    /* ── Running header + footer (every other page) ── */
+    runHead: {
+      position: 'absolute',
+      top: 22,
+      left: 40,
+      right: 40,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
+      paddingBottom: 7,
+      borderBottomWidth: 0.6,
+      borderBottomColor: INK.border,
     },
-    headerTitleCol: {
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      maxWidth: '40%',
-      paddingTop: 8,
-    },
-    titleEn: {
-      fontSize: 26,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: '#b8c5d6',
-      letterSpacing: 1.2,
-      marginBottom: 4,
-    },
-    titleAr: {
-      fontSize: 11,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-    },
-    titleRef: {
-      marginTop: 4,
-      fontSize: 9.5,
-      fontFamily: PDF_FONT_FAMILY,
-      color: INK.muted,
-    },
-    identityRow: {
+    runTitle: { fontSize: 8.4, color: INK.muted, textAlign: 'left' },
+    foot: {
+      position: 'absolute',
+      bottom: 22,
+      left: 40,
+      right: 40,
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      flex: 1,
-      marginLeft: 8,
+      justifyContent: 'space-between',
+      paddingTop: 7,
+      borderTopWidth: 0.6,
+      borderTopColor: INK.border,
     },
-    identityText: {
-      alignItems: 'flex-end',
-      flexShrink: 1,
-      maxWidth: 300,
-      justifyContent: 'center',
-    },
-    companyFull: {
-      fontSize: 13.5,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-      marginBottom: 3,
-      textAlign: 'right',
-      lineHeight: 1.35,
-    },
-    engineer: {
-      fontSize: 10,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 2,
-      textAlign: 'right',
-    },
-    tagEn: {
-      fontSize: 8,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: INK.muted,
-      textAlign: 'right',
-      letterSpacing: 0.6,
-    },
-    logoWrap: {
-      paddingLeft: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    divider: {
-      borderBottomWidth: 2,
-      borderBottomColor: B.palette.primary,
-      paddingBottom: 8,
+    footText: { fontSize: 7.8, color: INK.faint },
+
+    /* ── Document title ── */
+    docTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 },
+    docKicker: { fontSize: 7.4, fontWeight: 'bold', letterSpacing: 1.6, color: INK.gold, textAlign: 'right', marginBottom: 3 },
+    docTitle: { fontSize: 19, fontWeight: 'bold', color: INK.text, textAlign: 'right', lineHeight: 1.25 },
+    docSubtitle: { fontSize: 9.4, color: INK.muted, textAlign: 'right', marginTop: 3 },
+    docMeta: { alignItems: 'flex-start', gap: 3 },
+    docMetaRow: { flexDirection: 'row', gap: 6 },
+    docMetaLabel: { fontSize: 7.8, color: INK.faint, textAlign: 'left' },
+    docMetaValue: { fontSize: 8.6, fontWeight: 'bold', color: INK.text, textAlign: 'left' },
+
+    /* ── Info card ── */
+    infoCard: {
+      flexDirection: 'row-reverse',
+      borderWidth: 0.8,
+      borderColor: INK.border,
+      borderRadius: 4,
+      backgroundColor: INK.zebra,
       marginBottom: 14,
     },
-    contactBlock: { alignItems: 'flex-end' },
-    kvRow: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
-      width: '100%',
-      marginTop: 4,
-      paddingTop: 5,
-      borderTopWidth: 1,
-      borderTopColor: INK.border,
-    },
-    kvBox: { alignItems: 'flex-end' },
-    kvLabel: {
-      fontSize: 7,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 2,
-      textAlign: 'right',
-    },
-    kvVal: {
-      fontSize: 8.8,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: INK.text,
-      textAlign: 'right',
-    },
-    servicesRow: {
-      marginTop: 6,
-      paddingTop: 6,
-      borderTopWidth: 1,
-      borderTopColor: INK.border,
-      alignItems: 'flex-end',
-    },
-    servicesLabel: {
-      fontSize: 7,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 3,
-      textAlign: 'right',
-    },
-    servicesText: {
-      fontSize: 8,
-      fontFamily: PDF_FONT_FAMILY,
-      color: INK.text,
-      textAlign: 'right',
-      lineHeight: 1.55,
-    },
+    infoCell: { flex: 1, paddingVertical: 8, paddingHorizontal: 10, alignItems: 'flex-end' },
+    infoCellDivider: { borderRightWidth: 0.8, borderRightColor: INK.border },
+    infoLabel: { fontSize: 7.4, color: INK.faint, marginBottom: 3, textAlign: 'right' },
+    infoValue: { fontSize: 9.6, fontWeight: 'bold', color: INK.text, textAlign: 'right', lineHeight: 1.35 },
 
-    /* ── Info row (debtflow-pro) ── */
-    infoRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 16,
-    },
-    datesCol: { width: '38%' },
-    dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    dateLabel: { fontSize: 8.8, color: '#999', textAlign: 'right', fontFamily: PDF_FONT_FAMILY },
-    dateVal: { fontSize: 8.8, fontWeight: 'bold', color: INK.text, textAlign: 'left', fontFamily: PDF_FONT_FAMILY },
-    clientBox: {
-      width: '55%',
-      paddingVertical: 4,
-      paddingRight: 12,
-      borderRightWidth: 2,
-      borderRightColor: B.palette.primary,
-      alignItems: 'flex-end',
-    },
-    clientSectionLbl: {
-      fontSize: 7.5,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 3,
-      textAlign: 'right',
-    },
-    clientName: { fontSize: 12.5, fontWeight: 'bold', fontFamily: PDF_FONT_FAMILY, color: '#2d3a2d', textAlign: 'right', marginBottom: 2 },
-    clientSub: { fontSize: 8.8, fontFamily: PDF_FONT_FAMILY, color: '#888', marginTop: 2, textAlign: 'right' },
-    metaRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 16,
-    },
-    datesBox: { width: '38%' },
-    dateValue: { fontSize: 8.8, fontWeight: 'bold', color: INK.text, textAlign: 'left', fontFamily: PDF_FONT_FAMILY },
-    sectionLabel: {
-      fontSize: 7.5,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 3,
-      textAlign: 'right',
-    },
-
-    /* ── Summary cards ── */
-    summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+    /* ── Summary strip ── */
+    summaryRow: { flexDirection: 'row-reverse', gap: 8, marginBottom: 14 },
     summaryCard: {
       flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      backgroundColor: INK.zebra,
-      borderRadius: 5,
-      borderWidth: 1,
+      paddingTop: 9,
+      paddingBottom: 9,
+      paddingHorizontal: 10,
+      borderWidth: 0.8,
       borderColor: INK.border,
-      alignItems: 'center',
-      justifyContent: 'center',
+      borderRadius: 4,
+      backgroundColor: INK.white,
+      alignItems: 'flex-end',
     },
-    summaryCardLabel: { fontSize: 8, color: INK.muted, marginBottom: 5, fontWeight: 'bold', textAlign: 'center' },
-    summaryCardValue: { fontSize: 13, fontWeight: 'bold', color: B.palette.primary, textAlign: 'center' },
-    summaryLabel: { fontSize: 8, color: INK.muted, marginBottom: 5, fontWeight: 'bold', textAlign: 'center' },
-    summaryValue: { fontSize: 13, fontWeight: 'bold', color: B.palette.primary, textAlign: 'center' },
+    summaryLabel: { fontSize: 7.8, color: INK.muted, marginBottom: 5, textAlign: 'right' },
+    summaryValue: { fontSize: 13.5, fontWeight: 'bold', color: INK.text, textAlign: 'right' },
+    summaryHint: { fontSize: 7.4, color: INK.faint, marginTop: 3, textAlign: 'right' },
 
     /* ── Section title ── */
-    sectionTitle: {
-      fontSize: 10.5,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-      marginBottom: 6,
-      marginTop: 12,
-      paddingBottom: 4,
-      borderBottomWidth: 1.5,
-      borderBottomColor: INK.border,
-      textAlign: 'right',
-    },
+    sectionTitle: { fontSize: 11.2, fontWeight: 'bold', color: INK.text, textAlign: 'right' },
+    sectionRule: { width: 26, borderTopWidth: 1.6, borderTopColor: INK.gold, marginTop: 3, alignSelf: 'flex-end' },
 
-    totalsBox: { width: 240, alignSelf: 'flex-start', marginTop: 10 },
-    totalLine: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 4,
-    },
-    grandLblMuted: {
-      fontSize: 11,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-      textAlign: 'right',
-    },
+    /* ── Totals + notes ── */
+    totalsBox: { width: 230, alignSelf: 'flex-start', marginTop: 12 },
+    totalLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingVertical: 4 },
+    totalLabel: { fontSize: 9.4, color: INK.muted, textAlign: 'right' },
     grandBar: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 10,
-      marginTop: 10,
-      borderTopWidth: 1.5,
-      borderTopColor: B.palette.primary,
+      alignItems: 'baseline',
+      paddingVertical: 9,
+      paddingHorizontal: 10,
+      marginTop: 6,
+      backgroundColor: INK.text,
+      borderRadius: 4,
     },
-    grandLbl: {
-      fontSize: 12,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-      textAlign: 'right',
-    },
-    grandAmt: {
-      fontSize: 13,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-      textAlign: 'left',
-    },
+    grandLbl: { fontSize: 10.5, fontWeight: 'bold', color: INK.white, textAlign: 'right' },
     notesBox: {
       padding: 10,
       backgroundColor: INK.paleGold,
-      borderRightWidth: 3,
-      borderRightColor: B.palette.accent,
+      borderRightWidth: 2.2,
+      borderRightColor: INK.gold,
       borderRadius: 3,
       marginTop: 14,
       alignItems: 'flex-end',
     },
-    notesLbl: {
-      fontSize: 9,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 4,
-      textAlign: 'right',
-    },
-    notesTxt: {
-      fontSize: 9.5,
-      fontFamily: PDF_FONT_FAMILY,
-      color: INK.muted,
-      textAlign: 'right',
-      lineHeight: 1.65,
-    },
-
-    /* ── Tables (debtflow-pro: flex row, RTL text) ── */
-    tableHead: {
-      flexDirection: 'row',
-      backgroundColor: B.palette.primary,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      borderRadius: 3,
-      marginBottom: 2,
-    },
-    th: { color: INK.white, fontSize: 9, fontWeight: 'bold', fontFamily: PDF_FONT_FAMILY, textAlign: 'right' },
-    tableRow: {
-      flexDirection: 'row',
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: '#f0efeb',
-      alignItems: 'center',
-    },
-    rowEven: { backgroundColor: INK.zebra },
-    totalRow: {
-      flexDirection: 'row',
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      backgroundColor: '#f0ede7',
-      borderTopWidth: 1.5,
-      borderTopColor: B.palette.primary,
-      marginTop: 1,
-      borderRadius: 2,
-      alignItems: 'center',
-    },
-    td: { fontSize: 9, fontFamily: PDF_FONT_FAMILY, color: INK.text, textAlign: 'right' },
-    tdBold: { fontSize: 9, fontWeight: 'bold', fontFamily: PDF_FONT_FAMILY, color: INK.text, textAlign: 'right' },
-    tdPos: { fontSize: 9, fontWeight: 'bold', fontFamily: PDF_FONT_FAMILY, color: INK.success, textAlign: 'right' },
-    tdNeg: { fontSize: 9, fontWeight: 'bold', fontFamily: PDF_FONT_FAMILY, color: INK.danger, textAlign: 'right' },
-    tdNum: { direction: 'ltr', textAlign: 'left' },
-    tdDate: { direction: 'ltr', textAlign: 'center' },
-    moneyRow: { direction: 'ltr', flexDirection: 'row', alignItems: 'baseline', gap: 3 },
-
-    /* ── Footer (debtflow-pro) ── */
-    footer: {
-      position: 'absolute',
-      bottom: 14,
-      left: 36,
-      right: 36,
-      textAlign: 'center',
-      borderTopWidth: 1,
-      borderTopColor: '#eee',
-      paddingTop: 8,
-    },
-    footerBrand: {
-      fontSize: 9.5,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.primary,
-      marginBottom: 2,
-    },
-    footerEng: {
-      fontSize: 8.5,
-      fontWeight: 'bold',
-      fontFamily: PDF_FONT_FAMILY,
-      color: B.palette.accent,
-      marginBottom: 3,
-    },
-    footerMuted: {
-      fontSize: 7.8,
-      fontFamily: PDF_FONT_FAMILY,
-      color: '#778877',
-      lineHeight: 1.4,
-      marginBottom: 2,
-    },
-    footerNote: { fontSize: 6.8, fontFamily: PDF_FONT_FAMILY, color: '#888' },
+    notesLbl: { fontSize: 8.4, fontWeight: 'bold', color: INK.warning, marginBottom: 4, textAlign: 'right' },
+    notesTxt: { fontSize: 9.2, color: INK.muted, textAlign: 'right', lineHeight: 1.7 },
   });
 }
 
-/** مكوّن يعرض المبلغ ثم العملة (debtflow-pro) */
+const groupAmount = (amount: number) => {
+  const hasFraction = Math.abs(amount % 1) > 1e-9;
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: hasFraction ? 3 : 0, minimumFractionDigits: hasFraction ? 1 : 0 }).format(Math.abs(amount));
+};
+
+/** An amount, then the currency: the number reads left to right and the symbol sits quietly after it. */
 export const PdfMoneyText = ({
   amount,
   style,
@@ -400,6 +183,7 @@ export const PdfMoneyText = ({
   currency = 'د.ل',
   color,
   light = false,
+  bare = false,
 }: {
   amount: number;
   style?: any;
@@ -408,99 +192,200 @@ export const PdfMoneyText = ({
   currency?: string;
   color?: string;
   light?: boolean;
+  /** Number only: for table cells whose header already names the currency. */
+  bare?: boolean;
 }) => {
-  const hasFraction = Math.abs(amount % 1) > 1e-9;
-  const formatted = new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: hasFraction ? 6 : 0,
-    minimumFractionDigits: 0,
-  }).format(Math.abs(amount));
-  const sign = amount < 0 ? '-' : '';
-  const currColor = light ? 'rgba(255,255,255,0.92)' : INK.muted;
+  const sign = amount < 0 && Math.abs(amount) >= 0.0005 ? '-' : '';
   const amtColor = color || (light ? INK.white : INK.text);
   return (
-    <View
-      wrap={false}
-      style={[{ flexDirection: 'row-reverse', alignItems: 'baseline', justifyContent: 'flex-start' }, containerStyle]}
-    >
-      <Text style={[{ fontSize: 9, fontWeight: 'bold', color: amtColor, fontFamily: PDF_FONT_FAMILY }, style]}>
-        {`${sign}${formatted}`}
-      </Text>
-      <Text style={[{ fontSize: 9, color: currColor, fontWeight: 'bold', marginRight: 3, fontFamily: PDF_FONT_FAMILY }, currStyle]}>
-        {currency}
-      </Text>
+    <View wrap={false} style={[{ flexDirection: 'row-reverse', alignItems: 'baseline', justifyContent: 'flex-start' }, containerStyle]}>
+      <Text style={[{ fontSize: 9, fontWeight: 'bold', color: amtColor, fontFamily: FF }, style]}>{`${sign}${groupAmount(amount)}`}</Text>
+      {bare ? null : (
+        <Text style={[{ fontSize: 7.4, color: light ? 'rgba(255,255,255,0.8)' : INK.faint, marginRight: 3, fontFamily: FF }, currStyle]}>{currency}</Text>
+      )}
     </View>
   );
 };
 
-/** Brand logo mark — high-res crisp Vector SVG inside PDF */
-export const PdfLogoMark = ({ 
-  size = 68, 
-  primary = '#003366', 
-  accent: _accent = '#1A5276' 
-}: { 
-  size?: number; 
-  primary?: string; 
-  accent?: string; 
-}) => {
+/**
+ * The letterhead: the logo, then the company line, the services line and the phones, centred.
+ * Printed once, at the top of the first page.
+ */
+export const PdfLetterhead = ({ s, logo }: { s: any; logo?: string | null }) => {
+  const info = getPdfCompanyInfo();
   return (
-    <View style={{ width: size, height: size, paddingLeft: 12, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size} viewBox="0 0 100 100">
-        {/* Blueprint/Drafting layout lines (very thin) */}
-        <G stroke={primary} strokeWidth={0.6} opacity={0.3} strokeLinecap="round">
-          <Line x1={50} y1={8} x2={50} y2={88} />
-          <Line x1={25} y1={12} x2={25} y2={88} />
-          <Line x1={75} y1={12} x2={75} y2={88} />
-          <Line x1={15} y1={82} x2={85} y2={82} />
-          <Line x1={22} y1={82} x2={28} y2={82} strokeWidth={0.4} />
-          <Line x1={25} y1={79} x2={25} y2={85} strokeWidth={0.4} />
-          <Line x1={72} y1={82} x2={78} y2={82} strokeWidth={0.4} />
-          <Line x1={75} y1={79} x2={75} y2={85} strokeWidth={0.4} />
-        </G>
-
-        {/* Dot at top peak */}
-        <Circle cx={50} cy={22} r={1.5} fill={primary} />
-
-        {/* Main House and Key Structure */}
-        <G fill="none" stroke={primary} strokeLinecap="round" strokeLinejoin="round">
-          {/* Outer roof slopes (thick) */}
-          <Path d="M 19 47 L 50 22 L 81 47" strokeWidth={2.5} />
-          {/* Left outer wall */}
-          <Line x1={25} y1={42} x2={25} y2={72} strokeWidth={2.5} />
-          {/* Right outer wall */}
-          <Line x1={75} y1={42} x2={75} y2={62} strokeWidth={2.5} />
-
-          {/* Key Shaft */}
-          <Line x1={25} y1={72} x2={75} y2={72} strokeWidth={2.5} />
-
-          {/* Key Handle (Rounded loop) */}
-          <Path d="M 75 62 C 84 62, 84 78, 75 78 Z" strokeWidth={2.5} />
-
-          {/* Inner House roof */}
-          <Path d="M 38 46 L 50 36 L 62 46" strokeWidth={2.0} />
-          {/* Inner House walls */}
-          <Line x1={38} y1={46} x2={38} y2={72} strokeWidth={2.0} />
-          <Line x1={62} y1={46} x2={62} y2={72} strokeWidth={2.0} />
-
-          {/* Window inside inner house */}
-          <Rect x={45} y={52} width={10} height={10} strokeWidth={1.5} />
-          <Line x1={45} y1={57} x2={55} y2={57} strokeWidth={1.2} />
-          <Line x1={50} y1={52} x2={50} y2={62} strokeWidth={1.2} />
-
-          {/* Hook / Chimney line on right side of inner house */}
-          <Path d="M 66 42 V 68 H 62" strokeWidth={1.5} />
-        </G>
-
-        {/* Key Teeth & Tip (filled Paths instead of Polygons for safety) */}
-        <Path 
-          d="M 32 72 L 35 78 L 38 72 Z M 42 72 L 45 78 L 48 72 Z M 52 72 L 55 78 L 58 72 Z M 25 70.5 L 17 72 L 25 73.5 Z" 
-          fill={primary} 
-        />
-      </Svg>
+    <View style={s.letterhead} wrap={false}>
+      {logo ? <Image src={logo} style={{ width: 176, height: 176 * LOGO_RATIO }} /> : <Text style={{ fontSize: 26, fontWeight: 'bold', letterSpacing: 4 }}>MAKIN</Text>}
+      <Text style={s.lhName}>{info.nameEn}</Text>
+      <Text style={s.lhServices}>{info.servicesEn}</Text>
+      {info.phones.length > 0 ? <Text style={s.lhPhones}>{info.phones.join('   |   ')}</Text> : null}
+      <View style={s.lhRule} />
+      <View style={s.lhRuleThin} />
     </View>
   );
 };
 
-/** Totals block — debtflow-pro layout (space-between + border-top grand bar). */
+/**
+ * A page of a document. `letterhead` puts the full letterhead on top of the first page; every page
+ * without it gets the slim running header. The footer is the same on all of them.
+ */
+export const PdfPage = ({
+  B,
+  s,
+  letterhead = false,
+  runningTitle,
+  docRef,
+  children,
+}: {
+  B?: PdfBrandSnapshot;
+  s: any;
+  letterhead?: boolean;
+  /** What the slim header says (e.g. «كشف المصروفات · مشروع الفيلا»). */
+  runningTitle: string;
+  docRef?: string;
+  children: React.ReactNode;
+}) => {
+  const logo = usePdfLogoDataUri();
+  return (
+    <Page size="A4" style={s.page} wrap>
+      <View
+        fixed
+        style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+        render={({ subPageNumber }) =>
+          letterhead && subPageNumber === 1 ? null : (
+            <View style={s.runHead}>
+              <Text style={s.runTitle}>{ar(runningTitle)}</Text>
+              {logo ? <Image src={logo} style={{ width: 72, height: 72 * LOGO_RATIO }} /> : <Text style={{ fontSize: 10, fontWeight: 'bold', letterSpacing: 2 }}>MAKIN</Text>}
+            </View>
+          )
+        }
+      />
+      {letterhead ? <PdfLetterhead s={s} logo={logo} /> : null}
+      {children}
+      <View fixed style={s.foot}>
+        <Text style={s.footText} render={({ pageNumber, totalPages }) => ar(`صفحة ${pageNumber} من ${totalPages}`)} />
+        <Text style={s.footText}>{docRef ?? ''}</Text>
+      </View>
+    </Page>
+  );
+};
+
+/** Title block: kicker + Arabic title on the start side, reference and date on the other. */
+export const PdfDocTitle = ({
+  s,
+  titleEn,
+  titleAr,
+  subtitle,
+  meta,
+}: {
+  s: any;
+  titleEn: string;
+  titleAr: string;
+  subtitle?: string;
+  meta?: { label: string; value: string }[];
+}) => (
+  <View style={s.docTitleRow} wrap={false}>
+    <View style={s.docMeta}>
+      {(meta ?? [{ label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]).map((m) => (
+        <View key={m.label} style={s.docMetaRow}>
+          <Text style={s.docMetaValue}>{m.value}</Text>
+          <Text style={s.docMetaLabel}>{ar(m.label)}</Text>
+        </View>
+      ))}
+    </View>
+    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+      <Text style={s.docKicker}>{titleEn}</Text>
+      <Text style={s.docTitle}>{ar(titleAr)}</Text>
+      {subtitle ? <Text style={s.docSubtitle}>{ar(subtitle)}</Text> : null}
+    </View>
+  </View>
+);
+
+/** A single bordered row of labelled facts (client, phone, period...). Empty values are dropped. */
+export const PdfInfoCard = ({ s, items }: { s: any; items: { label: string; value?: string | null }[] }) => {
+  const shown = items.filter((i) => i.value);
+  if (shown.length === 0) return null;
+  return (
+    <View style={s.infoCard} wrap={false}>
+      {shown.map((item, i) => (
+        <View key={item.label} style={[s.infoCell, i > 0 ? s.infoCellDivider : null]}>
+          <Text style={s.infoLabel}>{ar(item.label)}</Text>
+          <Text style={s.infoValue}>{ar(item.value)}</Text>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/** Headline figures. A colour marks the figure that matters; a hint says what it is made of. */
+export const PdfSummaryStrip = ({
+  s,
+  cells,
+}: {
+  s: any;
+  cells: { label: string; value: string | number; color?: string; accent?: boolean; hint?: string; count?: boolean }[];
+}) => (
+  <View style={s.summaryRow} wrap={false}>
+    {cells.map((cell, i) => (
+      <View key={i} style={[s.summaryCard, cell.accent ? { borderTopWidth: 2.4, borderTopColor: cell.color || INK.gold } : null]}>
+        <Text style={s.summaryLabel}>{ar(cell.label)}</Text>
+        {typeof cell.value === 'number' && !cell.count ? (
+          <PdfMoneyText amount={cell.value} style={[s.summaryValue, cell.color ? { color: cell.color } : null]} currStyle={{ fontSize: 8 }} />
+        ) : (
+          <Text style={[s.summaryValue, cell.color ? { color: cell.color } : null]}>{ar(String(cell.value))}</Text>
+        )}
+        {cell.hint ? <Text style={s.summaryHint}>{ar(cell.hint)}</Text> : null}
+      </View>
+    ))}
+  </View>
+);
+
+/** Section heading with the short gold rule. */
+export const PdfSectionHeading = ({ s, children, hint }: { s: any; children: string; hint?: string }) => (
+  <View style={{ marginTop: 14, marginBottom: 8 }} minPresenceAhead={PDF_PAGINATION.section + PDF_PAGINATION.minRowHeight}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <Text style={{ fontSize: 8.2, color: INK.faint }}>{hint ? ar(hint) : ''}</Text>
+      <Text style={s.sectionTitle}>{ar(children)}</Text>
+    </View>
+    <View style={s.sectionRule} />
+  </View>
+);
+
+/**
+ * Share of a total, as labelled bars: where the money went (categories) or how it came in (methods).
+ * Rows are sorted largest first by the caller; `total` is the whole the bars are a share of.
+ */
+export const PdfBreakdown = ({
+  rows,
+  total,
+  color = INK.text,
+}: {
+  rows: { label: string; amount: number }[];
+  total: number;
+  color?: string;
+}) => (
+  <View style={{ gap: 7 }}>
+    {rows.map((row) => {
+      const share = total > 0 ? Math.max(0, Math.min(1, row.amount / total)) : 0;
+      return (
+        <View key={row.label} wrap={false} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ width: 62 }}>
+            <PdfMoneyText amount={row.amount} bare style={{ fontSize: 8.6, color: INK.text }} />
+          </View>
+          <View style={{ width: 30 }}>
+            <Text style={{ fontSize: 8, color: INK.muted, textAlign: 'left' }}>{`${Math.round(share * 100)}%`}</Text>
+          </View>
+          <View style={{ flex: 1, height: 5, backgroundColor: INK.hair, borderRadius: 2.5, flexDirection: 'row-reverse' }}>
+            <View style={{ width: `${Math.max(share * 100, share > 0 ? 2 : 0)}%`, height: 5, backgroundColor: color, borderRadius: 2.5 }} />
+          </View>
+          <Text style={{ width: 118, fontSize: 8.8, color: INK.text, textAlign: 'right' }}>{ar(row.label)}</Text>
+        </View>
+      );
+    })}
+  </View>
+);
+
+/** Subtotal, tax and the grand total, for documents that bill (invoices). */
 export const PdfTotalsBlock = ({
   s,
   subtotal,
@@ -509,7 +394,7 @@ export const PdfTotalsBlock = ({
   total,
   subtotalLabel = 'المجموع الفرعي',
   taxLabel,
-  grandLabel = 'الإجمالي النهائي',
+  grandLabel = 'الإجمالي المستحق',
 }: {
   s: any;
   B?: PdfBrandSnapshot;
@@ -524,157 +409,39 @@ export const PdfTotalsBlock = ({
   const taxLbl = taxLabel || (taxRate != null ? `ضريبة (${taxRate}%)` : 'الضريبة');
   return (
     <View style={s.totalsBox} wrap={false}>
-      <View style={s.totalLine}>
-        <PdfMoneyText amount={subtotal} style={s.grandAmt} />
-        <Text style={s.grandLblMuted}>{ar(subtotalLabel)}</Text>
-      </View>
       {taxAmount > 0 ? (
-        <View style={s.totalLine}>
-          <PdfMoneyText amount={taxAmount} style={s.grandAmt} />
-          <Text style={s.grandLblMuted}>{ar(taxLbl)}</Text>
-        </View>
+        <>
+          <View style={s.totalLine}>
+            <PdfMoneyText amount={subtotal} style={{ fontSize: 9.6, color: INK.text }} />
+            <Text style={s.totalLabel}>{ar(subtotalLabel)}</Text>
+          </View>
+          <View style={s.totalLine}>
+            <PdfMoneyText amount={taxAmount} style={{ fontSize: 9.6, color: INK.text }} />
+            <Text style={s.totalLabel}>{ar(taxLbl)}</Text>
+          </View>
+        </>
       ) : null}
-      <View style={s.grandBar} minPresenceAhead={PDF_PAGINATION.totalBar}>
-        <PdfMoneyText amount={total} style={[s.grandAmt, { fontSize: 15 }]} />
-        <Text style={[s.grandLbl, { fontSize: 12 }]}>{ar(grandLabel)}</Text>
+      <View style={s.grandBar}>
+        <PdfMoneyText amount={total} light style={{ fontSize: 14 }} currStyle={{ fontSize: 8.5 }} />
+        <Text style={s.grandLbl}>{ar(grandLabel)}</Text>
       </View>
     </View>
   );
 };
 
-/** Notes box with accent border (debtflow-pro). */
+/** Notes with a gold edge. */
 export const PdfNotesBox = ({ s, label = 'ملاحظات', children }: { s: any; label?: string; children: React.ReactNode }) => (
-  <View style={s.notesBox}>
+  <View style={s.notesBox} wrap={false}>
     <Text style={s.notesLbl}>{ar(label)}</Text>
     {children}
   </View>
 );
 
-/** Report header — debtflow-pro PdfBrandedReportHeader. */
-export const PdfBrandedReportHeader = ({
-  s,
-  B,
-  titleEn,
-  subtitleAr,
-  refLine,
-}: {
-  s: any;
-  B: PdfBrandSnapshot;
-  titleEn: string;
-  subtitleAr: string;
-  refLine?: string;
-}) => {
-  const phones = buildFooterPhones(B);
-  const address = buildFooterAddressLine(B);
-  const pdfInfo = getPdfCompanyInfo();
-  const servicesBulleted = pdfInfo.services.join('   •   ');
-  return (
-    <View wrap={false}>
-      <View style={s.headerTop}>
-        <View style={s.headerTitleCol}>
-          <Text style={s.titleEn}>{titleEn}</Text>
-          <Text style={s.titleAr}>{ar(subtitleAr)}</Text>
-          {refLine ? <Text style={s.titleRef}>{refLine}</Text> : null}
-        </View>
-        <View style={s.identityRow}>
-          <View style={s.identityText}>
-            <Text style={s.companyFull}>{ar(B.fullName)}</Text>
-            {B.tagline ? <Text style={s.engineer}>{ar(B.tagline)}</Text> : null}
-            <Text style={s.tagEn}>{pdfInfo.taglineEn}</Text>
-          </View>
-          <PdfLogoMark size={68} primary={B.palette.primary} accent={B.palette.accent} />
-        </View>
-      </View>
-      <View style={s.divider}>
-        <View style={s.contactBlock}>
-          <View style={s.kvRow}>
-            <View style={[s.kvBox, { width: '55%' }]}>
-              <Text style={s.kvLabel}>{ar('العنوان')}</Text>
-              <Text style={s.kvVal}>{ar(address || 'طرابلس، ليبيا')}</Text>
-            </View>
-            <View style={[s.kvBox, { width: '40%' }]}>
-              <Text style={s.kvLabel}>{ar('الهاتف')}</Text>
-              <Text style={s.kvVal}>{phones.length ? phones.join('\n') : '—'}</Text>
-            </View>
-          </View>
-        </View>
-        <View style={s.servicesRow}>
-          <Text style={s.servicesLabel}>{ar('مجالات الخدمة')}</Text>
-          <Text style={s.servicesText}>{ar(servicesBulleted)}</Text>
-        </View>
-      </View>
-    </View>
-  );
-};
+/** «١ دفعة، دفعتان، ٣ دفعات، ١١ دفعة»: the Arabic counted noun. */
+export function countWord(n: number, forms: { one: string; two: string; few: string; many: string }): string {
+  if (n === 1) return forms.one;
+  if (n === 2) return forms.two;
+  return `${n} ${n >= 3 && n <= 10 ? forms.few : forms.many}`;
+}
 
-/** Centered footer — debtflow-pro PdfBrandedFooter. */
-export const PdfBrandedFooter = ({ s, B }: { s: any; B: PdfBrandSnapshot }) => {
-  const phones = buildFooterPhones(B);
-  const pdfInfo = getPdfCompanyInfo();
-  const line1 = [B.contact.address, ...phones].filter(Boolean).join(' • ');
-  return (
-    <View style={s.footer} fixed>
-      <Text style={s.footerBrand}>{ar(B.fullName)}</Text>
-      {B.tagline ? <Text style={s.footerEng}>{ar(B.tagline)}</Text> : null}
-      {line1 ? <Text style={s.footerMuted}>{ar(line1)}</Text> : null}
-      {B.contact.email ? <Text style={s.footerMuted}>{B.contact.email}</Text> : null}
-      <Text style={s.footerNote}>{pdfInfo.footerNote}</Text>
-    </View>
-  );
-};
-
-/** @deprecated — use PdfBrandedReportHeader */
-export const PdfBand = ({
-  s,
-  B,
-  title,
-  titleEn = 'DOCUMENT',
-  refText,
-}: {
-  s: any;
-  B: PdfBrandSnapshot;
-  title: string;
-  titleEn?: string;
-  refText?: string;
-  kicker?: string;
-}) => (
-  <PdfBrandedReportHeader s={s} B={B} titleEn={titleEn} subtitleAr={title} refLine={refText} />
-);
-
-/** Summary cards row — debtflow-pro pattern. */
-export const PdfSummaryStrip = ({
-  s,
-  cells,
-}: {
-  s: any;
-  cells: { label: string; value: string | number; color?: string; accent?: boolean }[];
-}) => (
-  <View style={s.summaryRow}>
-    {cells.map((cell, i) => (
-      <View
-        key={i}
-        style={[
-          s.summaryCard,
-          cell.accent ? { borderTopWidth: 3, borderTopColor: cell.color || INK.danger, backgroundColor: '#fffcfc' } : null,
-        ]}
-      >
-        <Text style={s.summaryLabel}>{ar(cell.label)}</Text>
-        {typeof cell.value === 'number' ? (
-          <PdfMoneyText amount={cell.value} style={[s.summaryValue, cell.color ? { color: cell.color } : null]} />
-        ) : (
-          <Text style={[s.summaryValue, cell.color ? { color: cell.color } : null]}>{ar(String(cell.value))}</Text>
-        )}
-      </View>
-    ))}
-  </View>
-);
-
-/** @deprecated — use PdfBrandedFooter */
-export const PdfFooter = ({ s, B }: { s: any; B: PdfBrandSnapshot; docRef?: string; fixed?: boolean }) => (
-  <PdfBrandedFooter s={s} B={B} />
-);
-
-/** @deprecated — debtflow-pro has no page accent */
-export const PdfPageAccent = (_props: { s: any }) => null;
-
-export { ar, arDate, arMoney, getPdfBrand };
+export { ar, arDate, getPdfBrand };

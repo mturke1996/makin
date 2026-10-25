@@ -1,11 +1,11 @@
 // @ts-nocheck
 import React from 'react';
-import { Document, Page, Text, View } from '@react-pdf/renderer';
+import { Document, Text, View } from '@react-pdf/renderer';
 import './pdfFonts';
 import { ar, arDate } from './arabicPDF';
 import type { Letter, LetterType } from '../../types';
 import { getPdfBrand } from './pdfBrand';
-import { makePdfStyles, PdfBrandedReportHeader, PdfBrandedFooter, PdfNotesBox, INK } from './pdfKit';
+import { INK, PdfDocTitle, PdfNotesBox, PdfPage, makePdfStyles } from './pdfKit';
 
 /** Re-export for backwards compatibility with legacy callers. */
 export type { Letter as LetterData, LetterType } from '../../types';
@@ -29,73 +29,39 @@ interface Props {
 export const LetterPDF: React.FC<Props> = ({ letter }) => {
   const B = getPdfBrand();
   const s = makePdfStyles(B);
+  const body = { fontSize: 10.6, color: INK.text, lineHeight: 2, textAlign: 'right' as const };
 
   return (
     <Document title={typeLabelsAr[letter.type]} author={B.fullName} language="ar">
-      <Page size="A4" style={s.page}>
-        <PdfBrandedReportHeader
+      <PdfPage B={B} s={s} letterhead runningTitle={`${typeLabelsAr[letter.type]}  ·  ${letter.subject}`} docRef={letter.refNumber}>
+        <PdfDocTitle
           s={s}
-          B={B}
           titleEn={typeLabelsEn[letter.type]}
-          subtitleAr={typeLabelsAr[letter.type]}
-          refLine={`#${letter.refNumber}`}
+          titleAr={typeLabelsAr[letter.type]}
+          meta={[{ label: 'الرقم', value: letter.refNumber }, { label: 'التاريخ', value: arDate(letter.date) }]}
         />
 
-        <View style={s.infoRow}>
-          <View style={s.datesCol}>
-            <View style={s.dateRow}>
-              <Text style={s.dateLabel}>{ar('التاريخ')}</Text>
-              <Text style={s.dateVal}>{arDate(letter.date)}</Text>
-            </View>
-            <View style={s.dateRow}>
-              <Text style={s.dateLabel}>{ar('النوع')}</Text>
-              <Text style={s.dateVal}>{ar(typeLabelsAr[letter.type])}</Text>
-            </View>
-          </View>
-          <View style={s.clientBox}>
-            <Text style={s.clientSectionLbl}>{ar('إلى السيد / السادة')}</Text>
-            <Text style={s.clientName}>{ar(letter.recipientName)}</Text>
-            {letter.recipientTitle ? <Text style={s.clientSub}>{ar(letter.recipientTitle)}</Text> : null}
-            {letter.recipientAddress ? <Text style={s.clientSub}>{ar(letter.recipientAddress)}</Text> : null}
-            {letter.recipientPhone ? <Text style={s.clientSub}>{letter.recipientPhone}</Text> : null}
-          </View>
+        <View style={{ alignItems: 'flex-end', marginBottom: 14 }} wrap={false}>
+          <Text style={{ fontSize: 8, color: INK.faint, marginBottom: 3 }}>{ar('إلى السيد / السادة')}</Text>
+          <Text style={{ fontSize: 12, fontWeight: 'bold', color: INK.text, textAlign: 'right' }}>{ar(letter.recipientName)}</Text>
+          {[letter.recipientTitle, letter.recipientAddress].filter(Boolean).map((line) => (
+            <Text key={line} style={{ fontSize: 9, color: INK.muted, textAlign: 'right', marginTop: 2 }}>{ar(line)}</Text>
+          ))}
+          {letter.recipientPhone ? <Text style={{ fontSize: 9, color: INK.muted, marginTop: 2 }}>{letter.recipientPhone}</Text> : null}
         </View>
 
-        <View
-          style={{
-            backgroundColor: B.palette.primary,
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            borderRadius: 5,
-            marginBottom: 18,
-            alignItems: 'flex-end',
-          }}
-        >
-          <Text style={{ fontSize: 7.5, color: INK.white, opacity: 0.7, fontWeight: 'bold', marginBottom: 2 }}>
-            {ar('الموضوع')}
-          </Text>
-          <Text style={{ fontSize: 12, fontWeight: 'bold', color: INK.white, textAlign: 'right' }}>
-            {ar(letter.subject)}
-          </Text>
+        <View style={{ alignItems: 'flex-end', marginBottom: 16 }} wrap={false}>
+          <Text style={{ fontSize: 12.4, fontWeight: 'bold', color: INK.text, textAlign: 'right' }}>{ar(`الموضوع: ${letter.subject}`)}</Text>
+          <View style={s.sectionRule} />
         </View>
 
         {letter.greeting.split('\n').map((line, i) => (
-          <Text
-            key={`g${i}`}
-            style={{ fontSize: 11, fontWeight: 'bold', color: INK.text, textAlign: 'right', marginBottom: 6 }}
-          >
-            {ar(line)}
-          </Text>
+          <Text key={`g${i}`} style={{ ...body, fontWeight: 'bold', marginBottom: 4 }}>{ar(line)}</Text>
         ))}
 
-        <View style={{ marginTop: 6 }}>
+        <View style={{ marginTop: 4 }}>
           {letter.bodyParagraphs.map((para, i) => (
-            <Text
-              key={i}
-              style={{ fontSize: 10.5, color: INK.text, lineHeight: 2, textAlign: 'right', marginBottom: 8 }}
-            >
-              {ar(para)}
-            </Text>
+            <Text key={i} style={{ ...body, marginBottom: 8 }}>{ar(para)}</Text>
           ))}
         </View>
 
@@ -105,23 +71,12 @@ export const LetterPDF: React.FC<Props> = ({ letter }) => {
           </PdfNotesBox>
         ) : null}
 
-        <View style={{ marginTop: 16 }}>
+        <View style={{ marginTop: 18 }} wrap={false}>
           {letter.closing.split('\n').map((line, i) => (
-            <Text
-              key={`c${i}`}
-              style={
-                i === 0
-                  ? { fontSize: 10.5, color: INK.text, textAlign: 'right', marginBottom: 4 }
-                  : { fontSize: 11, fontWeight: 'bold', color: INK.text, textAlign: 'right', marginBottom: 18 }
-              }
-            >
-              {ar(line)}
-            </Text>
+            <Text key={`c${i}`} style={i === 0 ? { ...body, marginBottom: 4 } : { ...body, fontWeight: 'bold', marginBottom: 18 }}>{ar(line)}</Text>
           ))}
         </View>
-
-        <PdfBrandedFooter s={s} B={B} />
-      </Page>
+      </PdfPage>
     </Document>
   );
 };

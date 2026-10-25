@@ -77,8 +77,8 @@ function resolvePdfLogo(): string {
 
 export function getPdfBrand(): PdfBrandSnapshot {
   const b = useBrandStore.getState().brand;
-  const primary = b.palette.primary || '#003366';
-  const secondary = b.palette.secondary || '#1A5276';
+  const primary = b.palette.primary || '#1F2633';
+  const secondary = b.palette.secondary || '#C9972B';
 
   return {
     name: b.name || '',
@@ -89,12 +89,12 @@ export function getPdfBrand(): PdfBrandSnapshot {
       primary,
       primaryDark: mix(primary, 0.22, 'black'),
       accent: secondary,
-      text: '#0F2340',
-      muted: '#4A6080',
-      border: '#D8E0EA',
-      rowAlt: '#F4F7FB',
+      text: '#1F2633',
+      muted: '#5E6472',
+      border: '#E4E0D6',
+      rowAlt: '#FBFAF7',
       headerBg: primary,
-      success: b.palette.success || '#0D9488',
+      success: b.palette.success || '#0F766E',
       warning: b.palette.warning || '#B45309',
       danger: b.palette.danger || '#B91C1C',
     },
@@ -118,5 +118,5 @@ export function buildFooterLine(brand: PdfBrandSnapshot): string {
 }
 
 export function buildFooterAddressLine(brand: PdfBrandSnapshot): string {
-  return brand.contact.address || 'طرابلس، ليبيا';
+  return brand.contact.address;
 }

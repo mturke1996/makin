@@ -1,16 +1,11 @@
 import { getPdfBrand } from './pdfBrand';
 
-/** نصوص PDF — تُشتق من إعدادات العلامة التجارية الحالية. */
+/** The letterhead lines under the logo, printed once on the first page of every document. */
 export function getPdfCompanyInfo() {
   const B = getPdfBrand();
   return {
-    taglineEn: B.tagline || 'Integrated Business Management',
-    services: [
-      'إدارة العملاء والمشاريع',
-      'الفواتير والمدفوعات',
-      'المصروفات والتقارير',
-      'تصدير PDF احترافي',
-    ],
-    footerNote: 'وثيقة رسمية — يُعتد بالنسخ المطبوعة الموثّقة فقط.',
+    nameEn: 'MAKIN CONSTRUCTION COMPANY',
+    servicesEn: 'Construction • Design • Engineering Supervision',
+    phones: [B.contact.phone, B.contact.phone2].filter(Boolean),
   } as const;
 }

@@ -44,7 +44,8 @@ export const DEFAULT_BRAND: BrandConfig = {
   },
 
   contact: {
-    phone: '',
+    phone: '091 211 8388',
+    phoneSecondary: '092 211 8388',
     email: '',
     website: '',
     address: '',

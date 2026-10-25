@@ -1,14 +1,22 @@
 // @ts-nocheck
 /**
- * PdfTable — debtflow-pro layout: flex row, amount columns on physical left.
+ * PdfTable — a quiet ledger table.
+ *
+ * - Header: a pale band with a single ink rule under it. No solid colour block.
+ * - Rows: hairline separators only. Numbers are plain; the currency is named once, in the header.
+ * - Columns are given in reading order (first = rightmost); money ends up on the physical left.
+ * - A cell of kind `stack` carries a title and a muted second line, so a category or a worker
+ *   sits under the description instead of taking a column of its own.
+ * - No total row by default: the figure is already in the summary strip above. A table that
+ *   really needs one passes `footer`.
  */
 import React from 'react';
 import { Text, View } from '@react-pdf/renderer';
 import { ar } from './arabicPDF';
 import { PDF_FONT_FAMILY } from './pdfFonts';
-import { INK, PDF_PAGINATION, PdfMoneyText } from './pdfKit';
+import { INK, PDF_PAGINATION, PdfMoneyText, PdfSectionHeading } from './pdfKit';
 
-export type PdfColKind = 'text' | 'num' | 'money' | 'date' | 'multiline';
+export type PdfColKind = 'text' | 'num' | 'money' | 'date' | 'multiline' | 'stack';
 
 export type PdfColumn = {
   key: string;
@@ -17,91 +25,51 @@ export type PdfColumn = {
   kind?: PdfColKind;
 };
 
+export type PdfStack = { t: string; s?: string };
+
 const FF = PDF_FONT_FAMILY;
+const CURRENCY = 'د.ل';
 
-const headStyle = {
-  flexDirection: 'row',
-  backgroundColor: '#003366',
-  paddingVertical: 8,
-  paddingHorizontal: 10,
-  alignItems: 'center',
-  borderRadius: 3,
-  marginBottom: 2,
-};
-
-const rowStyle = {
-  flexDirection: 'row',
-  paddingVertical: 9,
-  paddingHorizontal: 10,
-  borderBottomWidth: 1,
-  borderBottomColor: '#f0efeb',
-  alignItems: 'flex-start',
-};
-
-const footStyle = {
-  flexDirection: 'row',
-  paddingVertical: 8,
-  paddingHorizontal: 10,
-  backgroundColor: '#f0ede7',
-  borderTopWidth: 1.5,
-  borderTopColor: '#003366',
-  marginTop: 1,
-  borderRadius: 2,
-  alignItems: 'center',
-};
-
-/** Render columns reversed so money ends up on physical left (debtflow-pro). */
+/** Render columns reversed so money ends up on the physical left. */
 const visualCols = (columns: PdfColumn[]) => [...columns].reverse();
 
-const rowPresenceAhead = PDF_PAGINATION.minRowHeight + PDF_PAGINATION.footerReserve;
-const headPresenceAhead = PDF_PAGINATION.tableHead + PDF_PAGINATION.minRowHeight + PDF_PAGINATION.footerReserve;
+// The page's bottom padding already keeps clear of the footer, so a row only needs room for itself.
+const headPresenceAhead = PDF_PAGINATION.tableHead + PDF_PAGINATION.minRowHeight + 24;
 
-export function PdfMoneyInline({
-  amount,
-  size = 9,
-  color = INK.text,
-  bold = true,
-}: {
-  amount: number;
-  size?: number;
-  color?: string;
-  bold?: boolean;
-}) {
-  return <PdfMoneyText amount={amount} style={{ fontSize: size, fontWeight: bold ? 'bold' : 'normal', color }} />;
-}
+const alignOf = (kind: PdfColKind = 'text') => (kind === 'money' ? 'left' : kind === 'num' || kind === 'date' ? 'center' : 'right');
 
 export function PdfTh({ flex, kind = 'text', children }: { flex: number; kind?: PdfColKind; children: string }) {
-  const align = kind === 'money' ? 'left' : kind === 'num' || kind === 'date' ? 'center' : 'right';
   return (
-    <Text style={{ flex, color: INK.white, fontSize: 8.5, fontWeight: 'bold', textAlign: align, lineHeight: 1.4, fontFamily: FF }}>
-      {ar(children)}
-    </Text>
+    <View style={{ flex, flexDirection: 'row', justifyContent: kind === 'money' ? 'flex-start' : kind === 'num' || kind === 'date' ? 'center' : 'flex-end', alignItems: 'baseline', gap: 4 }}>
+      {kind === 'money' ? <Text style={{ fontSize: 7, color: INK.faint, fontFamily: FF }}>{CURRENCY}</Text> : null}
+      <Text style={{ color: INK.text, fontSize: 8.2, fontWeight: 'bold', textAlign: alignOf(kind), lineHeight: 1.35, fontFamily: FF }}>{ar(children)}</Text>
+    </View>
   );
 }
 
-function PdfTd({
-  flex,
-  kind = 'text',
-  color,
-  children,
-}: {
-  flex: number;
-  kind?: PdfColKind;
-  color?: string;
-  children: string | number;
-}) {
-  const align = kind === 'num' || kind === 'date' ? 'center' : 'right';
-  const isMultiline = kind === 'multiline';
+function PdfTd({ flex, kind = 'text', color, bold, children }: { flex: number; kind?: PdfColKind; color?: string; bold?: boolean; children: any }) {
+  if (kind === 'stack') {
+    const v: PdfStack = typeof children === 'object' && children ? children : { t: String(children ?? '') };
+    return (
+      <View style={{ flex, alignItems: 'flex-end', paddingLeft: 4 }}>
+        <Text style={{ fontSize: 9, fontWeight: bold ? 'bold' : 'normal', color: color || INK.text, textAlign: 'right', lineHeight: 1.45, fontFamily: FF }}>{ar(v.t)}</Text>
+        {v.s ? <Text style={{ fontSize: 7.6, color: INK.faint, textAlign: 'right', lineHeight: 1.5, marginTop: 1, fontFamily: FF }}>{ar(v.s)}</Text> : null}
+      </View>
+    );
+  }
   const raw = String(children ?? '');
-  const text = kind === 'num' || kind === 'date' ? raw : isMultiline && raw === '—' ? raw : ar(raw);
+  const isMulti = kind === 'multiline';
+  const text = kind === 'num' || kind === 'date' ? raw : isMulti && raw === '—' ? raw : ar(raw);
   return (
     <Text
       style={{
         flex,
-        fontSize: isMultiline ? 8.5 : 9,
-        color: color || INK.text,
-        textAlign: align,
-        lineHeight: isMultiline ? 1.65 : 1.45,
+        fontSize: isMulti ? 8.3 : 9,
+        fontWeight: bold ? 'bold' : 'normal',
+        color: color || (raw === '—' || raw === '-' ? INK.faint : INK.text),
+        textAlign: alignOf(kind),
+        lineHeight: isMulti ? 1.6 : 1.45,
+        paddingLeft: 4,
         fontFamily: FF,
       }}
     >
@@ -110,118 +78,95 @@ function PdfTd({
   );
 }
 
-function PdfTdMoney({ flex, amount, color }: { flex: number; amount: number; color?: string }) {
+function PdfTdMoney({ flex, amount, color, bold = true }: { flex: number; amount: number; color?: string; bold?: boolean }) {
   return (
     <View style={{ flex, justifyContent: 'center', alignItems: 'flex-start' }}>
-      <PdfMoneyInline amount={amount} color={color || INK.text} bold />
+      <PdfMoneyText amount={amount} bare style={{ fontSize: 9.2, fontWeight: bold ? 'bold' : 'normal', color: color || INK.text }} />
     </View>
   );
 }
 
-export function PdfTableHead({
-  columns,
-  primary,
-  fixed = false,
-}: {
-  columns: PdfColumn[];
-  primary?: string;
-  fixed?: boolean;
-}) {
-  const cols = visualCols(columns);
-  const headBg = primary || '#003366';
+const headRow = {
+  flexDirection: 'row',
+  backgroundColor: INK.panel,
+  paddingVertical: 7,
+  paddingHorizontal: 8,
+  alignItems: 'center',
+  borderTopWidth: 0.8,
+  borderTopColor: INK.border,
+  borderBottomWidth: 1.1,
+  borderBottomColor: INK.text,
+};
+
+export function PdfTableHead({ columns, fixed = false }: { columns: PdfColumn[]; fixed?: boolean }) {
   return (
-    <View style={[headStyle, { backgroundColor: headBg }]} fixed={fixed || undefined}>
-      {cols.map((c) => (
+    <View style={headRow} fixed={fixed || undefined}>
+      {visualCols(columns).map((c) => (
         <PdfTh key={c.key} flex={c.flex} kind={c.kind}>{c.label}</PdfTh>
       ))}
     </View>
   );
 }
 
-export function PdfSectionTitle({ children, primary }: { children: string; primary?: string }) {
-  return (
-    <Text
-      style={{
-        fontSize: 10.5,
-        fontWeight: 'bold',
-        color: primary || '#003366',
-        marginBottom: 6,
-        marginTop: 12,
-        paddingBottom: 4,
-        borderBottomWidth: 1.5,
-        borderBottomColor: INK.border,
-        textAlign: 'right',
-        fontFamily: FF,
-      }}
-    >
-      {ar(children)}
-    </Text>
-  );
-}
-
 export function PdfTable({
+  s,
+  heading,
+  hint,
   columns,
   rows,
-  primary,
   emptyMessage = 'لا توجد بيانات',
   footer,
   moneyColor,
-  repeatHeader = false,
+  repeatHeader,
 }: {
+  /** With `heading`: the section title printed above the table and kept together with it. */
+  s?: any;
+  heading?: string;
+  hint?: string;
   columns: PdfColumn[];
-  rows: Record<string, string | number>[];
-  primary?: string;
+  rows: Record<string, string | number | PdfStack>[];
   emptyMessage?: string;
+  /** Only for a table whose total is not already stated above it. */
   footer?: { label: string; values: Record<string, number>; colors?: Record<string, string> };
   moneyColor?: string;
-  /** Repeat column headers on each page when the table spans multiple pages */
+  /** Repeat the column header on every page the table runs onto (default: tables over 12 rows). */
   repeatHeader?: boolean;
+  /** @deprecated the header is always ink on a pale band. */
+  primary?: string;
 }) {
   const cols = visualCols(columns);
-  const headBg = primary || '#003366';
-
+  // A short table is kept whole with its header (never a header alone at the foot of a page). A long one
+  // repeats its header on every page it runs onto.
+  const repeat = repeatHeader ?? rows.length > 12;
+  // Up to six rows stay in one piece with their heading; longer tables flow over pages.
+  const whole = rows.length <= 6;
   return (
-    <View style={{ marginBottom: 4 }}>
-      {repeatHeader ? (
-        <>
-          <View minPresenceAhead={headPresenceAhead} />
-          <PdfTableHead columns={columns} primary={primary} fixed />
-        </>
-      ) : (
-        <View style={[headStyle, { backgroundColor: headBg }]} minPresenceAhead={headPresenceAhead}>
-          {cols.map((c) => (
-            <PdfTh key={c.key} flex={c.flex} kind={c.kind}>{c.label}</PdfTh>
-          ))}
-        </View>
-      )}
+    <View style={{ marginBottom: 4 }} {...(whole ? { wrap: false } : {})}>
+      {heading ? <PdfSectionHeading s={s} hint={hint}>{heading}</PdfSectionHeading> : null}
+      {repeat ? <View minPresenceAhead={headPresenceAhead} /> : null}
+      <View style={headRow} fixed={repeat || undefined} minPresenceAhead={repeat ? undefined : headPresenceAhead}>
+        {cols.map((c) => (
+          <PdfTh key={c.key} flex={c.flex} kind={c.kind}>{c.label}</PdfTh>
+        ))}
+      </View>
 
       {rows.length === 0 ? (
-        <Text style={{ fontSize: 9, color: INK.muted, textAlign: 'center', paddingVertical: 14, fontFamily: FF }}>
-          {ar(emptyMessage)}
-        </Text>
+        <Text style={{ fontSize: 9, color: INK.muted, textAlign: 'center', paddingVertical: 16, fontFamily: FF }}>{ar(emptyMessage)}</Text>
       ) : (
         rows.map((row, i) => (
           <View
             key={i}
-            style={[rowStyle, i % 2 === 1 ? { backgroundColor: INK.zebra } : null]}
+            style={{ flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 8, borderBottomWidth: 0.6, borderBottomColor: INK.hair, alignItems: 'flex-start' }}
             wrap={false}
-            minPresenceAhead={rowPresenceAhead}
           >
             {cols.map((c) => {
               const kind = c.kind ?? 'text';
               const val = row[c.key] ?? '';
               if (kind === 'money') {
                 const n = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
-                return (
-                  <PdfTdMoney
-                    key={c.key}
-                    flex={c.flex}
-                    amount={Number.isFinite(n) ? n : 0}
-                    color={moneyColor || footer?.colors?.[c.key]}
-                  />
-                );
+                return <PdfTdMoney key={c.key} flex={c.flex} amount={Number.isFinite(n) ? n : 0} color={moneyColor} />;
               }
-              return <PdfTd key={c.key} flex={c.flex} kind={kind} children={val} />;
+              return <PdfTd key={c.key} flex={c.flex} kind={kind} bold={c.key === 'name' || c.key === 'desc'}>{val}</PdfTd>;
             })}
           </View>
         ))
@@ -229,23 +174,16 @@ export function PdfTable({
 
       {footer ? (
         <View
-          style={[footStyle, { borderTopColor: headBg }]}
+          style={{ flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 8, backgroundColor: INK.panel, borderTopWidth: 1.1, borderTopColor: INK.text, alignItems: 'center' }}
           wrap={false}
-          minPresenceAhead={PDF_PAGINATION.totalBar + PDF_PAGINATION.footerReserve}
+          minPresenceAhead={PDF_PAGINATION.totalBar}
         >
-          {visualCols(columns)
+          {cols
             .filter((c) => c.kind === 'money' && footer.values[c.key] != null)
             .map((c) => (
-              <PdfTdMoney
-                key={c.key}
-                flex={c.flex}
-                amount={footer.values[c.key]}
-                color={footer.colors?.[c.key]}
-              />
+              <PdfTdMoney key={c.key} flex={c.flex} amount={footer.values[c.key]} color={footer.colors?.[c.key]} />
             ))}
-          <Text style={{ flex: 1, fontSize: 9, fontWeight: 'bold', color: INK.text, textAlign: 'right', fontFamily: FF }}>
-            {ar(footer.label === 'الإجمالي' ? 'المجموع الكلي' : footer.label)}
-          </Text>
+          <Text style={{ flex: 1, fontSize: 9, fontWeight: 'bold', color: INK.text, textAlign: 'right', fontFamily: FF }}>{ar(footer.label)}</Text>
         </View>
       ) : null}
     </View>
