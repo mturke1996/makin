@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  MoreHoriz, PictureAsPdfOutlined, PrintOutlined, ReceiptLong, ShareOutlined, Add,
+  MoreHoriz, PictureAsPdfOutlined, PrintOutlined, Receipt, ShareOutlined, Add,
 } from '../../design-system/icons';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
@@ -93,7 +93,7 @@ export const InvoiceDetailsPage = () => {
     return (
       <PageShell width="4xl">
         <EmptyState
-          Icon={ReceiptLong}
+          Icon={Receipt}
           title="الفاتورة غير موجودة"
           description="ربما حُذفت أو أن الرابط غير صحيح."
           action={

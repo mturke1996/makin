@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AccountBalanceWallet, EventBusy, Engineering, ReceiptLong, RequestQuote } from '../../design-system/icons';
+import { AccountBalanceWallet, EventBusy, Engineering, Receipt, RequestQuote } from '../../design-system/icons';
 import { Skeleton } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import {
@@ -142,7 +142,7 @@ export function HomeStatGrid({ gates, stats, cells, pooledFund, onOpen }: StatsP
     outstanding: stats.outstanding !== null && (
       <StatCell
         key="outstanding"
-        icon={<ReceiptLong sx={sizeIcon} />}
+        icon={<Receipt sx={sizeIcon} />}
         label="المطلوب تحصيله"
         value={<CompactAmount amount={stats.outstanding} />}
         tone={stats.outstanding > 0 ? 'warning' : 'neutral'}

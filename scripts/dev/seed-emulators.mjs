@@ -67,7 +67,7 @@ await put('clients', 'c-old', {
 
 // ── Workers ───────────────────────────────────────────────────────────────────
 const workers = [
-  ['w-elec', 'c-villa', 'علي الكهربائي', 'كهرباء', 18000, 11000, [
+  ['w-elec', 'c-villa', 'علي الكهربائي', 'كهرباء', 18000, 6000, [
     { id: 'i1', title: 'تمديد نقاط الإنارة', quantity: 60, unit: 'نقطة', unitPrice: 150 },
     { id: 'i2', title: 'تأسيس لوحات التوزيع', quantity: 3, unit: 'لوحة', unitPrice: 3000 }]],
   ['w-plumb', 'c-villa', 'مصطفى السباك', 'سباكة', 14000, 14000, undefined],
@@ -107,6 +107,7 @@ const ex = [
   ['e9', 'c-shop', 'دهان جوتن 18 لتر × 30', 5400, 'painting', '2026-10-21', 30, 180, 'piece'],
   ['e10', 'c-shop', 'أرضيات بورسلين', 9800, 'flooring', '2026-10-05', 140, 70, 'm2'],
   ['e11', 'c-shop', 'وقود مولد الموقع', 780, 'fuel', '2026-10-23'],
+  ['e13', 'c-villa', 'دفعة للسباك مصطفى (تسوية كاملة)', 14000, 'labor', '2026-10-16', undefined, undefined, undefined, 'w-plumb', 'مصطفى السباك'],
   ['e12', 'c-shop', 'دفعة للدهان فرج', 3000, 'labor', '2026-10-22', undefined, undefined, undefined, 'w-paint', 'فرج الدهان'],
 ];
 for (const [id, clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName] of ex) {

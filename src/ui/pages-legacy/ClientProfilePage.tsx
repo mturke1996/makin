@@ -268,7 +268,7 @@ export const ClientProfilePage = () => {
     !caps.showSummary && 'statement',
   ].filter((a): a is InsightAction => !!a);
 
-  const renderModules = (section: 'records' | 'supporting' | 'all' | 'shortcuts') => (
+  const renderModules = (section: 'all' | 'shortcuts') => (
     <ClientModules
       section={section}
       summary={summary}
@@ -366,6 +366,10 @@ export const ClientProfilePage = () => {
               {renderModules('all')}
             </>
           )}
+          <details open className="group rounded-lg border border-border bg-surface-panel">
+            <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-fg">بيانات المشروع<ExpandMore className="shrink-0 text-fg-muted transition-transform group-open:rotate-180" sx={{ fontSize: 20 }} aria-hidden /></summary>
+            <ClientDetailsCard client={client} caps={caps} collected={summary.totalPaid} onEdit={may.editClient ? () => setActiveForm({ kind: 'editClient' }) : undefined} className="rounded-none border-0 border-t" />
+          </details>
         </div>
 
         <aside aria-label="إجراءات العميل وتقاريره" className="min-w-0 space-y-4 lg:order-1 lg:col-span-4 lg:sticky lg:top-4 xl:col-span-3">
@@ -391,10 +395,6 @@ export const ClientProfilePage = () => {
               </div>
             </Card>
           )}
-          <details className="group rounded-lg border border-border bg-surface-panel">
-            <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-fg">بيانات المشروع<ExpandMore className="shrink-0 text-fg-muted transition-transform group-open:rotate-180" sx={{ fontSize: 20 }} aria-hidden /></summary>
-            <ClientDetailsCard client={client} caps={caps} collected={summary.totalPaid} onEdit={may.editClient ? () => setActiveForm({ kind: 'editClient' }) : undefined} className="rounded-none border-0 border-t" />
-          </details>
         </aside>
       </div>
 

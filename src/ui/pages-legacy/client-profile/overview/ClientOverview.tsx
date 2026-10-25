@@ -148,11 +148,11 @@ export function ClientOverview({
         <AccountFigures summary={summary} workersDue={workerSummary?.remaining} onAction={onAction} unavailable={unavailableActions} />
         <InsightsList insights={insights} onAction={onAction} unavailable={unavailableActions} limit={3} />
         {afterInsights}
-        <details className="group rounded-lg border border-border bg-surface-panel p-4">
+        <details open className="group rounded-lg border border-border bg-surface-panel p-4">
           <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-fg">تفاصيل حساب العميل<ExpandMore className="shrink-0 text-fg-muted transition-transform group-open:rotate-180" sx={{ fontSize: 20 }} aria-hidden /></summary>
           <ClientAccountSummary summary={summary} className="mt-3 border-0" />
         </details>
-        <details className="group rounded-lg border border-border bg-surface-panel p-4">
+        <details open className="group rounded-lg border border-border bg-surface-panel p-4">
           <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-fg">التحليل الشهري وتوزيع المصروفات<ExpandMore className="shrink-0 text-fg-muted transition-transform group-open:rotate-180" sx={{ fontSize: 20 }} aria-hidden /></summary>
           <div className="mt-4 space-y-6"><OverviewKpis totalPaid={summary.totalPaid} totalExpenses={summary.totalExpenses} trend={trend} /><CashFlowCard payments={payments} expenses={expenses} today={today} /><SpendBreakdown expenses={expenses} showPeople={expenseScope === 'all'} /></div>
         </details>

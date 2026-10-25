@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, PostAdd, ReceiptLong } from '../../../../design-system/icons';
+import { ChevronRight, PostAdd, Receipt } from '../../../../design-system/icons';
 import {
   Amount,
   Badge,
@@ -202,7 +202,7 @@ export function ClientInvoicesSheet({
           <InvoicesSkeleton />
         ) : empty ? (
           <EmptyState
-            Icon={ReceiptLong}
+            Icon={Receipt}
             title="لا توجد فواتير لهذا العميل"
             description={
               onCreate

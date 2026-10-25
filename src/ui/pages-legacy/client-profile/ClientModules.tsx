@@ -1,6 +1,7 @@
 import type { ElementType, ReactNode } from 'react';
 import {
   AccountBalanceWallet,
+  Balance,
   Description,
   Engineering,
   Groups,
@@ -8,7 +9,6 @@ import {
   Payment,
   Percent,
   Receipt,
-  ReceiptLong,
   RequestQuote,
   TableChart,
   Timeline,
@@ -64,7 +64,7 @@ interface ModuleDef {
 }
 
 interface ClientModulesProps {
-  section?: 'records' | 'supporting' | 'all' | 'shortcuts';
+  section?: 'records' | 'all' | 'shortcuts';
   stats: ClientModuleStats;
   summary: ClientSummary;
   caps: ClientProfileCaps;
@@ -75,7 +75,7 @@ interface ClientModulesProps {
 }
 
 /**
- * Main records are four icon entries; secondary services are grouped, compact links.
+ * Every section of the client as one stacked list of rows (name, count, figure), in labelled bands.
  * Entries exist only for permissions the person holds; personal expenses stay labelled as their own.
  */
 export function ClientModules({ stats, summary, caps, canEditProfit, onOpenSheet, onOpenProfit, section = 'all' }: ClientModulesProps) {
@@ -196,7 +196,7 @@ export function ClientModules({ stats, summary, caps, canEditProfit, onOpenSheet
       subtitle: 'المحصّل والمصروف برصيد جارٍ',
       amountLabel: 'الرصيد',
       amount: subtractMoney(summary.totalPaid, summary.totalExpenses),
-      Icon: ReceiptLong,
+      Icon: Balance,
       tone: 'brand',
     },
   ];
@@ -240,30 +240,19 @@ export function ClientModules({ stats, summary, caps, canEditProfit, onOpenSheet
     },
   ];
 
-  const renderGroup = (title: string, defs: ModuleDef[], primary = false) => {
-    const visible = defs.filter((m) => m.shown);
-    if (visible.length === 0) return null;
-    return (
-      <Section title={title} key={title} className="[&_h2]:text-sm [&_h2]:font-semibold">
-        <nav aria-label={title} className={primary ? 'grid grid-cols-4 gap-1 sm:gap-3' : 'grid gap-1 rounded-lg border border-border bg-surface-panel p-1 sm:grid-cols-2'}>
-          {visible.map((m) => (
-            <ProfileModuleRow
-              key={m.key}
-              title={m.title}
-              subtitle={m.subtitle}
-              amountLabel={m.amountLabel}
-              amount={m.amount}
-              amountDisplay={m.amountDisplay}
-              Icon={m.Icon}
-              tone={m.tone}
-              layout={primary ? 'icon' : 'row'}
-              onClick={m.key === 'profit' ? onOpenProfit : () => onOpenSheet(m.key as ProfileSheetKey)}
-            />
-          ))}
-        </nav>
-      </Section>
-    );
-  };
+  const row = (m: ModuleDef) => (
+    <ProfileModuleRow
+      key={m.key}
+      title={m.title}
+      subtitle={m.subtitle}
+      amountLabel={m.amountLabel}
+      amount={m.amount}
+      amountDisplay={m.amountDisplay}
+      Icon={m.Icon}
+      tone={m.tone}
+      onClick={m.key === 'profit' ? onOpenProfit : () => onOpenSheet(m.key as ProfileSheetKey)}
+    />
+  );
 
   if (section === 'shortcuts') {
     const visible = records.filter((module) => module.shown);
@@ -275,13 +264,32 @@ export function ClientModules({ stats, summary, caps, canEditProfit, onOpenSheet
     </Section>;
   }
 
+  // Everything on one list, top to bottom, in bands: the money records, the project follow-up, then documents and statements.
+  const bands: { title: string; defs: ModuleDef[] }[] =
+    section === 'records'
+      ? [{ title: '', defs: records }]
+      : [
+          { title: 'السجلات المالية', defs: records },
+          { title: 'متابعة المشروع', defs: project },
+          { title: 'المستندات والكشوفات', defs: [...documents, ...history] },
+        ];
+  const visibleBands = bands.map((band) => ({ ...band, defs: band.defs.filter((m) => m.shown) })).filter((band) => band.defs.length > 0);
+  if (visibleBands.length === 0) return null;
+
   return (
-    <>
-      {section !== 'supporting' && renderGroup('الأقسام', records.slice(0, 4), true)}
-      {section !== 'records' && renderGroup('العهد والنسبة', records.slice(4))}
-      {section !== 'records' && renderGroup('المستندات', documents)}
-      {section !== 'records' && renderGroup('السجل والكشف', history)}
-      {section !== 'records' && renderGroup('متابعة المشروع', project)}
-    </>
+    <Section
+      title="الأقسام"
+      description="كل سجلات العميل في مكان واحد، اضغط على أي قسم لفتحه."
+      className="[&_h2]:text-base [&_h2]:font-semibold"
+    >
+      <nav aria-label="الأقسام" className="overflow-hidden rounded-lg border border-border bg-surface-panel">
+        {visibleBands.map((band, index) => (
+          <div key={band.title || 'records'} className={index > 0 ? 'border-t border-border' : undefined}>
+            {band.title && <p className="bg-surface-sunken px-4 py-1.5 text-2xs font-semibold text-fg-muted">{band.title}</p>}
+            <div className="divide-y divide-border">{band.defs.map(row)}</div>
+          </div>
+        ))}
+      </nav>
+    </Section>
   );
 }

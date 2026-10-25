@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { ChevronLeft } from '../../../design-system/icons';
+import { Amount } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 
 export type ProfileTone = 'brand' | 'success' | 'danger' | 'warning' | 'info' | 'amber';
@@ -18,18 +19,19 @@ export const PROFILE_TONE: Record<ProfileTone, { tile: string; ink: string }> = 
 };
 
 /**
- * Client section entry: touch-sized icon, section name and record count, without a financial card.
+ * One section of the client page, as a full-width row: tinted icon, name and record count on the start side,
+ * the figure that matters (with its caption) and a chevron on the end side. Rows are stacked in one list so the
+ * whole account reads top to bottom, the way Rkeaz lists it.
  */
 export function ProfileModuleRow({
   title,
   subtitle,
-  amountLabel: _amountLabel,
-  amount: _amount,
+  amountLabel,
+  amount,
   Icon,
   tone,
   onClick,
-  amountDisplay: _amountDisplay,
-  layout = 'icon',
+  amountDisplay,
 }: {
   title: string;
   /** Muted line under the title: the record count in words, or the rule for the percentage row. */
@@ -42,23 +44,28 @@ export function ProfileModuleRow({
   onClick: () => void;
   /** Replaces the money figure (a progress percentage, a short phrase). */
   amountDisplay?: ReactNode;
-  layout?: 'icon' | 'row';
 }) {
   return (
     <button
       type="button"
       aria-label={`فتح ${title}`}
       onClick={onClick}
-      className={cn('group flex min-w-0 items-center rounded-lg transition-colors hover:bg-surface-sunken focus:outline-none focus-visible:shadow-focus', layout === 'icon' ? 'flex-col gap-1.5 px-1 py-2.5 text-center' : 'min-h-16 gap-3 px-3 py-2 text-start')}
+      className="group flex min-h-[4.25rem] w-full min-w-0 items-center gap-3 px-3.5 py-3 text-start transition-colors hover:bg-surface-sunken focus:outline-none focus-visible:shadow-focus sm:px-4"
     >
-      <span className={cn('grid shrink-0 place-items-center rounded-lg transition-colors group-hover:brightness-95', layout === 'icon' ? 'size-11' : 'size-9', PROFILE_TONE[tone].tile)}>
+      <span className={cn('grid size-10 shrink-0 place-items-center rounded-lg transition-colors group-hover:brightness-95', PROFILE_TONE[tone].tile)}>
         <Icon sx={{ fontSize: 22 }} aria-hidden />
       </span>
-      <span className={cn('min-w-0', layout === 'icon' ? 'space-y-1.5' : 'flex-1 space-y-0.5')}>
-        <span className={cn('block break-words font-semibold leading-relaxed text-fg', layout === 'icon' ? 'text-2xs' : 'text-sm')}>{title}</span>
-        <span className="block break-words text-3xs leading-relaxed text-fg-muted">{subtitle}</span>
+      <span className="min-w-0 flex-1 space-y-0.5">
+        <span className="block break-words text-sm font-semibold leading-snug text-fg">{title}</span>
+        <span className="block break-words text-2xs leading-relaxed text-fg-muted">{subtitle}</span>
       </span>
-      {layout === 'row' && <ChevronLeft className="shrink-0 text-fg-muted ltr:rotate-180" sx={{ fontSize: 18 }} aria-hidden />}
+      <span className="flex-none text-end">
+        {amountLabel && <span className="block text-3xs leading-tight text-fg-muted">{amountLabel}</span>}
+        <span className={cn('block text-sm font-bold leading-tight tabular-nums', PROFILE_TONE[tone].ink)}>
+          {amountDisplay ?? <Amount amount={amount} />}
+        </span>
+      </span>
+      <ChevronLeft className="shrink-0 text-fg-muted ltr:rotate-180" sx={{ fontSize: 18 }} aria-hidden />
     </button>
   );
 }
