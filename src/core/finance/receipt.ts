@@ -1,5 +1,6 @@
 import type { Client, Invoice, Payment } from '../../types';
 import { amountInWords } from './amountInWords';
+import { verifyQr } from './docVerify';
 import { subtractMoney, sumMoney } from './money';
 
 /** Receipts are numbered per year, from 1: RC-2026-0001. */
@@ -56,8 +57,9 @@ export function receiptInvoice(payment: Payment, invoice: Invoice | undefined, a
   return { number: invoice.invoiceNumber, total: invoice.total, paidThrough, remaining: Math.max(0, subtractMoney(invoice.total, paidThrough)) };
 }
 
-export function receiptQrPayload(number: string, amount: number, date: string): string {
-  return ['MAKIN', number, amount.toFixed(3), day(date)].join('|');
+/** A link to the app's verification page; `origin` is where the app is served from. */
+export function receiptQrPayload(number: string, amount: number, date: string, origin = ''): string {
+  return verifyQr('receipt', number, amount, date, origin);
 }
 
 export function buildReceipt(args: {
@@ -68,8 +70,10 @@ export function buildReceipt(args: {
   allPayments: readonly Payment[];
   /** Used when the payment names no recorder. */
   fallbackReceiver?: string;
+  /** Where the app is served from, so the QR code is a scannable link. */
+  origin?: string;
 }): ReceiptData {
-  const { payment, number, client, invoice, allPayments, fallbackReceiver } = args;
+  const { payment, number, client, invoice, allPayments, fallbackReceiver, origin } = args;
   return {
     number,
     date: day(payment.paymentDate),
@@ -81,6 +85,6 @@ export function buildReceipt(args: {
     notes: payment.notes?.trim() || undefined,
     invoice: receiptInvoice(payment, invoice, allPayments),
     receivedBy: payment.createdBy || fallbackReceiver || '',
-    qr: receiptQrPayload(number, payment.amount, payment.paymentDate),
+    qr: receiptQrPayload(number, payment.amount, payment.paymentDate, origin),
   };
 }

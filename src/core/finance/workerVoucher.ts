@@ -1,5 +1,6 @@
 import type { Worker } from '../../types';
 import { amountInWords } from './amountInWords';
+import { verifyQr, workerVoucherRef } from './docVerify';
 import type { WorkerLedger, WorkerLedgerPayment } from './workerLedger';
 import { workerProgressView, type WorkerProgressView } from './workerProgress';
 
@@ -32,11 +33,7 @@ export interface WorkerVoucherData {
   qr: string;
 }
 
-const compactDay = (day: string) => day.replace(/-/g, '');
-
-export function workerVoucherRef(payment: Pick<WorkerLedgerPayment, 'id' | 'day'>): string {
-  return `MK-WPV-${compactDay(payment.day || '00000000')}-${payment.id.slice(-4).toUpperCase()}`;
-}
+export { workerVoucherRef };
 
 export function buildWorkerVoucher(args: {
   payment: WorkerLedgerPayment;
@@ -45,8 +42,10 @@ export function buildWorkerVoucher(args: {
   projectName: string;
   /** Total of the worker's advances, for the progress line. */
   advances?: number;
+  /** Where the app is served from, so the QR code is a scannable link. */
+  origin?: string;
 }): WorkerVoucherData {
-  const { payment, worker, ledger, projectName, advances } = args;
+  const { payment, worker, ledger, projectName, advances, origin } = args;
   const ref = workerVoucherRef(payment);
   const progress = worker.workProgressPercent == null
     ? undefined
@@ -68,6 +67,6 @@ export function buildWorkerVoucher(args: {
     remainingAfter: payment.remainingAfter,
     progress,
     recordedBy: payment.recordedBy,
-    qr: ['MAKIN', 'WPV', ref, payment.amount.toFixed(3), payment.day].join('|'),
+    qr: verifyQr('voucher', ref, payment.amount, payment.day, origin),
   };
 }

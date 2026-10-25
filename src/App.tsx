@@ -39,6 +39,7 @@ const FundPage               = lazy(() => import('./ui/pages-legacy/FundPage').t
 const LettersPage            = lazy(() => import('./ui/pages-legacy/LettersPage').then(m => ({ default: m.LettersPage })));
 const AuditLogPage           = lazy(() => import('./ui/pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const InstallPage            = lazy(() => import('./ui/pages/InstallPage').then(m => ({ default: m.InstallPage })));
+const VerifyPage             = lazy(() => import('./ui/pages/VerifyPage').then(m => ({ default: m.VerifyPage })));
 const CompanyPage            = lazy(() => import('./ui/pages/CompanyPage').then(m => ({ default: m.CompanyPage })));
 const SuppliersPage          = lazy(() => import('./ui/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 const BackupPage             = lazy(() => import('./ui/pages/BackupPage').then(m => ({ default: m.BackupPage })));
@@ -91,6 +92,7 @@ function AppRouterBody({ isAuthenticated }: { isAuthenticated: boolean }) {
           />
           {/* صفحة عامة لتثبيت التطبيق — تُشارك مع الموظفين (تعمل قبل تسجيل الدخول) */}
           <Route path="/install" element={<InstallPage />} />
+          <Route path="/verify" element={<VerifyPage />} />
 
           <Route element={isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />}>
             <Route path="/" element={<HomePage />} />

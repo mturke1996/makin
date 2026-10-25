@@ -498,6 +498,46 @@ export const PdfTotalsBlock = ({
 };
 
 /** Notes under a hairline. */
+/** A signature line: the role under a ruled space, the name beneath when known, and an optional seal pressed over the line. */
+export const PdfSignature = ({ role, name, stamp }: { role: string; name?: string; stamp?: React.ReactNode }) => (
+  <View style={{ flex: 1, alignItems: 'center' }} wrap={false}>
+    <View style={{ width: '82%', height: stamp ? 76 : 44, borderBottomWidth: 0.8, borderBottomColor: INK.text, alignItems: 'center', justifyContent: 'flex-end' }}>
+      {stamp ? <View style={{ marginBottom: 3 }}>{stamp}</View> : null}
+    </View>
+    <Text style={{ marginTop: 6, fontSize: 9, fontWeight: 'bold', color: INK.text, fontFamily: PDF_FONT_FAMILY }}>{ar(role)}</Text>
+    {name ? <Text style={{ marginTop: 2, fontSize: 8.4, color: INK.muted, fontFamily: PDF_FONT_FAMILY }}>{ar(name)}</Text> : null}
+  </View>
+);
+
+/**
+ * The company's electronic seal: two thin rings round the company name, "approved electronically", the document's
+ * reference and its date. Drawn with views (no image), slightly tilted like a pressed stamp, in the brand ink.
+ */
+export const PdfSeal = ({ B, docRef, date, size = 72 }: { B: PdfBrandSnapshot; docRef: string; date?: string; size?: number }) => {
+  const color = B.palette.primary || INK.text;
+  const ring = (inset: number, width: number) => ({
+    position: 'absolute' as const,
+    top: inset,
+    left: inset,
+    right: inset,
+    bottom: inset,
+    borderRadius: size,
+    borderWidth: width,
+    borderColor: color,
+  });
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', transform: 'rotate(-8deg)', opacity: 0.88 }} wrap={false}>
+      <View style={ring(0, 1.3)} />
+      <View style={ring(4, 0.5)} />
+      <Text style={{ fontFamily: PDF_FONT_FAMILY, fontWeight: 'bold', fontSize: 8.6, color, textAlign: 'center' }}>{ar(B.name)}</Text>
+      <Text style={{ marginTop: 2, fontFamily: PDF_FONT_FAMILY, fontSize: 6.2, color, textAlign: 'center' }}>{ar('معتمد إلكترونياً')}</Text>
+      <View style={{ width: size * 0.5, borderTopWidth: 0.5, borderTopColor: color, marginVertical: 3 }} />
+      <Text style={{ fontFamily: PDF_NUM_FONT, fontSize: 5.6, color, textAlign: 'center' }}>{docRef}</Text>
+      {date ? <Text style={{ marginTop: 1, fontFamily: PDF_NUM_FONT, fontSize: 5.6, color, textAlign: 'center' }}>{date}</Text> : null}
+    </View>
+  );
+};
+
 export const PdfNotesBox = ({ s, label = 'ملاحظات', children }: { s: any; label?: string; children: React.ReactNode }) => (
   <View style={s.notesBox} wrap={false}>
     <Text style={s.notesLbl}>{ar(label)}</Text>

@@ -32,7 +32,7 @@ describe('buildWorkerVoucher', () => {
     const v = buildWorkerVoucher({ payment: payment(), worker, ledger: { agreed: 18000, paid: 6000 }, projectName: 'فيلا خالد' });
     expect(v).toMatchObject({ ref: 'MK-WPV-20261014-1234', amount: 2500, paidThrough: 6000, remainingAfter: 12000, isAdvance: false, projectName: 'فيلا خالد' });
     expect(v.amountWords).toContain('ألفان');
-    expect(v.qr).toBe('MAKIN|WPV|MK-WPV-20261014-1234|2500.000|2026-10-14');
+    expect(v.qr).toMatch(/^\/verify\?k=WPV&r=MK-WPV-20261014-1234&a=2500\.000&d=2026-10-14&s=[0-9a-f]{8}$/);
     expect(v.progress).toBeUndefined();
   });
 

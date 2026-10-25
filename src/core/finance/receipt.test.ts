@@ -45,7 +45,7 @@ describe('buildReceipt', () => {
       method: 'نقداً',
       notes: 'الدفعة الأولى',
       receivedBy: 'م. أحمد',
-      qr: 'MAKIN|RC-2026-0001|60000.000|2026-09-20',
+      qr: expect.stringMatching(/^\/verify\?k=RC&r=RC-2026-0001&a=60000\.000&d=2026-09-20&s=[0-9a-f]{8}$/),
     });
     expect(receipt.invoice?.remaining).toBe(50000);
   });
@@ -57,6 +57,6 @@ describe('buildReceipt', () => {
   });
 
   it('keeps the QR payload in thousandths', () => {
-    expect(receiptQrPayload('RC-2026-0003', 10000.5, '2026-10-12T08:00:00Z')).toBe('MAKIN|RC-2026-0003|10000.500|2026-10-12');
+    expect(receiptQrPayload('RC-2026-0003', 10000.5, '2026-10-12T08:00:00Z', 'https://app.example')).toContain('https://app.example/verify?k=RC&r=RC-2026-0003&a=10000.500&d=2026-10-12&s=');
   });
 });

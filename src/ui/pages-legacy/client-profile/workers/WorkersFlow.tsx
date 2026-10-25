@@ -234,6 +234,7 @@ export function WorkersFlow({
         ledger: selected.ledger,
         projectName: clientName || 'المشروع',
         advances: advanceTotal(selected.ledger.payments),
+        origin: window.location.origin,
       });
       await downloadPdf(createElement(WorkerVoucherPDF, { voucher }), `إيصال-صرف-${selected.worker.name}-${voucher.ref}`);
     } catch {

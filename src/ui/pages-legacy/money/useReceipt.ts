@@ -45,6 +45,7 @@ export function useReceipt() {
           invoice: invoices.find((i) => i.id === current.invoiceId),
           allPayments: payments,
           fallbackReceiver: user?.displayName,
+          origin: window.location.origin,
         });
         const element = createElement(ReceiptPDF, { receipt });
         const file = `إيصال-${number}`;

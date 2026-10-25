@@ -6,20 +6,11 @@ import type { ReceiptData } from '../../core/finance/receipt';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand } from './pdfBrand';
 import { PDF_FONT_FAMILY, PDF_NUM_FONT } from './pdfFonts';
-import { INK, PdfDocTitle, PdfInfoCard, PdfPage, PdfStatement, PdfSummaryStrip, makePdfStyles } from './pdfKit';
+import { INK, PdfDocTitle, PdfInfoCard, PdfPage, PdfSeal, PdfSignature, PdfStatement, PdfSummaryStrip, makePdfStyles } from './pdfKit';
 import { PdfQr } from './PdfQr';
 
 const FF = PDF_FONT_FAMILY;
 const NUM = PDF_NUM_FONT;
-
-/** A signature line: the role under a ruled space, and the name beneath when it is known. */
-const Signature = ({ role, name }: { role: string; name?: string }) => (
-  <View style={{ flex: 1, alignItems: 'center' }} wrap={false}>
-    <View style={{ width: '82%', height: 44, borderBottomWidth: 0.8, borderBottomColor: INK.text }} />
-    <Text style={{ marginTop: 6, fontSize: 9, fontWeight: 'bold', color: INK.text, fontFamily: FF }}>{ar(role)}</Text>
-    {name ? <Text style={{ marginTop: 2, fontSize: 8.4, color: INK.muted, fontFamily: FF }}>{ar(name)}</Text> : null}
-  </View>
-);
 
 /**
  * The receipt for a payment: who paid, how much (in figures and in words), for what, what is left on the
@@ -79,16 +70,16 @@ export const ReceiptPDF: React.FC<{ receipt: ReceiptData }> = ({ receipt }) => {
         ) : null}
 
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', marginTop: 26, gap: 18 }} wrap={false}>
-          <Signature role="المستلم" name={receipt.receivedBy} />
-          <Signature role="اعتماد الإدارة" />
-          <View style={{ alignItems: 'center', width: 78 }}>
-            <PdfQr value={receipt.qr} size={66} />
+          <PdfSignature role="المستلم" name={receipt.receivedBy} />
+          <PdfSignature role="اعتماد الإدارة" stamp={<PdfSeal B={B} docRef={receipt.number} date={receipt.date} />} />
+          <View style={{ alignItems: 'center', width: 90 }}>
+            <PdfQr value={receipt.qr} size={84} />
             <Text style={{ marginTop: 3, fontFamily: NUM, fontSize: 6.6, color: INK.faint }}>{receipt.number}</Text>
           </View>
         </View>
 
         <Text style={{ marginTop: 14, fontSize: 7.6, color: INK.faint, textAlign: 'center', fontFamily: FF }}>
-          {ar('امسح الرمز للتحقق من رقم الإيصال والمبلغ والتاريخ ومطابقتها مع سجلات الشركة.')}
+          {ar('امسح الرمز للتحقق من الإيصال: سلامة الرقم والمبلغ والتاريخ، ومطابقتها لسجلات الشركة.')}
         </Text>
       </PdfPage>
     </Document>

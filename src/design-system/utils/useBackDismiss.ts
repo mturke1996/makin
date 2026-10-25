@@ -58,6 +58,7 @@ function bindGlobal() {
  */
 function popMarkerWhenIdle(token: string, attempt = 0) {
   window.setTimeout(() => {
+    if (typeof window === 'undefined') return; // the page was torn down while this was waiting
     const s = window.history.state as HistoryState | null;
     if (s?.__overlay === token) {
       selfPops += 1;

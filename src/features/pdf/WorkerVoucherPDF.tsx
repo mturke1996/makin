@@ -7,19 +7,11 @@ import { formatCurrencyDisplay } from '../../core/utils-formatters';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand } from './pdfBrand';
 import { PDF_FONT_FAMILY, PDF_NUM_FONT } from './pdfFonts';
-import { INK, PdfDocTitle, PdfInfoCard, PdfPage, PdfStatement, PdfSummaryStrip, makePdfStyles } from './pdfKit';
+import { INK, PdfDocTitle, PdfInfoCard, PdfPage, PdfSeal, PdfSignature, PdfStatement, PdfSummaryStrip, makePdfStyles } from './pdfKit';
 import { PdfQr } from './PdfQr';
 
 const FF = PDF_FONT_FAMILY;
 const NUM = PDF_NUM_FONT;
-
-const Signature = ({ role, name }: { role: string; name?: string }) => (
-  <View style={{ flex: 1, alignItems: 'center' }} wrap={false}>
-    <View style={{ width: '82%', height: 44, borderBottomWidth: 0.8, borderBottomColor: INK.text }} />
-    <Text style={{ marginTop: 6, fontSize: 9, fontWeight: 'bold', color: INK.text, fontFamily: FF }}>{ar(role)}</Text>
-    {name ? <Text style={{ marginTop: 2, fontSize: 8.4, color: INK.muted, fontFamily: FF }}>{ar(name)}</Text> : null}
-  </View>
-);
 
 /**
  * The voucher a worker signs when he is paid: his details, the amount in figures and in words, what remains of his
@@ -92,10 +84,10 @@ export const WorkerVoucherPDF: React.FC<{ voucher: WorkerVoucherData }> = ({ vou
         ) : null}
 
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', marginTop: 26, gap: 18 }} wrap={false}>
-          <Signature role="المستلم (العامل)" name={voucher.workerName} />
-          <Signature role="الصارف" name={voucher.recordedBy} />
-          <View style={{ alignItems: 'center', width: 78 }}>
-            <PdfQr value={voucher.qr} size={66} />
+          <PdfSignature role="المستلم (العامل)" name={voucher.workerName} />
+          <PdfSignature role="الصارف" name={voucher.recordedBy} stamp={<PdfSeal B={B} docRef={voucher.ref} date={voucher.date} />} />
+          <View style={{ alignItems: 'center', width: 90 }}>
+            <PdfQr value={voucher.qr} size={84} />
             <Text style={{ marginTop: 3, fontFamily: NUM, fontSize: 6.6, color: INK.faint }}>{voucher.ref}</Text>
           </View>
         </View>
