@@ -51,14 +51,14 @@ export function QuickAddFab({ className, initialClientId, initialPhaseId }: { cl
         className={cn(
           'fixed end-4 z-[900] inline-flex size-14 select-none items-center justify-center gap-2 rounded-full',
           'bg-accent text-accent-on shadow-lg hover:bg-accent-hover',
-          'bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:bottom-8 lg:end-8 lg:h-14 lg:w-auto lg:px-6',
+          'bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-8 md:end-8 md:h-14 md:w-auto md:px-6',
           'transition-[transform,background-color] duration-[120ms] ease-out active:scale-95',
           'focus:outline-none focus-visible:shadow-focus',
           className,
         )}
       >
         <Add aria-hidden sx={{ fontSize: 28 }} />
-        <span className="hidden text-base font-semibold lg:inline">مصروف</span>
+        <span className="hidden text-base font-semibold md:inline">مصروف</span>
       </button>
       {session > 0 && (
         <Suspense fallback={null}>

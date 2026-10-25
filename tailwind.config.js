@@ -6,6 +6,9 @@ const tone = (name) => ({
 });
 
 export default {
+  // Hover styles only where a pointer can really hover: on a tablet or phone a tap would otherwise leave the
+  // row or button looking hovered until the next tap.
+  future: { hoverOnlyWhenSupported: true },
   content: ['./index.html', './src/**/*.{ts,tsx,js,jsx}'],
   darkMode: ['class', "[data-theme='dark']"],
   theme: {

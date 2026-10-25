@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Add, Payments as PaymentsIcon, Receipt, Search } from '../../design-system/icons';
 import { useDataSlice } from '../../stores/useDataStore';
@@ -28,7 +28,9 @@ import { summarizePayments } from './money/moneyTrend';
 import { DeltaBadge, MiniBars, Sparkline } from '../../design-system/charts';
 import { ReceiptPanel } from './money/ReceiptPanel';
 import { useReceipt } from './money/useReceipt';
-import { groupBy, matchesQuery, monthKey, monthLabel, sumAmounts } from './money/moneyUtils';
+import { groupBy, limitGroups, matchesQuery, monthKey, monthLabel, sumAmounts } from './money/moneyUtils';
+import { ShowMoreRows } from './money/ShowMoreRows';
+import { useVisibleCount } from './client-profile/activity/useVisibleCount';
 
 type MethodFilter = 'all' | PaymentMethod;
 
@@ -80,18 +82,23 @@ export const PaymentsPage = () => {
     [payments]
   );
 
+  // The box answers every keystroke at once; the long list catches up when the device has a moment.
+  const deferredSearch = useDeferredValue(search);
   /** search + client filter (the method chips count against this set). */
   const scoped = useMemo(
     () =>
       sorted.filter(
         (p) =>
           (!clientId || p.clientId === clientId) &&
-          matchesQuery(search, p.notes, nameOf(p), invoiceById.get(p.invoiceId)?.invoiceNumber)
+          matchesQuery(deferredSearch, p.notes, nameOf(p), invoiceById.get(p.invoiceId)?.invoiceNumber)
       ),
-    [sorted, clientId, search, nameOf, invoiceById]
+    [sorted, clientId, deferredSearch, nameOf, invoiceById]
   );
   const visible = useMemo(() => scoped.filter((p) => method === 'all' || p.paymentMethod === method), [scoped, method]);
-  const groups = useMemo(() => groupBy(visible, (p) => monthKey(p.paymentDate)), [visible]);
+  const { count: rowLimit, showMore, pageSize } = useVisibleCount(`${deferredSearch}|${clientId}|${method}`);
+  const allGroups = useMemo(() => groupBy(visible, (p) => monthKey(p.paymentDate)), [visible]);
+  const { groups, hidden } = useMemo(() => limitGroups(allGroups, rowLimit), [allGroups, rowLimit]);
+  const monthTotals = useMemo(() => new Map(allGroups.map((g) => [g.key, { count: g.items.length, sum: sumAmounts(g.items.map((p) => p.amount)) }])), [allGroups]);
 
   const methodOptions = useMemo(() => {
     const present = new Set(payments.map((p) => p.paymentMethod));
@@ -304,7 +311,7 @@ export const PaymentsPage = () => {
                       title={monthLabel(g.items[0].paymentDate)}
                       trailing={
                         <span>
-                          {g.items.length} {g.items.length === 1 ? 'دفعة' : 'دفعات'} · {formatCurrencyDisplay(sumAmounts(g.items.map((p) => p.amount)))}
+                          {monthTotals.get(g.key)!.count} {monthTotals.get(g.key)!.count === 1 ? 'دفعة' : 'دفعات'} · {formatCurrencyDisplay(monthTotals.get(g.key)!.sum)}
                         </span>
                       }
                     >
@@ -348,6 +355,7 @@ export const PaymentsPage = () => {
                       })}
                     </StickyGroup>
                   ))}
+                  <ShowMoreRows hidden={hidden} pageSize={pageSize} noun="دفعة" onMore={showMore} />
                 </div>
               )}
               </div>

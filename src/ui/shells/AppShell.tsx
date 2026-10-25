@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { Sidebar } from '../nav/Sidebar';
 import { TopBar } from '../nav/TopBar';
 import { MobileBottomNav } from '../nav/MobileBottomNav';
@@ -11,16 +11,20 @@ import { PageFallback } from '../feedback/PageFallback';
 /**
  * AppShell: authenticated layout.
  *
- *  lg+ : sidebar + content (no top/bottom bars)
- *  <lg : top bar + content + bottom nav (both frosted, fixed to the edges)
+ *  md+ : side rail (xl+: full sidebar) + content (no top/bottom bars): tablets in both directions, laptops
+ *  <md : top bar + content + bottom nav (both frosted, fixed to the edges)
  *
  *  Scroll resets to top on every route change.
  */
 export function AppShell() {
   const location = useLocation();
 
+  // From 768px the page area scrolls inside the shell rather than the window, so both go back to the top.
+  const mainRef = useRef<HTMLElement>(null);
   useEffect(() => {
     window.scrollTo(0, 0);
+    // scrollTop, not scrollTo: Element.scrollTo is missing on iPads still on iOS 13.
+    if (mainRef.current) mainRef.current.scrollTop = 0;
   }, [location.pathname]);
 
   return (
@@ -32,9 +36,9 @@ export function AppShell() {
         <TopBar />
         {/*
           Phones: the page scrolls with the window; bottom padding clears the 64px tab bar + home indicator.
-          lg+: .app-shell-main gets overflow-y auto + min-height 0 so the sidebar/content split scrolls correctly.
+          md+: .app-shell-main gets overflow-y auto + min-height 0 so the sidebar/content split scrolls correctly.
         */}
-        <main className="app-shell-main flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <main ref={mainRef} className="app-shell-main flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           {/* The shell stays on screen while a page's code loads: only this block waits. */}
           <Suspense fallback={<PageFallback />}>
             <Outlet />

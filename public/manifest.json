@@ -11,7 +11,7 @@
   "theme_color": "#1F2633",
   "dir": "rtl",
   "lang": "ar",
-  "orientation": "portrait",
+  "orientation": "any",
   "prefer_related_applications": false,
   "categories": ["business", "productivity", "finance"],
   "launch_handler": { "client_mode": ["navigate-existing", "auto"] },

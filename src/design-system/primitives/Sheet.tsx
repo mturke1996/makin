@@ -21,7 +21,7 @@ interface SheetProps {
   /** Pinned bottom action bar (Save / Cancel). */
   footer?: ReactNode;
   children: ReactNode;
-  /** Desktop max width. Below lg the sheet follows `mobile`. */
+  /** Panel max width. Below md (phones) the sheet follows `mobile`. */
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
   /** `full`: full-screen page-like sheet. `bottom`: rounded bottom sheet with grabber + drag to dismiss. */
   mobile?: 'full' | 'bottom';
@@ -33,10 +33,10 @@ interface SheetProps {
 }
 
 const widths = {
-  sm: 'lg:max-w-lg',
-  md: 'lg:max-w-2xl',
-  lg: 'lg:max-w-4xl',
-  xl: 'lg:max-w-6xl',
+  sm: 'md:max-w-lg',
+  md: 'md:max-w-2xl',
+  lg: 'md:max-w-4xl',
+  xl: 'md:max-w-6xl',
 } as const;
 
 /**
@@ -102,7 +102,7 @@ export function Sheet({
       role="dialog"
       aria-modal="true"
       aria-label={typeof title === 'string' ? title : 'نافذة'}
-      className="fixed inset-0 z-[1200] flex items-end justify-center lg:items-center lg:p-6"
+      className="fixed inset-0 z-[1200] flex items-end justify-center md:items-center md:p-6"
     >
       <div
         data-state={state}
@@ -116,27 +116,27 @@ export function Sheet({
         data-state={state}
         className={cn(
           'relative flex w-full flex-col overflow-hidden bg-surface-canvas outline-none',
-          'lg:max-h-[min(90dvh,60rem)] lg:rounded-2xl lg:shadow-xl lg:border lg:border-border',
+          'md:max-h-[min(90dvh,60rem)] md:rounded-2xl md:shadow-xl md:border md:border-border',
           widths[maxWidth],
-          bottom ? 'max-h-[92dvh] rounded-t-3xl shadow-xl' : 'h-[100dvh] lg:h-auto'
+          bottom ? 'max-h-[92dvh] rounded-t-3xl shadow-xl' : 'h-[100dvh] md:h-auto'
         )}
         style={{
           animation:
             state === 'open'
-              ? `${typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'pop-in 200ms' : 'sheet-up 320ms'} var(--ease-ios) both`
-              : `${typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'pop-out 160ms' : 'sheet-down 220ms'} var(--ease-in) both`,
+              ? `${typeof window !== 'undefined' && window.innerWidth >= 768 ? 'pop-in 200ms' : 'sheet-up 320ms'} var(--ease-ios) both`
+              : `${typeof window !== 'undefined' && window.innerWidth >= 768 ? 'pop-out 160ms' : 'sheet-down 220ms'} var(--ease-in) both`,
         }}
       >
         <header
-          className={cn('shrink-0 border-b border-border bg-surface-panel', !bottom && 'pwa-safe-top lg:pt-0')}
+          className={cn('shrink-0 border-b border-border bg-surface-panel', !bottom && 'pwa-safe-top md:pt-0')}
           onPointerDown={onDragStart}
           onPointerMove={onDragMove}
           onPointerUp={onDragEnd}
           onPointerCancel={onDragEnd}
           style={bottom ? { touchAction: 'none' } : undefined}
         >
-          {bottom && <div aria-hidden className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border-strong lg:hidden" />}
-          <div className="flex items-center gap-2 px-3 py-2 lg:px-5">
+          {bottom && <div aria-hidden className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border-strong md:hidden" />}
+          <div className="flex items-center gap-2 px-3 py-2 md:px-5">
             <IconButton label={bottom ? 'إغلاق' : 'رجوع'} onClick={onClose} variant="ghost">
               {bottom ? <Close sx={{ fontSize: 22 }} /> : <BackIcon sx={{ fontSize: 22 }} />}
             </IconButton>
@@ -146,13 +146,13 @@ export function Sheet({
             </div>
             {headerAction && <div className="shrink-0">{headerAction}</div>}
           </div>
-          {headerExtras && <div className="px-4 pb-3 lg:px-5">{headerExtras}</div>}
+          {headerExtras && <div className="px-4 pb-3 md:px-5">{headerExtras}</div>}
         </header>
 
         <div className="flex-1 overflow-y-auto overscroll-contain">{children}</div>
 
         {footer && (
-          <div className={cn('shrink-0 border-t border-border bg-surface-panel px-4 py-3 lg:px-6', 'pb-[max(12px,env(safe-area-inset-bottom))]')}>
+          <div className={cn('shrink-0 border-t border-border bg-surface-panel px-4 py-3 md:px-6', 'pb-[max(12px,env(safe-area-inset-bottom))]')}>
             {footer}
           </div>
         )}

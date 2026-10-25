@@ -14,7 +14,7 @@ import {
    Sticky offset clears the mobile TopBar (56px + hairline + safe area); from lg
    up there is no top bar and the page itself scrolls inside the shell.
 ───────────────────────────────────────────────────────────────────────── */
-const STICKY_TOP = 'top-[calc(57px+var(--sa-top,0px))] lg:top-0';
+const STICKY_TOP = 'top-[calc(57px+var(--sa-top,0px))] md:top-0';
 
 export function StickyGroup({
   title,
@@ -216,7 +216,9 @@ export function ChoiceGrid<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className={cn('grid grid-cols-2 gap-2 sm:grid-cols-4', className)}>
+    // Columns follow the width of the place the picker sits in (a phone, a narrow tablet panel, a wide form), not the screen.
+    <div className="[container-type:inline-size]">
+    <div role="radiogroup" aria-label={label} className={cn('grid grid-cols-2 gap-2 [@container_(min-width:34rem)]:grid-cols-4', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -243,6 +245,7 @@ export function ChoiceGrid<T extends string>({
           </button>
         );
       })}
+    </div>
     </div>
   );
 }

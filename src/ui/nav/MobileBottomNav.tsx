@@ -29,7 +29,7 @@ export function MobileBottomNav({ badges }: MobileBottomNavProps) {
   return (
     <nav
       aria-label={brand.direction === 'rtl' ? 'التنقل الرئيسي' : 'Primary'}
-      className="frosted-strong fixed inset-x-0 bottom-0 z-[1000] border-t border-border pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+      className="frosted-strong fixed inset-x-0 bottom-0 z-[1000] border-t border-border pb-[env(safe-area-inset-bottom,0px)] md:hidden"
     >
       <ul className="mx-auto grid max-w-lg px-1" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {items.map((item) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Add, Check, HourglassEmpty, CancelOutlined, Receipt, Search, TrendingDown } from '../../design-system/icons';
 import { useDataSlice } from '../../stores/useDataStore';
@@ -39,7 +39,9 @@ import { MoneyKpiGrid, MoneyKpiSkeleton } from './money/moneyKpis';
 import { summarizeExpenses } from './money/moneyTrend';
 import { DeltaBadge, MiniBars, Sparkline } from '../../design-system/charts';
 import { ProfileCallout } from './client-profile/profileUi';
-import { dayKey, dayLabel, groupBy, matchesQuery, sumAmounts } from './money/moneyUtils';
+import { dayKey, dayLabel, groupBy, limitGroups, matchesQuery, sumAmounts } from './money/moneyUtils';
+import { ShowMoreRows } from './money/ShowMoreRows';
+import { useVisibleCount } from './client-profile/activity/useVisibleCount';
 
 /**
  * Expenses. What this page lists is decided by the access policy: a field employee sees (and
@@ -93,13 +95,14 @@ export const ExpensesPage = () => {
   const authorCounts = useMemo(() => countByAuthorRole(visibleExpenses, authorRoles), [visibleExpenses, authorRoles]);
   const review = useMemo(() => approvalCounts(visibleExpenses), [visibleExpenses]);
 
+  const deferredQuery = useDeferredValue(searchQuery);
   const filtered = useMemo(
     () =>
       visibleExpenses
         .filter((e) => {
           const matchCategory = categoryFilter === 'all' || e.category === categoryFilter;
           const matchSearch = matchesQuery(
-            searchQuery,
+            deferredQuery,
             e.description,
             e.category,
             getExpenseCategoryLabel(e.category),
@@ -115,9 +118,12 @@ export const ExpensesPage = () => {
             new Date(b.date).getTime() - new Date(a.date).getTime() ||
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ),
-    [visibleExpenses, searchQuery, categoryFilter, authorFilter, approvalFilter, showRoles, authorRoles, clientName]
+    [visibleExpenses, deferredQuery, categoryFilter, authorFilter, approvalFilter, showRoles, authorRoles, clientName]
   );
-  const groups = useMemo(() => groupBy(filtered, (e) => dayKey(e.date)), [filtered]);
+  const { count: rowLimit, showMore, pageSize } = useVisibleCount(`${deferredQuery}|${categoryFilter}|${authorFilter}|${approvalFilter}`);
+  const allGroups = useMemo(() => groupBy(filtered, (e) => dayKey(e.date)), [filtered]);
+  const { groups, hidden } = useMemo(() => limitGroups(allGroups, rowLimit), [allGroups, rowLimit]);
+  const dayTotals = useMemo(() => new Map(allGroups.map((g) => [g.key, { count: g.items.length, sum: sumAmounts(g.items.map((e) => e.amount)) }])), [allGroups]);
 
   const categoryTotals = useMemo<CategoryTotal[]>(() => {
     const totals = new Map<string, { milli: number; count: number }>();
@@ -443,7 +449,7 @@ export const ExpensesPage = () => {
                     <StickyGroup
                       key={g.key}
                       title={dayLabel(g.items[0].date)}
-                      trailing={`${g.items.length} ${g.items.length === 1 ? 'مصروف' : 'مصروفات'} · ${formatCurrencyDisplay(sumAmounts(g.items.map((e) => e.amount)))}`}
+                      trailing={`${dayTotals.get(g.key)!.count} ${dayTotals.get(g.key)!.count === 1 ? 'مصروف' : 'مصروفات'} · ${formatCurrencyDisplay(dayTotals.get(g.key)!.sum)}`}
                     >
                       {g.items.map((exp) => (
                         <ExpenseRow
@@ -460,6 +466,7 @@ export const ExpensesPage = () => {
                       ))}
                     </StickyGroup>
                   ))}
+                  <ShowMoreRows hidden={hidden} pageSize={pageSize} noun="مصروف" onMore={showMore} />
                 </div>
               )}
             </div>

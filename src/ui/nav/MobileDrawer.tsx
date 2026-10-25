@@ -97,7 +97,7 @@ export function MobileDrawer({ open, onClose }: Props) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[1150] touch-manipulation lg:hidden" role="dialog" aria-modal="true" aria-label={rtl ? 'القائمة' : 'Menu'}>
+    <div className="fixed inset-0 z-[1150] touch-manipulation md:hidden" role="dialog" aria-modal="true" aria-label={rtl ? 'القائمة' : 'Menu'}>
       <div
         aria-hidden
         onClick={onClose}

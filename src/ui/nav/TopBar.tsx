@@ -65,7 +65,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="frosted-strong pwa-safe-top sticky top-0 z-[100] border-b border-border lg:hidden">
+      <header className="frosted-strong pwa-safe-top sticky top-0 z-[100] border-b border-border md:hidden">
         <div className="flex h-14 items-center gap-1 px-2">
           {isTabRoot ? (
             <IconButton label={rtl ? 'فتح القائمة' : 'Open menu'} onClick={() => setDrawerOpen(true)}>

@@ -215,7 +215,7 @@ export function AuditLogPage() {
           {groups.map((g) => (
             <section key={g.key} aria-label={dayLabel(g.key)}>
               {/* top-14 clears the phone top bar (h-14 + notch); the desktop page scrolls under nothing */}
-              <h2 className="sticky top-[calc(3.5rem+var(--sa-top,0px))] z-10 flex items-center justify-between bg-surface-canvas px-1 py-2 text-sm font-semibold text-fg-subtle lg:top-0">
+              <h2 className="sticky top-[calc(3.5rem+var(--sa-top,0px))] z-10 flex items-center justify-between bg-surface-canvas px-1 py-2 text-sm font-semibold text-fg-subtle md:top-0">
                 <span>{dayLabel(g.key)}</span>
                 <span className="text-xs font-medium tabular-nums text-fg-muted">{g.items.length}</span>
               </h2>

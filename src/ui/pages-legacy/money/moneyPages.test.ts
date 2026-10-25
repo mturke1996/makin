@@ -90,6 +90,22 @@ describe('PaymentsPage', () => {
     expect(after).toBe(1);
   });
 
+  it('draws a page of rows at a time, keeps the month totals whole, and shows the rest on request', async () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({ ...(payment(`p${i}`, 0, 10, 'cash') as object), paymentDate: '2026-03-15' }) as never);
+    useDataStore.setState({ payments: many });
+    await mount(PaymentsPage);
+    const rows = () => host.querySelectorAll('button[aria-label^="تعديل دفعة"]').length;
+    expect(rows()).toBe(60);
+    expect(text()).toContain('متبقٍ 90 دفعة');
+    // the heading of a month still counts every payment of that month, not just the drawn ones
+    expect(text()).toContain('150 دفعات · 1,500');
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('دفعة أخرى'))!.click());
+    expect(rows()).toBe(120);
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('دفعة أخرى'))!.click());
+    expect(rows()).toBe(150);
+    expect(text()).not.toContain('لم تُعرض بعد');
+  });
+
   it('has no cards for an empty page, only the way to add the first payment', async () => {
     await mount(PaymentsPage);
     expect(kpis()).toBeNull();
@@ -163,6 +179,24 @@ describe('ExpensesPage', () => {
     await act(async () => [...kpis()!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('أكبر تصنيف'))!.click());
     expect(host.querySelector<HTMLSelectElement>('select[aria-label="تصفية حسب التصنيف"]')!.value).toBe('all');
     expect(shown()).toBe(4);
+  });
+
+  it('draws a page of rows at a time and says how many wait', async () => {
+    signIn('admin');
+    useDataStore.setState({ expenses: Array.from({ length: 130 }, (_, i) => expense(`${i}`, i % 30, 5, 'cement')) });
+    await mount(ExpensesPage);
+    const shown = () => (host.textContent!.match(/بند \d+/g) ?? []).length;
+    expect(shown()).toBe(60);
+    expect(text()).toContain('متبقٍ 70 مصروف');
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('مصروف أخرى'))!.click());
+    expect(shown()).toBe(120);
+    // a new filter starts the count over
+    const select = host.querySelector<HTMLSelectElement>('select[aria-label="تصفية حسب التصنيف"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, 'cement');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(shown()).toBe(60);
   });
 
   it('has no cards for an empty page', async () => {

@@ -56,3 +56,23 @@ export const matchesQuery = (query: string, ...fields: Array<string | undefined 
   if (!q) return true;
   return fields.some((f) => !!f && f.toLowerCase().includes(q));
 };
+
+/**
+ * The first `limit` rows of grouped rows, in order, cut wherever the limit falls (a group may show only some of its
+ * rows). Long ledgers draw a page at a time instead of every row at once, which is what keeps scrolling and
+ * typing smooth on an older tablet. `hidden` is how many rows are still waiting.
+ */
+export function limitGroups<T>(groups: { key: string; items: T[] }[], limit: number): { groups: { key: string; items: T[] }[]; hidden: number } {
+  let left = Math.max(0, Math.floor(limit));
+  const shown: { key: string; items: T[] }[] = [];
+  let total = 0;
+  for (const g of groups) {
+    total += g.items.length;
+    if (left <= 0) continue;
+    const items = g.items.length <= left ? g.items : g.items.slice(0, left);
+    shown.push(items === g.items ? g : { key: g.key, items });
+    left -= items.length;
+  }
+  const visible = shown.reduce((n, g) => n + g.items.length, 0);
+  return { groups: shown, hidden: total - visible };
+}
