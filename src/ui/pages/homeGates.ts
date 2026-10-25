@@ -41,6 +41,8 @@ export interface HomeGates {
   budgets: boolean;
   /** Agreed instalments that are late: needs the payments that cover them. */
   schedule: boolean;
+  /** The manager is reminded to keep a backup copy. */
+  backup: boolean;
 
   /** The pooled fund balance next to the custody shortcut belongs to whoever manages custody. */
   pooledFund: boolean;
@@ -81,6 +83,7 @@ export function homeGates(p: Principal | null | undefined): HomeGates {
     corrections: can(p, 'expenses.create'),
     budgets: can(p, 'projects.view') && scope === 'all',
     schedule: payments,
+    backup: isAdmin(p),
     pooledFund: can(p, 'custody.manage'),
     newInvoice: can(p, 'invoices.manage'),
     newExpense: can(p, 'expenses.create'),

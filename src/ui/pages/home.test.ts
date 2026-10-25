@@ -43,6 +43,12 @@ describe('homeGates', () => {
     expect(g).toMatchObject({ newInvoice: true, newPayment: true, newExpense: true });
   });
 
+  it('only the manager is reminded to back up', () => {
+    expect(homeGates(admin).backup).toBe(true);
+    expect(homeGates(fatima).backup).toBe(false);
+    expect(homeGates(salem).backup).toBe(false);
+  });
+
   it('only whoever sees payments follows the payment schedule', () => {
     expect(homeGates(admin).schedule).toBe(true);
     expect(homeGates(fatima).schedule).toBe(true);
@@ -284,6 +290,26 @@ describe('buildAttentionItems', () => {
       expect(buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 300)], allow: { ...all, budgets: true } })).toEqual([]);
     });
   });
+  describe('backup reminder', () => {
+    const none = { invoices: [], debts: [], payments: [] };
+    const allowed = { ...all, backup: true };
+    const info = (lastAt: string | null, records = 50) => ({ lastAt, records });
+
+    it('reminds the manager who never took a copy, or not for a week', () => {
+      for (const lastAt of [null, '2026-10-10T08:00:00Z']) {
+        const items = buildAttentionItems({ ...base, ...none, backupInfo: info(lastAt), allow: allowed });
+        expect(items.map((i) => i.kind)).toEqual(['backup-due']);
+        expect(items[0]).toMatchObject({ tone: 'warning', path: '/settings/backup' });
+      }
+    });
+
+    it('stays quiet after a recent copy, with no data yet, or for anyone who is not the manager', () => {
+      expect(buildAttentionItems({ ...base, ...none, backupInfo: info('2026-10-22T08:00:00Z'), allow: allowed })).toEqual([]);
+      expect(buildAttentionItems({ ...base, ...none, backupInfo: info(null, 0), allow: allowed })).toEqual([]);
+      expect(buildAttentionItems({ ...base, ...none, backupInfo: info(null), allow: all })).toEqual([]);
+    });
+  });
+
   describe('payment schedule', () => {
     const milestone = (id: string, order: number, amount: number, dueAgo: number, clientId = 'c1'): PaymentMilestone =>
       ({ id, clientId, title: `دفعة ${id}`, amount, order, dueDate: day(dueAgo), createdAt: day(90), updatedAt: day(90) }) as PaymentMilestone;

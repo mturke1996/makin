@@ -30,6 +30,7 @@ import { HomeModuleList, type HomeModule } from './HomeModuleList';
 import { HomeQuickActions, type QuickAction } from './HomeQuickActions';
 import { HomeDashboardSkeleton, HomeFlowCard, HomeKpiGrid, HomeStatGrid, daysLabel } from './HomeDashboard';
 import { buildAttentionItems } from './homeAttentionModel';
+import { readLastBackup } from '../../core/backupMemory';
 import { canOpenPath, homeGates, planDashboard } from './homeGates';
 import { computeHomeStats } from './homeStats';
 import { QuickAddFab, useCanQuickAdd } from '../quick-expense/QuickAddFab';
@@ -89,6 +90,7 @@ export function HomePage() {
         expenses: listable,
         phases: projectPhases,
         milestones: paymentMilestones,
+        backupInfo: gates.backup ? { lastAt: readLastBackup(), records: clients.length + payments.length + expenses.length } : undefined,
         userId: user?.id,
         allow: {
           invoices: gates.overdueInvoices,
@@ -99,6 +101,7 @@ export function HomePage() {
           corrections: gates.corrections,
           budgets: gates.budgets,
           schedule: gates.schedule,
+          backup: gates.backup,
         },
         t,
       }),

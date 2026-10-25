@@ -5,12 +5,13 @@ import type { MyFundStats } from '../../core/hooks/useMyFundStats';
 import { approvalCounts, approvalStatusOf, expensePhrase } from '../../core/finance/expenseApproval';
 import { budgetState } from '../../core/finance/budgetStatus';
 import { buildPhaseBudgetRows } from '../../core/finance/projectBudget';
+import { backupAgeDays, backupDue } from '../../core/backup';
 import { buildReceivables } from '../../core/finance/paymentSchedule';
 import type { Client, Expense, Invoice, Payment, PaymentMilestone, ProjectPhase } from '../../types';
 
 type Translate = (ar: string, en: string) => string;
 
-export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near' | 'schedule-overdue';
+export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near' | 'schedule-overdue' | 'backup-due';
 
 export interface AttentionItem {
   key: string;
@@ -40,6 +41,8 @@ export interface AttentionAllow {
   budgets?: boolean;
   /** Agreed instalments past their date: needs the payments they are covered by. */
   schedule?: boolean;
+  /** The manager: reminded to keep a copy of the data. */
+  backup?: boolean;
 }
 
 interface BuildArgs {
@@ -54,6 +57,8 @@ interface BuildArgs {
   /** The agreed payment schedules of all clients. */
   milestones?: PaymentMilestone[];
   userId?: string;
+  /** When a copy was last taken on this device (ISO), if ever; and how many records there are to keep. */
+  backupInfo?: { lastAt: string | null; records: number };
   allow: AttentionAllow;
   t: Translate;
   /** For tests; defaults to now. */
@@ -73,7 +78,7 @@ function sinceDays(days: number, t: Translate): string {
  * that area, and an amount is quoted only when the data behind it is complete.
  */
 export function buildAttentionItems({
-  invoices, payments, clients, debts, custody, expenses = [], phases = [], milestones = [], userId, allow, t, now,
+  invoices, payments, clients, debts, custody, expenses = [], phases = [], milestones = [], userId, backupInfo, allow, t, now,
 }: BuildArgs): AttentionItem[] {
   const items: AttentionItem[] = [];
   const today = dayjs(now).startOf('day');
@@ -232,6 +237,18 @@ export function buildAttentionItems({
         path: '/debts',
       });
     }
+  }
+
+  if (allow.backup && backupInfo && backupDue(backupInfo.lastAt, now ?? new Date(), backupInfo.records)) {
+    const age = backupAgeDays(backupInfo.lastAt, now ?? new Date());
+    items.push({
+      key: 'backup-due',
+      tone: 'warning',
+      kind: 'backup-due',
+      title: t('احتفظ بنسخة احتياطية من البيانات', 'Keep a backup copy of your data'),
+      subtitle: age === null ? t('لم تُحمَّل نسخة من هذا الجهاز بعد', 'No copy has been taken on this device yet') : `${t('آخر نسخة', 'Last copy')} ${sinceDays(age, t)}`,
+      path: '/settings/backup',
+    });
   }
 
   if (allow.custody && custody && custody.deposited > 0) {

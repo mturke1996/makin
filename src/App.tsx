@@ -39,6 +39,7 @@ const FundPage               = lazy(() => import('./ui/pages-legacy/FundPage').t
 const LettersPage            = lazy(() => import('./ui/pages-legacy/LettersPage').then(m => ({ default: m.LettersPage })));
 const AuditLogPage           = lazy(() => import('./ui/pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const InstallPage            = lazy(() => import('./ui/pages/InstallPage').then(m => ({ default: m.InstallPage })));
+const BackupPage             = lazy(() => import('./ui/pages/BackupPage').then(m => ({ default: m.BackupPage })));
 const ReceivablesPage        = lazy(() => import('./ui/pages/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })));
 const WorkersPage            = lazy(() => import('./ui/pages/WorkersPage').then(m => ({ default: m.WorkersPage })));
 
@@ -92,6 +93,7 @@ function AppRouterBody({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Route element={isAuthenticated ? <AppShell /> : <Navigate to="/login" replace />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/settings/branding" element={<RequireAccess admin><BrandingSettingsPage /></RequireAccess>} />
+            <Route path="/settings/backup" element={<RequireAccess admin><BackupPage /></RequireAccess>} />
             <Route path="/settings/audit" element={<RequireAccess admin><AuditLogPage /></RequireAccess>} />
 
             <Route path="/clients" element={<RequireAccess module="clients"><ClientsPage /></RequireAccess>} />
