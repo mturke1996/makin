@@ -16,12 +16,6 @@ const typeLabelsAr: Record<LetterType, string> = {
   entitlement: 'مستخلص',
 };
 
-const typeLabelsEn: Record<LetterType, string> = {
-  official: 'OFFICIAL LETTER',
-  offer: 'QUOTATION',
-  entitlement: 'STATEMENT',
-};
-
 interface Props {
   letter: Letter;
 }
@@ -36,7 +30,6 @@ export const LetterPDF: React.FC<Props> = ({ letter }) => {
       <PdfPage B={B} s={s} letterhead runningTitle={`${typeLabelsAr[letter.type]}  ·  ${letter.subject}`} docRef={letter.refNumber}>
         <PdfDocTitle
           s={s}
-          titleEn={typeLabelsEn[letter.type]}
           titleAr={typeLabelsAr[letter.type]}
           meta={[{ label: 'الرقم', value: letter.refNumber }, { label: 'التاريخ', value: arDate(letter.date) }]}
         />

@@ -21,7 +21,7 @@ const ITEM_COLS: PdfColumn[] = [
   { key: 'desc', label: 'الوصف', flex: 3.2, kind: 'text' },
   { key: 'qty', label: 'الكمية', flex: 0.8, kind: 'num' },
   { key: 'price', label: 'سعر الوحدة', flex: 1.1, kind: 'money' },
-  { key: 'total', label: 'الإجمالي', flex: 1.2, kind: 'money' },
+  { key: 'total', label: 'الإجمالي', flex: 1.2, kind: 'money', bold: true },
 ];
 
 interface Props {
@@ -42,7 +42,6 @@ export const InvoicePDF: React.FC<Props> = ({ invoice, client }) => {
       <PdfPage B={B} s={s} letterhead runningTitle={`فاتورة ${invoice.invoiceNumber}  ·  ${clientName ?? ''}`} docRef={invoice.invoiceNumber}>
         <PdfDocTitle
           s={s}
-          titleEn="INVOICE"
           titleAr="فاتورة"
           meta={[
             { label: 'رقم الفاتورة', value: invoice.invoiceNumber },

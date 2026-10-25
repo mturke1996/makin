@@ -9,6 +9,7 @@ import { WorkerStatementPDF } from './WorkerStatementPDF';
 import { FullReportPDF } from './ClientReportsPDF';
 
 Font.register({ family: 'MakinPdf', fonts: [{ src: resolve('public/fonts/Tajawal-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Tajawal-Bold.ttf'), fontWeight: 700 }] });
+Font.register({ family: 'MakinNum', fonts: [{ src: resolve('public/fonts/Cairo-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Cairo-Bold.ttf'), fontWeight: 700 }] });
 Font.registerHyphenationCallback(word => [word]);
 const at = '2026-10-24T10:00:00Z';
 const client = { id: 'c1', name: 'مشروع التحقق', phone: '0910000000', address: 'طرابلس', type: 'individual', createdAt: at, updatedAt: at } as Client;

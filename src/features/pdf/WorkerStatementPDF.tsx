@@ -10,17 +10,17 @@ import { PDF_FONT_FAMILY } from './pdfFonts';
 import { buildWorkerStatement, type WorkerReportEntry, type WorkerReportPeriod } from './workerReportModel';
 
 const AGREEMENT_COLS: PdfColumn[] = [
-  { key: 'title', label: 'بند الاتفاق', flex: 2.6, kind: 'stack' },
+  { key: 'title', label: 'بند الاتفاق', flex: 2.6, kind: 'stack', bold: true },
   { key: 'quantity', label: 'الكمية', flex: 1, kind: 'text' },
   { key: 'unitPrice', label: 'السعر', flex: 1, kind: 'money' },
-  { key: 'total', label: 'الإجمالي', flex: 1, kind: 'money' },
+  { key: 'total', label: 'الإجمالي', flex: 1, kind: 'money', bold: true },
 ];
 
 const PAYMENT_COLS: PdfColumn[] = [
   { key: 'n', label: '#', flex: 0.35, kind: 'num' },
   { key: 'date', label: 'التاريخ', flex: 0.9, kind: 'date' },
-  { key: 'desc', label: 'البيان', flex: 2.3, kind: 'stack' },
-  { key: 'amount', label: 'الدفعة', flex: 1, kind: 'money' },
+  { key: 'desc', label: 'البيان', flex: 2.3, kind: 'stack', bold: true },
+  { key: 'amount', label: 'الدفعة', flex: 1, kind: 'money', bold: true },
   { key: 'cumulative', label: 'مجموع المدفوع', flex: 1, kind: 'money' },
   { key: 'remaining', label: 'المتبقي', flex: 1, kind: 'money' },
   { key: 'mark', label: '', flex: 0.25, kind: 'num' },
@@ -29,7 +29,7 @@ const PAYMENT_COLS: PdfColumn[] = [
 const REVISION_COLS: PdfColumn[] = [
   { key: 'date', label: 'التاريخ', flex: 0.9, kind: 'date' },
   { key: 'what', label: 'التعديل', flex: 3, kind: 'stack' },
-  { key: 'total', label: 'قيمة الاتفاق', flex: 1, kind: 'money' },
+  { key: 'total', label: 'قيمة الاتفاق', flex: 1, kind: 'money', bold: true },
   { key: 'change', label: 'التغيير', flex: 1, kind: 'money' },
 ];
 
@@ -87,7 +87,6 @@ export function WorkerStatementPages({ client, entry, period, letterhead = false
     <PdfPage B={B} s={s} letterhead={letterhead} runningTitle={`كشف حساب العامل  ·  ${worker.name}  ·  ${client.name}`} docRef={ref}>
       <PdfDocTitle
         s={s}
-        titleEn="WORKER STATEMENT"
         titleAr="كشف حساب العامل"
         subtitle={`${worker.name}${worker.jobType ? `  ·  ${worker.jobType}` : ''}`}
         meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]}

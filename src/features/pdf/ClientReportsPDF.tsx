@@ -14,9 +14,9 @@ import {
   PdfBreakdown,
   PdfDocTitle,
   PdfInfoCard,
-  PdfMoneyText,
   PdfPage,
   PdfSectionHeading,
+  PdfStatement,
   PdfSummaryStrip,
   makePdfStyles,
 } from './pdfKit';
@@ -60,10 +60,10 @@ const sumBy = <T,>(items: T[], pick: (item: T) => string, amount: (item: T) => n
 
 const EXP_COLS: PdfColumn[] = [
   { key: 'date', label: 'التاريخ', flex: 0.85, kind: 'date' },
-  { key: 'desc', label: 'البيان', flex: 2.6, kind: 'stack' },
+  { key: 'desc', label: 'البيان', flex: 2.6, kind: 'stack', bold: true },
   { key: 'qty', label: 'الكمية', flex: 1.1, kind: 'stack' },
   { key: 'notes', label: 'ملاحظات', flex: 1.4, kind: 'text' },
-  { key: 'amount', label: 'المبلغ', flex: 1, kind: 'money' },
+  { key: 'amount', label: 'المبلغ', flex: 1, kind: 'money', bold: true },
 ];
 
 const expenseRow = (e: Expense) => ({
@@ -79,17 +79,17 @@ const PAY_COLS: PdfColumn[] = [
   { key: 'method', label: 'طريقة الدفع', flex: 1.1, kind: 'text' },
   { key: 'notes', label: 'ملاحظات', flex: 2.2, kind: 'text' },
   { key: 'by', label: 'سجّلها', flex: 1.1, kind: 'text' },
-  { key: 'amount', label: 'المبلغ', flex: 1, kind: 'money' },
+  { key: 'amount', label: 'المبلغ', flex: 1, kind: 'money', bold: true },
 ];
 
 const paymentRow = (p: Payment) => ({ date: arDate(p.paymentDate), method: payLabel(p.paymentMethod), notes: p.notes || '—', by: p.createdBy || '—', amount: p.amount });
 
 const DEBT_COLS: PdfColumn[] = [
-  { key: 'desc', label: 'الدين', flex: 2.4, kind: 'stack' },
+  { key: 'desc', label: 'الدين', flex: 2.4, kind: 'stack', bold: true },
   { key: 'due', label: 'الاستحقاق', flex: 0.9, kind: 'date' },
   { key: 'amount', label: 'القيمة', flex: 1, kind: 'money' },
   { key: 'paid', label: 'المسدد', flex: 1, kind: 'money' },
-  { key: 'remaining', label: 'المتبقي', flex: 1, kind: 'money' },
+  { key: 'remaining', label: 'المتبقي', flex: 1, kind: 'money', bold: true },
 ];
 
 const debtRow = (d: StandaloneDebt) => ({
@@ -101,11 +101,11 @@ const debtRow = (d: StandaloneDebt) => ({
 });
 
 const WORKER_COLS: PdfColumn[] = [
-  { key: 'name', label: 'العامل', flex: 2, kind: 'stack' },
+  { key: 'name', label: 'العامل', flex: 2, kind: 'stack', bold: true },
   { key: 'state', label: 'الحالة', flex: 1.5, kind: 'stack' },
   { key: 'agreed', label: 'الاتفاق', flex: 1, kind: 'money' },
   { key: 'paid', label: 'المدفوع', flex: 1, kind: 'money' },
-  { key: 'due', label: 'المتبقي', flex: 1, kind: 'money' },
+  { key: 'due', label: 'المتبقي', flex: 1, kind: 'money', bold: true },
 ];
 
 const workerRow = (entry) => {
@@ -144,7 +144,7 @@ export const ExpensesPDF: React.FC<{ client: Client; expenses: Expense[]; total:
   return (
     <Document title={`مصروفات-${client.name}`} author={B.fullName} language="ar">
       <PdfPage B={B} s={s} letterhead runningTitle={`كشف المصروفات  ·  ${client.name}`} docRef={ref}>
-        <PdfDocTitle s={s} titleEn="EXPENSES STATEMENT" titleAr="كشف المصروفات" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
+        <PdfDocTitle s={s} titleAr="كشف المصروفات" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
         <ClientCard s={s} client={client} period={periodOf(expenses.map((e) => e.date))} />
         <PdfSummaryStrip
           s={s}
@@ -172,7 +172,7 @@ export const PaymentsPDF: React.FC<{ client: Client; payments: Payment[]; total:
   return (
     <Document title={`مدفوعات-${client.name}`} author={B.fullName} language="ar">
       <PdfPage B={B} s={s} letterhead runningTitle={`كشف المدفوعات  ·  ${client.name}`} docRef={ref}>
-        <PdfDocTitle s={s} titleEn="PAYMENTS STATEMENT" titleAr="كشف المدفوعات" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
+        <PdfDocTitle s={s} titleAr="كشف المدفوعات" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
         <ClientCard s={s} client={client} period={periodOf(payments.map((p) => p.paymentDate))} />
         <PdfSummaryStrip
           s={s}
@@ -200,7 +200,7 @@ export const WorkersPDF: React.FC<{ client: Client; workers: Worker[]; expenses:
   return (
     <Document title={`عمال-${client.name}`} author={B.fullName} language="ar">
       <PdfPage B={B} s={s} letterhead runningTitle={`كشف العمال والمقاولين  ·  ${client.name}`} docRef={ref}>
-        <PdfDocTitle s={s} titleEn="WORKERS STATEMENT" titleAr="كشف العمال والمقاولين" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
+        <PdfDocTitle s={s} titleAr="كشف العمال والمقاولين" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
         <ClientCard s={s} client={client} />
         <PdfSummaryStrip
           s={s}
@@ -230,7 +230,7 @@ export const DebtsPDF: React.FC<{ client: Client; debts: StandaloneDebt[]; total
   return (
     <Document title={`ديون-${client.name}`} author={B.fullName} language="ar">
       <PdfPage B={B} s={s} letterhead runningTitle={`كشف الديون  ·  ${client.name}`} docRef={ref}>
-        <PdfDocTitle s={s} titleEn="DEBTS STATEMENT" titleAr="كشف الديون" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
+        <PdfDocTitle s={s} titleAr="كشف الديون" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
         <ClientCard s={s} client={client} />
         <PdfSummaryStrip
           s={s}
@@ -262,20 +262,6 @@ interface FullReportPDFProps {
   };
 }
 
-/** One line of the account statement: a label, a sign and the figure. */
-const StatementLine = ({ label, sign, amount, color, strong, note }: { label: string; sign?: string; amount: number; color?: string; strong?: boolean; note?: string }) => (
-  <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: strong ? 9 : 6.5, paddingHorizontal: 12, borderBottomWidth: strong ? 0 : 0.6, borderBottomColor: INK.hair, backgroundColor: strong ? INK.text : 'transparent', borderRadius: strong ? 3 : 0 }}>
-    <PdfMoneyText amount={amount} light={strong} color={strong ? undefined : color} style={{ fontSize: strong ? 13 : 10, fontWeight: 'bold' }} currStyle={{ fontSize: 8 }} />
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ fontSize: strong ? 10.5 : 9.4, fontWeight: strong ? 'bold' : 'normal', color: strong ? INK.white : INK.text, textAlign: 'right', fontFamily: PDF_FONT_FAMILY }}>{ar(label)}</Text>
-        {note ? <Text style={{ fontSize: 7.4, color: strong ? 'rgba(255,255,255,0.7)' : INK.faint, textAlign: 'right', marginTop: 1, fontFamily: PDF_FONT_FAMILY }}>{ar(note)}</Text> : null}
-      </View>
-      <Text style={{ width: 10, fontSize: 11, fontWeight: 'bold', color: strong ? INK.white : INK.faint, textAlign: 'center', fontFamily: PDF_FONT_FAMILY }}>{sign ?? ''}</Text>
-    </View>
-  </View>
-);
-
 export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, payments, debts, workers, summary }) => {
   const B = getPdfBrand();
   const s = makePdfStyles(B);
@@ -288,17 +274,19 @@ export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, 
   return (
     <Document title={`تقرير-${client.name}`} author={B.fullName} language="ar">
       <PdfPage B={B} s={s} letterhead runningTitle={`التقرير الشامل  ·  ${client.name}`} docRef={ref}>
-        <PdfDocTitle s={s} titleEn="COMPREHENSIVE REPORT" titleAr="التقرير الشامل" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
+        <PdfDocTitle s={s} titleAr="التقرير الشامل" meta={[{ label: 'المرجع', value: ref }, { label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]} />
         <ClientCard s={s} client={client} period={periodOf([...expenses.map((e) => e.date), ...payments.map((p) => p.paymentDate)])} />
 
         <PdfSectionHeading s={s}>ملخص الحساب</PdfSectionHeading>
-        <View style={{ borderWidth: 0.8, borderColor: INK.border, borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-          <StatementLine label="المدفوعات المحصّلة من العميل" sign="+" amount={summary.totalPaid} color={INK.success} note={countWord(payments.length, PAYW)} />
-          <StatementLine label="المصروفات" sign="−" amount={summary.totalExpenses} color={INK.danger} note={countWord(expenses.length, REC)} />
-          {summary.totalDebts > 0 ? <StatementLine label="الديون المتبقية" sign="−" amount={summary.totalDebts} color={INK.warning} note={countWord(debts.length, DEBTW)} /> : null}
-          {summary.profitPercentage > 0 ? <StatementLine label="النسبة المتفق عليها" sign="−" amount={summary.profit} color={INK.text} note={`${summary.profitPercentage} بالمئة ${baseLabel}`} /> : null}
-          <StatementLine strong label={summary.remaining < 0 ? 'العجز' : 'الصافي المتبقي'} sign="=" amount={summary.remaining} />
-        </View>
+        <PdfStatement
+          lines={[
+            { label: 'المدفوعات المحصّلة من العميل', sign: '+', amount: summary.totalPaid, color: INK.success, note: countWord(payments.length, PAYW) },
+            { label: 'المصروفات', sign: '−', amount: summary.totalExpenses, color: INK.danger, note: countWord(expenses.length, REC) },
+            ...(summary.totalDebts > 0 ? [{ label: 'الديون المتبقية', sign: '−', amount: summary.totalDebts, color: INK.warning, note: countWord(debts.length, DEBTW) }] : []),
+            ...(summary.profitPercentage > 0 ? [{ label: 'النسبة المتفق عليها', sign: '−', amount: summary.profit, note: `${summary.profitPercentage} بالمئة ${baseLabel}` }] : []),
+          ]}
+          net={{ label: summary.remaining < 0 ? 'العجز' : 'الصافي المتبقي', amount: summary.remaining, color: summary.remaining < 0 ? INK.danger : undefined }}
+        />
         {workerTotals.owed > 0 ? (
           <Text style={{ fontSize: 8.2, color: INK.muted, textAlign: 'right', marginBottom: 4, fontFamily: PDF_FONT_FAMILY }}>
             {ar(`مستحقات عمال لم تُسدَّد بعد: ${formatCurrencyDisplay(workerTotals.owed)}، وهي غير محتسبة في الصافي أعلاه.`)}

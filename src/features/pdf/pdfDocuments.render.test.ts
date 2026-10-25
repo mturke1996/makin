@@ -13,6 +13,7 @@ import { PdfLogoProvider } from './pdf-logo-context';
 import { WorkerStatementPDF } from './WorkerStatementPDF';
 
 Font.register({ family: 'MakinPdf', fonts: [{ src: resolve('public/fonts/Tajawal-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Tajawal-Bold.ttf'), fontWeight: 700 }] });
+Font.register({ family: 'MakinNum', fonts: [{ src: resolve('public/fonts/Cairo-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Cairo-Bold.ttf'), fontWeight: 700 }] });
 Font.registerHyphenationCallback((word) => [word]);
 
 const logo = `data:image/png;base64,${readFileSync(resolve('public/brand/logo-pdf.png')).toString('base64')}`;
@@ -72,6 +73,7 @@ const letter: Letter = {
 describe('MAKIN PDF documents', () => {
   const cases: [string, () => ReactElement, number][] = [
     ['expenses.pdf', () => createElement(ExpensesPDF, { client, expenses, total: expenses.reduce((s, e) => s + e.amount, 0) }), 1],
+    ['expenses-long.pdf', () => createElement(ExpensesPDF, { client, expenses: Array.from({ length: 4 }, (_, k) => expenses.map((e) => ({ ...e, id: `${e.id}-${k}` }))).flat(), total: 1 }), 2],
     ['payments.pdf', () => createElement(PaymentsPDF, { client, payments, total: 85000 }), 1],
     ['debts.pdf', () => createElement(DebtsPDF, { client, debts, total: 5000 }), 1],
     ['workers.pdf', () => createElement(WorkersPDF, { client, workers: [elec, plumb], expenses }), 2],
