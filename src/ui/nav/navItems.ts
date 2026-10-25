@@ -16,6 +16,7 @@ import {
   HourglassEmpty,
   CloudUpload,
   Storefront,
+  Insights,
 } from '../../design-system/icons';
 import { ComponentType } from 'react';
 import type { AppModule } from '../../core/access/modules';
@@ -38,11 +39,15 @@ export interface NavItem {
   permission?: Permission;
   /** Admins only: settings and the audit log. */
   adminOnly?: boolean;
+  /** Also needs every one of these (a page built from several kinds of record). */
+  allOf?: Permission[];
   /** Needs expense invoices (the same rule the route and the Firestore rules use). */
   expenseInvoices?: boolean;
 }
 
 const HOME: NavItem = { id: 'home', label: 'الرئيسية', labelEn: 'Home', path: '/', icon: Home };
+/** The whole company at a glance: built from payments, every expense and the business figures, so it needs all three. */
+const COMPANY: NavItem = { id: 'company', label: 'لوحة الشركة', labelEn: 'Company', path: '/company', icon: Insights, allOf: ['payments.view', 'expenses.view.all', 'reports.view'] };
 const CLIENTS: NavItem = { id: 'clients', label: 'العملاء', labelEn: 'Clients', path: '/clients', icon: People, module: 'clients' };
 const WORKERS: NavItem = { id: 'workers', label: 'مركز العمال', labelEn: 'Workers', path: '/workers', icon: Groups, module: 'workers' };
 const INVOICES: NavItem = { id: 'invoices', label: 'الفواتير', labelEn: 'Invoices', path: '/invoices', icon: Receipt, module: 'invoices' };
@@ -98,7 +103,7 @@ export interface NavGroupDef {
  * Flow: overview → revenue (invoices, payments) → spending (expenses, custody, debts) → admin.
  */
 export const NAV_GROUPS: readonly NavGroupDef[] = [
-  { key: 'overview', titleAr: 'عام', titleEn: 'Overview', items: [HOME, CLIENTS, WORKERS] },
+  { key: 'overview', titleAr: 'عام', titleEn: 'Overview', items: [HOME, COMPANY, CLIENTS, WORKERS] },
   { key: 'revenue', titleAr: 'الفواتير والمدفوعات', titleEn: 'Invoices & payments', items: [INVOICES, NEW_INVOICE, PAYMENTS, RECEIVABLES] },
   { key: 'spending', titleAr: 'المصروفات والعهد', titleEn: 'Expenses & custody', items: [EXPENSES, EXPENSE_INVOICES, SUPPLIERS, FUND, DEBTS] },
   { key: 'admin', titleAr: 'المستندات والإدارة', titleEn: 'Documents & admin', items: [LETTERS, USERS, AUDIT, BACKUP, SETTINGS] },
@@ -116,6 +121,7 @@ export function isNavItemVisible(item: NavItem, access: NavAccess): boolean {
   if (item.adminOnly && !access.isAdmin) return false;
   if (item.module && !access.canAccessModule(item.module)) return false;
   if (item.permission && !access.can(item.permission)) return false;
+  if (item.allOf && !item.allOf.every((p) => access.can(p))) return false;
   if (item.expenseInvoices && !access.canUseExpenseInvoices) return false;
   return true;
 }

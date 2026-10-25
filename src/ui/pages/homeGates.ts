@@ -124,6 +124,7 @@ function areaOfPath(path: string): AppModule | 'admin' | null | undefined {
     invoices: 'invoices',
     payments: 'payments',
     suppliers: 'expenses',
+    company: 'payments',
     receivables: 'payments',
     debts: 'debts',
     expenses: 'expenses',

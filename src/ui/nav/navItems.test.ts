@@ -65,6 +65,7 @@ describe('sidebar and drawer visibility', () => {
     expect(sidebarIds(ali)).toEqual(['home', 'clients', 'workers', 'expenses', 'fund']);
     expect(sidebarIds(fatima)).toEqual([
       'home',
+      'company',
       'clients',
       'invoices',
       'new-invoice',
@@ -84,6 +85,11 @@ describe('sidebar and drawer visibility', () => {
     expect(sidebarIds(viewer)).not.toContain('new-invoice');
     expect(sidebarIds(viewer)).toContain('expense-invoices');
     expect(sidebarIds(salem)).not.toContain('expense-invoices');
+  });
+
+  it('lists the company dashboard only for whoever holds payments, every expense and the business figures', () => {
+    for (const access of [admin, fatima]) expect(sidebarIds(access)).toContain('company');
+    for (const access of [salem, ali, nobody, accessFor('employee', ['payments.view', 'expenses.view.all'])]) expect(sidebarIds(access)).not.toContain('company');
   });
 
   it('lists the suppliers only for whoever sees every expense', () => {
