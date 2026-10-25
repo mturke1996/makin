@@ -104,6 +104,12 @@ service cloud.firestore {
       allow delete: if can('payments.delete');
     }
 
+    // The agreed payment schedule: seen by whoever sees payments, written by whoever manages them.
+    match /payment_milestones/{id} {
+      allow read: if can('payments.view');
+      allow create, update, delete: if can('payments.manage');
+    }
+
     // Receipt numbering: one counter per year (receipts-2026), only ever moved up by exactly one, in the same
     // transaction that stamps the number on a payment. Nobody deletes a counter.
     match /counters/{id} {

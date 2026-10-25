@@ -9,6 +9,7 @@ import type {
   Client,
   Expense,
   Payment,
+  PaymentMilestone,
   ProjectPhase,
   SiteReport,
   StandaloneDebt,
@@ -31,6 +32,7 @@ export function useClientDeletes({ closeForm }: { closeForm: () => void }) {
     deleteUserBalance,
     deleteProjectPhase,
     deleteBoqItem,
+    deletePaymentMilestone,
     deleteSiteReport,
     deleteClient,
   } = useDataStore();
@@ -105,6 +107,15 @@ export function useClientDeletes({ closeForm }: { closeForm: () => void }) {
       onConfirm: () => deleteBoqItem(i.id),
     });
 
+  const milestone = (m: PaymentMilestone) =>
+    ask({
+      title: `حذف «${m.title}» من الجدول؟`,
+      description: `${formatCurrencyDisplay(m.amount)} تستحق في ${formatDate(m.dueDate)}`,
+      details: <p>يُحذف موعد الدفعة وحدها. ما حصّلته من العميل يبقى مسجلاً في المدفوعات، ويُوزَّع على الدفعات المتبقية من الجدول.</p>,
+      confirmLabel: 'حذف الدفعة',
+      onConfirm: () => deletePaymentMilestone(m.id),
+    });
+
   const siteReport = (r: SiteReport) =>
     ask({
       title: 'حذف هذا التقرير؟',
@@ -163,5 +174,5 @@ export function useClientDeletes({ closeForm }: { closeForm: () => void }) {
     });
   };
 
-  return { expense, payment, debt, balance, phase, boqItem, siteReport, client, modal, confirmOpen };
+  return { expense, payment, debt, balance, phase, boqItem, milestone, siteReport, client, modal, confirmOpen };
 }

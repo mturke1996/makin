@@ -29,6 +29,7 @@ const SEED: Record<string, Record<string, Record<string, unknown>>> = {
   clients: { c1: { name: 'Client' }, c2: { name: 'Other client' } },
   invoices: { i1: { status: 'sent', total: 100, updatedAt: '2026-01-01' } },
   payments: { p1: { amount: 10, invoiceId: 'i1' } },
+  payment_milestones: { pm1: { clientId: 'c1', title: 'Advance', amount: 100, dueDate: '2026-12-01', order: 1 } },
   expenses: {
     'e-field': { clientId: 'c1', userId: 'u-field', amount: 5, isClosed: false, date: '2026-01-01' },
     'e-field2': { clientId: 'c1', userId: 'u-field2', amount: 6, isClosed: false, date: '2026-01-01' },

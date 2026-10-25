@@ -6,10 +6,21 @@
 
 const HAS_ARABIC = /[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
-/** Arabic text — pass-through logical Unicode. */
+const RLM = '\u200F';
+
+/**
+ * Arabic text, logical Unicode, fenced by right-to-left marks (zero width).
+ *
+ * The PDF engine lays a line out left to right unless told otherwise, which misplaces whatever is not
+ * Arabic: «10 سجلات» leaves the figure at the far end of the line, and the full stop closing a sentence
+ * lands at its start. A mark at each end makes the whole line read right to left. Text with no Arabic
+ * (references, dates, amounts) is left exactly as it is.
+ */
 export function ar(text: string | number | null | undefined): string {
   if (text == null) return '';
-  return String(text);
+  const str = String(text);
+  if (!HAS_ARABIC.test(str)) return str;
+  return `${str.startsWith(RLM) ? '' : RLM}${str}${str.endsWith(RLM) ? '' : RLM}`;
 }
 
 function groupNumber(n: number, decimals = 0): string {

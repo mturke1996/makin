@@ -39,6 +39,7 @@ const FundPage               = lazy(() => import('./ui/pages-legacy/FundPage').t
 const LettersPage            = lazy(() => import('./ui/pages-legacy/LettersPage').then(m => ({ default: m.LettersPage })));
 const AuditLogPage           = lazy(() => import('./ui/pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const InstallPage            = lazy(() => import('./ui/pages/InstallPage').then(m => ({ default: m.InstallPage })));
+const ReceivablesPage        = lazy(() => import('./ui/pages/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })));
 const WorkersPage            = lazy(() => import('./ui/pages/WorkersPage').then(m => ({ default: m.WorkersPage })));
 
 
@@ -71,6 +72,7 @@ function AppRouterBody({ isAuthenticated }: { isAuthenticated: boolean }) {
             <Route path="/expenses" element={<RequireAccess module="expenses"><ExpensesPage /></RequireAccess>} />
             <Route path="/expenses/invoices" element={<RequireAccess anyOf={['expenses.view.all']}><ExpenseInvoicesPage /></RequireAccess>} />
             <Route path="/payments" element={<RequireAccess module="payments"><PaymentsPage /></RequireAccess>} />
+            <Route path="/receivables" element={<RequireAccess module="payments"><ReceivablesPage /></RequireAccess>} />
             <Route path="/debts" element={<RequireAccess module="debts"><DebtsPage /></RequireAccess>} />
             <Route path="/users" element={<RequireAccess admin><UsersPage /></RequireAccess>} />
             <Route path="/fund" element={<RequireAccess module="balances"><FundPage /></RequireAccess>} />

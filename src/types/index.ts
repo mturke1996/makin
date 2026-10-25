@@ -216,6 +216,24 @@ export interface ProjectPhase {
   createdBy?: string;
 }
 
+/**
+ * One agreed instalment of the contract (جدول الدفعات): what the client owes, and by when.
+ * It stores no "paid" flag: how much of it is covered is worked out from the payments received.
+ */
+export interface PaymentMilestone {
+  id: string;
+  clientId: string;
+  title: string;
+  amount: number;
+  /** YYYY-MM-DD */
+  dueDate: string;
+  order: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+
 export const BOQ_UNITS = ['m2', 'm3', 'm', 'kg', 'ton', 'piece', 'lot', 'day'] as const;
 export type BoqUnit = typeof BOQ_UNITS[number];
 

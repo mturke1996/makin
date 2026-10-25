@@ -2,6 +2,7 @@ import type { ElementType, ReactNode } from 'react';
 import {
   AccountBalanceWallet,
   Balance,
+  CalendarToday,
   Description,
   Engineering,
   Groups,
@@ -48,6 +49,12 @@ export interface ClientModuleStats {
   invoicesRemaining: number | null;
   invoicesOverdue: number;
   letters: number;
+  /** Instalments in the agreed payment schedule. */
+  milestones: number;
+  /** Still to collect on that schedule. */
+  scheduleRemaining: number;
+  /** Instalments past their due date and not covered. */
+  scheduleOverdue: number;
 }
 
 interface ModuleDef {
@@ -102,6 +109,22 @@ export function ClientModules({ stats, summary, caps, canEditProfit, onOpenSheet
       amount: summary.totalPaid,
       Icon: Payment,
       tone: 'success',
+    },
+    {
+      key: 'schedule',
+      shown: caps.payments,
+      title: 'جدول الدفعات',
+      subtitle:
+        stats.milestones === 0
+          ? 'الدفعات المتفق عليها ومواعيدها'
+          : stats.scheduleOverdue > 0
+            ? `${countPhrase('milestones', stats.milestones)} · ${stats.scheduleOverdue} متأخرة`
+            : countPhrase('milestones', stats.milestones),
+      amountLabel: stats.milestones > 0 ? 'المتبقي' : undefined,
+      amount: stats.scheduleRemaining,
+      amountDisplay: stats.milestones > 0 ? undefined : <span className="text-sm font-medium text-fg-muted">إعداد الجدول</span>,
+      Icon: CalendarToday,
+      tone: stats.scheduleOverdue > 0 ? 'danger' : 'info',
     },
     {
       key: 'debts',

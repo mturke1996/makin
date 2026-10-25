@@ -47,7 +47,7 @@ const LOGO_RATIO = 416 / 1600;
 const FF = PDF_FONT_FAMILY;
 const NUM = PDF_NUM_FONT;
 
-export function makePdfStyles(B: PdfBrandSnapshot) {
+export function makePdfStyles(_B: PdfBrandSnapshot) {
   return StyleSheet.create({
     page: {
       fontFamily: FF,

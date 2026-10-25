@@ -100,6 +100,7 @@ describe('simple areas follow the view / manage / delete ladder', () => {
     { path: 'clients', id: 'c1', create: { name: 'N' }, view: ['admin', 'owner', 'field', 'field2', 'supervisor', 'accountant', 'viewer'], manage: ['admin', 'accountant'], del: ['admin'] },
     { path: 'invoices', id: 'i1', create: { total: 1 }, view: ['admin', 'accountant', 'viewer'], manage: ['admin', 'accountant'], del: ['admin'] },
     { path: 'payments', id: 'p1', create: { amount: 1 }, view: ['admin', 'accountant', 'viewer'], manage: ['admin', 'accountant'], del: ['admin'] },
+    { path: 'payment_milestones', id: 'pm1', create: { amount: 1 }, view: ['admin', 'accountant', 'viewer'], manage: ['admin', 'accountant'], del: ['admin', 'accountant'] },
     { path: 'standalone_debts', id: 'd1', create: { amount: 1 }, view: ['admin', 'accountant', 'viewer'], manage: ['admin', 'accountant'], del: ['admin'] },
     { path: 'debt_parties', id: 'dp1', create: { name: 'S' }, view: ['admin', 'accountant', 'viewer'], manage: ['admin', 'accountant'], del: ['admin', 'accountant'] },
     { path: 'workers', id: 'w1', create: { name: 'W' }, view: ['admin', 'supervisor', 'viewer'], manage: ['admin', 'supervisor'], del: ['admin', 'supervisor'] },

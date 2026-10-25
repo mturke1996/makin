@@ -6,7 +6,7 @@ import type { ReceiptData } from '../../core/finance/receipt';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand } from './pdfBrand';
 import { PDF_FONT_FAMILY, PDF_NUM_FONT } from './pdfFonts';
-import { INK, PdfAmount, PdfDocTitle, PdfInfoCard, PdfPage, PdfStatement, PdfSummaryStrip, makePdfStyles } from './pdfKit';
+import { INK, PdfDocTitle, PdfInfoCard, PdfPage, PdfStatement, PdfSummaryStrip, makePdfStyles } from './pdfKit';
 import { PdfQr } from './PdfQr';
 
 const FF = PDF_FONT_FAMILY;

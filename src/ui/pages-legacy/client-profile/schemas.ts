@@ -18,6 +18,15 @@ export const paymentSchema = z.object({
 });
 export type PaymentFormValues = z.infer<typeof paymentSchema>;
 
+export const milestoneSchema = z.object({
+  title: z.string().trim().min(1, 'اكتب اسم الدفعة'),
+  amount: positiveAmount,
+  dueDate: z.string().min(1, 'اختر موعد الاستحقاق'),
+  order: looseNumber,
+  notes: z.string(),
+});
+export type MilestoneFormValues = z.infer<typeof milestoneSchema>;
+
 export const expenseSchema = z.object({
   description: z.string().trim().min(1, 'اكتب وصف المصروف'),
   amount: positiveAmount,

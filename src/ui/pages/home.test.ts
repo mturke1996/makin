@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPrincipal } from '../../core/access';
-import type { Client, Expense, Invoice, Payment, ProjectPhase, StandaloneDebt, Worker } from '../../types';
+import type { Client, Expense, Invoice, Payment, PaymentMilestone, ProjectPhase, StandaloneDebt, Worker } from '../../types';
 import { buildAttentionItems } from './homeAttentionModel';
 import { canOpenPath, homeGates, planDashboard } from './homeGates';
 import { bucketSums, computeHomeStats } from './homeStats';
@@ -41,6 +41,13 @@ describe('homeGates', () => {
     // personal custody has its own card on Home, so the grid has no custody cell for this person
     expect(g.cells).toEqual(['outstanding', 'debts', 'overdueInvoices']);
     expect(g).toMatchObject({ newInvoice: true, newPayment: true, newExpense: true });
+  });
+
+  it('only whoever sees payments follows the payment schedule', () => {
+    expect(homeGates(admin).schedule).toBe(true);
+    expect(homeGates(fatima).schedule).toBe(true);
+    expect(homeGates(salem).schedule).toBe(false);
+    expect(homeGates(ali).schedule).toBe(false);
   });
 
   it('a field employee only gets the personal expense cards and nothing about the business', () => {
@@ -107,6 +114,8 @@ describe('canOpenPath', () => {
     expect(canOpenPath(admin, '/users')).toBe(true);
     expect(canOpenPath(admin, '/something-else')).toBe(false);
     expect(canOpenPath(salem, '/')).toBe(true);
+    expect(canOpenPath(fatima, '/receivables')).toBe(true);
+    expect(canOpenPath(salem, '/receivables')).toBe(false);
   });
 });
 
@@ -273,6 +282,50 @@ describe('buildAttentionItems', () => {
       const phases = [phase('p1', 'c1', 'الهيكل', 1000)];
       expect(buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 5000)], allow: all })).toEqual([]);
       expect(buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 300)], allow: { ...all, budgets: true } })).toEqual([]);
+    });
+  });
+  describe('payment schedule', () => {
+    const milestone = (id: string, order: number, amount: number, dueAgo: number, clientId = 'c1'): PaymentMilestone =>
+      ({ id, clientId, title: `دفعة ${id}`, amount, order, dueDate: day(dueAgo), createdAt: day(90), updatedAt: day(90) }) as PaymentMilestone;
+    const none = { invoices: [], debts: [] };
+    const allowed = { ...all, schedule: true };
+
+    it('names the client with a late instalment, what is left on it and for how long', () => {
+      // 1500 collected: the first (1000) is covered, the second (2000) is half covered and 10 days late.
+      const milestones = [milestone('m1', 1, 1000, 60), milestone('m2', 2, 2000, 10), milestone('m3', 3, 500, -20)];
+      const items = buildAttentionItems({ ...base, ...none, milestones, allow: allowed });
+      expect(items.map((i) => i.kind)).toEqual(['schedule-overdue']);
+      expect(items[0]).toMatchObject({ tone: 'warning', title: 'شركة النور', amount: 1500, path: '/clients/c1?section=schedule' });
+      expect(items[0].subtitle).toContain('دفعة m2');
+    });
+
+    it('turns urgent after a month and sums several clients into one line to the receivables page', () => {
+      const urgent = buildAttentionItems({ ...base, ...none, milestones: [milestone('m1', 1, 5000, 45)], allow: allowed });
+      expect(urgent[0].tone).toBe('danger');
+
+      const twoClients = [{ id: 'c1', name: 'شركة النور' }, { id: 'c2', name: 'مكتب الأمل' }] as Client[];
+      const many = buildAttentionItems({
+        ...base, ...none, clients: twoClients,
+        payments: [],
+        milestones: [milestone('m1', 1, 700, 40), milestone('m2', 1, 300, 5, 'c2')],
+        allow: allowed,
+      });
+      expect(many).toHaveLength(1);
+      expect(many[0]).toMatchObject({ key: 'schedule-many', amount: 1000, path: '/receivables' });
+      expect(many[0].subtitle).toContain('شركة النور');
+    });
+
+    it('stays quiet without the gate, and when nothing is late', () => {
+      const late = [milestone('m1', 1, 5000, 45)];
+      expect(buildAttentionItems({ ...base, ...none, milestones: late, allow: all })).toEqual([]);
+      expect(buildAttentionItems({ ...base, ...none, milestones: [milestone('m1', 1, 5000, -10)], allow: allowed })).toEqual([]);
+    });
+
+    it('keeps invoices and instalments apart, each named for what it is (the receivables page merges them per client)', () => {
+      const kinds = buildAttentionItems({ ...base, debts: [], milestones: [milestone('m1', 1, 5000, 45)], allow: allowed }).map((i) => i.kind);
+      expect(kinds).toEqual(['invoice', 'schedule-overdue']);
+      // Without the schedule gate only the overdue invoice shows, as before.
+      expect(buildAttentionItems({ ...base, debts: [], milestones: [milestone('m1', 1, 5000, 45)], allow: all }).map((i) => i.kind)).toEqual(['invoice']);
     });
   });
 });

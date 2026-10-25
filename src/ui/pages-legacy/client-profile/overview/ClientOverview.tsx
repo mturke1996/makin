@@ -3,7 +3,7 @@ import { ExpandMore, Insights } from '../../../../design-system/icons';
 import { Button, EmptyState } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import { buildOverviewTrend, localDay } from '../../../../core/finance/clientAnalytics';
-import { buildClientInsights, type InsightAction } from '../../../../core/finance/clientInsights';
+import { buildClientInsights, type InsightAction, type InsightSchedule } from '../../../../core/finance/clientInsights';
 import type { PhaseBudgetRow } from '../../../../core/finance/projectBudget';
 import type { CategoryBudgetRow } from '../../../../core/finance/budgetStatus';
 import type { Expense, Invoice, Payment, StandaloneDebt } from '../../../../types';
@@ -33,6 +33,8 @@ export interface ClientOverviewProps {
   custody: UserBalancesSummary;
   /** This client's invoices, only when the viewer may list them (`caps.invoices`). */
   invoices?: readonly Invoice[];
+  /** What the agreed payment schedule says (late or due soon), when the client has one and the viewer sees payments. */
+  schedule?: InsightSchedule;
   /** Whose expenses are listed; the split by person is shown only for `'all'`. Defaults to `'all'`. */
   expenseScope?: 'all' | 'own' | 'none';
   /** Called with the action of the insight that was tapped; the page opens the matching sheet or form. */
@@ -68,6 +70,7 @@ export function ClientOverview({
   categoryBudgetRows,
   custody,
   invoices,
+  schedule,
   expenseScope = 'all',
   onAction,
   unavailableActions,
@@ -102,8 +105,9 @@ export function ClientOverview({
         categories: categoryBudgetRows,
         custody: Object.values(custody),
         invoices,
+        schedule,
       }),
-    [today, summary, expenses, payments, debts, workerSummary, phaseBudgetRows, categoryBudgetRows, custody, invoices],
+    [today, summary, expenses, payments, debts, workerSummary, phaseBudgetRows, categoryBudgetRows, custody, invoices, schedule],
   );
 
   // The slot stays in every state: the way into the records must not vanish while the numbers load or when there are none.

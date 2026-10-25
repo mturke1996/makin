@@ -8,6 +8,7 @@ import { buildWorkerLedgers, summarizeWorkerLedgers } from '../../core/finance/w
 import { APPROVAL_LABEL, approvalCounts, approvalStatusOf } from '../../core/finance/expenseApproval';
 import { budgetState, type CategoryBudgetRow } from '../../core/finance/budgetStatus';
 import type { PhaseBudgetRow } from '../../core/finance/projectBudget';
+import { milestoneStatusLabel, type MilestoneRow, type PaymentSchedule } from '../../core/finance/paymentSchedule';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand } from './pdfBrand';
 import { PDF_FONT_FAMILY } from './pdfFonts';
@@ -133,6 +134,25 @@ const categoryBudgetRow = (r: CategoryBudgetRow) => ({
   actual: r.actual,
   left: r.state === 'unbudgeted' ? 0 : r.variance,
   used: usedText(r.ratio),
+});
+
+/** The agreed payment schedule: what was agreed, by when, how much of it is covered. */
+const SCHEDULE_COLS: PdfColumn[] = [
+  { key: 'n', label: '#', flex: 0.35, kind: 'num' },
+  { key: 'item', label: 'الدفعة', flex: 2.1, kind: 'stack', bold: true },
+  { key: 'due', label: 'الاستحقاق', flex: 0.9, kind: 'date' },
+  { key: 'amount', label: 'القيمة', flex: 1, kind: 'money' },
+  { key: 'covered', label: 'المحصّل', flex: 1, kind: 'money' },
+  { key: 'remaining', label: 'المتبقي', flex: 1, kind: 'money', bold: true },
+];
+
+const scheduleRow = (r: MilestoneRow, i: number) => ({
+  n: String(i + 1),
+  item: { t: r.milestone.title, s: milestoneStatusLabel(r) },
+  due: arDate(r.milestone.dueDate),
+  amount: r.milestone.amount,
+  covered: r.covered,
+  remaining: r.remaining,
 });
 
 const WORKER_COLS: PdfColumn[] = [
@@ -298,6 +318,8 @@ interface FullReportPDFProps {
   workers: Worker[];
   /** Phase budgets and the estimate by category, when the viewer sees every expense. */
   budget?: { phases: PhaseBudgetRow[]; categories: CategoryBudgetRow[] };
+  /** The agreed payment schedule, when the viewer sees the payments that cover it. */
+  schedule?: PaymentSchedule;
   summary: {
     totalPaid: number; profit: number; profitPercentage: number; profitBase?: 'expenses' | 'payments';
     totalExpenses: number; totalDebts: number; totalObligations: number;
@@ -306,7 +328,7 @@ interface FullReportPDFProps {
   };
 }
 
-export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, payments, debts, workers, budget, summary }) => {
+export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, payments, debts, workers, budget, schedule, summary }) => {
   const B = getPdfBrand();
   const s = makePdfStyles(B);
   const ref = docRef('RPT', client);
@@ -366,6 +388,15 @@ export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, 
           <>
             <PdfTable s={s} heading="المدفوعات" hint={countWord(payments.length, PAYW)} columns={PAY_COLS} rows={payments.map(paymentRow)} />
           </>
+        ) : null}
+        {schedule && schedule.rows.length > 0 ? (
+          <PdfTable
+            s={s}
+            heading="جدول الدفعات"
+            hint={[countWord(schedule.rows.length, PAYW), schedule.overdueAmount > 0 ? `المتأخر ${formatCurrencyDisplay(schedule.overdueAmount)}` : ''].filter(Boolean).join('  ·  ')}
+            columns={SCHEDULE_COLS}
+            rows={schedule.rows.map(scheduleRow)}
+          />
         ) : null}
         {debts.length > 0 ? (
           <>

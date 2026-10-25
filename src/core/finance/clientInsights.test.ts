@@ -447,3 +447,49 @@ describe('daysWord', () => {
     expect(daysWord(30)).toBe('30 يوماً');
   });
 });
+
+describe('payment schedule rules', () => {
+  const schedule = (over: Partial<NonNullable<InsightInput['schedule']>> = {}): NonNullable<InsightInput['schedule']> => ({
+    overdueAmount: 0,
+    overdueCount: 0,
+    ...over,
+  });
+
+  it('is silent without a schedule or with nothing late', () => {
+    expect(ids(base())).toEqual([]);
+    expect(ids(base({ schedule: schedule() }))).toEqual([]);
+  });
+
+  it('warns about one late instalment, and calls it urgent after a month', () => {
+    const recent = one(base({ schedule: schedule({ overdueAmount: 5000, overdueCount: 1, oldest: { title: 'الدفعة الثانية', daysLate: 12 } }) }), 'schedule-overdue');
+    expect(recent?.severity).toBe('warning');
+    expect(recent?.title).toContain('الدفعة الثانية');
+    expect(recent?.action).toBe('schedule');
+
+    const old = one(base({ schedule: schedule({ overdueAmount: 5000, overdueCount: 1, oldest: { title: 'الدفعة الثانية', daysLate: 30 } }) }), 'schedule-overdue');
+    expect(old?.severity).toBe('danger');
+  });
+
+  it('sums several late instalments and names the oldest', () => {
+    const insight = one(base({ schedule: schedule({ overdueAmount: 12000, overdueCount: 3, oldest: { title: 'الدفعة الأولى', daysLate: 50 } }) }), 'schedule-overdue');
+    expect(insight?.title).toContain('3 دفعات');
+    expect(insight?.reason).toContain('الدفعة الأولى');
+  });
+
+  it('announces an instalment falling due within the week as information', () => {
+    const insight = one(base({ schedule: schedule({ dueSoon: { title: 'الدفعة الثالثة', remaining: 30000, daysUntil: 3 } }) }), 'schedule-due-soon');
+    expect(insight?.severity).toBe('info');
+    expect(insight?.title).toContain('بعد 3 أيام');
+    expect(one(base({ schedule: schedule({ dueSoon: { title: 'x', remaining: 1, daysUntil: 0 } }) }), 'schedule-due-soon')?.title).toContain('اليوم');
+  });
+
+  it('puts a late instalment above a quiet payment history', () => {
+    const order = ids(
+      base({
+        schedule: schedule({ overdueAmount: 100, overdueCount: 1, oldest: { title: 'x', daysLate: 40 } }),
+        totals: totals({ agreedPercentageDeficit: 50 }),
+      }),
+    );
+    expect(order.indexOf('schedule-overdue')).toBeLessThan(order.indexOf('percentage-deficit'));
+  });
+});

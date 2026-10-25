@@ -13,6 +13,7 @@ import {
   projectPhasesService,
   boqItemsService,
   siteReportsService,
+  paymentMilestonesService,
   globalFundTransactionsService,
   createExpenseInvoiceAtomic,
   deleteExpenseInvoiceAtomic,
@@ -34,6 +35,7 @@ import type {
   ProjectPhase,
   BoqLineItem,
   SiteReport,
+  PaymentMilestone,
 } from '../types';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from './useNotificationStore';
@@ -58,7 +60,7 @@ import type { Principal } from '../core/access/principal';
 const CACHE_PREFIX = 'app-cache-';
 const CACHE_OWNER_KEY = 'app-cache-owner';
 type StoreKey = Exclude<DataKey, 'fundTransactions'>;
-const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports'];
+const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones'];
 
 const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: any[], onError?: (e: any) => void) => () => void }> = {
   clients: clientsService,
@@ -74,6 +76,7 @@ const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: an
   projectPhases: projectPhasesService,
   boqItems: boqItemsService,
   siteReports: siteReportsService,
+  paymentMilestones: paymentMilestonesService,
 };
 
 const cacheOwnerTag = (principal: Principal | null) => (principal ? `${principal.id}|${JSON.stringify(planFor(principal))}` : '');
@@ -150,8 +153,9 @@ interface DataState {
   projectPhases: ProjectPhase[];
   boqItems: BoqLineItem[];
   siteReports: SiteReport[];
+  paymentMilestones: PaymentMilestone[];
   isLoading: boolean;
-  
+
   // Initialization
   /** Subscribes to exactly what this person may download (see core/access/dataPlan). Returns the unsubscribe. */
   initialize: (principal: Principal | null) => () => void;
@@ -219,6 +223,12 @@ interface DataState {
   updateBoqItem: (id: string, data: Partial<BoqLineItem>) => Promise<void>;
   deleteBoqItem: (id: string) => Promise<void>;
 
+  addPaymentMilestone: (milestone: PaymentMilestone) => Promise<void>;
+  /** Several instalments in one go (the "split the contract" shortcut). */
+  addPaymentMilestones: (milestones: PaymentMilestone[]) => Promise<void>;
+  updatePaymentMilestone: (id: string, data: Partial<PaymentMilestone>) => Promise<void>;
+  deletePaymentMilestone: (id: string) => Promise<void>;
+
   addSiteReport: (report: SiteReport) => Promise<void>;
   updateSiteReport: (id: string, data: Partial<SiteReport>) => Promise<void>;
   deleteSiteReport: (id: string) => Promise<void>;
@@ -258,6 +268,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   projectPhases: [],
   boqItems: [],
   siteReports: [],
+  paymentMilestones: [],
   isLoading: true,
 
   reset: () => {
@@ -265,7 +276,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({
       clients: [], invoices: [], payments: [], expenses: [], expenseInvoices: [], standaloneDebts: [],
       debtParties: [], workers: [], userBalances: [], letters: [], projectPhases: [], boqItems: [],
-      siteReports: [], isLoading: true,
+      siteReports: [], paymentMilestones: [], isLoading: true,
     });
   },
 
@@ -347,6 +358,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       const relatedBalances = state.userBalances.filter((i) => i.clientId === id);
       const relatedPhases = state.projectPhases.filter((i) => i.clientId === id);
       const relatedBoq = state.boqItems.filter((i) => i.clientId === id);
+      const relatedMilestones = state.paymentMilestones.filter((i) => i.clientId === id);
       const relatedSiteReports = state.siteReports.filter((i) => i.clientId === id);
       const relatedLetters = state.letters.filter((i) => i.clientId === id);
       const relatedExpenseInvoices = state.expenseInvoices.filter((i) => i.clientId === id);
@@ -364,6 +376,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         ...relatedBalances.map((item) => userBalancesService.delete(item.id)),
         ...relatedPhases.map((item) => projectPhasesService.delete(item.id)),
         ...relatedBoq.map((item) => boqItemsService.delete(item.id)),
+        ...relatedMilestones.map((item) => paymentMilestonesService.delete(item.id)),
         ...relatedSiteReports.map((item) => siteReportsService.delete(item.id)),
         ...relatedLetters.map((item) => lettersService.delete(item.id)),
         ...relatedExpenseInvoices.map((item) => expenseInvoicesService.delete(item.id)),
@@ -598,6 +611,22 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   deleteBoqItem: async (id) => {
     await handleAsync(() => boqItemsService.delete(id), 'تم حذف البند');
+  },
+
+  addPaymentMilestone: async (milestone) => {
+    await handleAsync(() => paymentMilestonesService.add(milestone), 'تمت إضافة الدفعة إلى الجدول');
+  },
+  addPaymentMilestones: async (milestones) => {
+    await handleAsync(
+      () => Promise.all(milestones.map((m) => paymentMilestonesService.add(m))),
+      `تم إنشاء جدول من ${milestones.length} دفعات`,
+    );
+  },
+  updatePaymentMilestone: async (id, data) => {
+    await handleAsync(() => paymentMilestonesService.update(id, data), 'تم تحديث الدفعة');
+  },
+  deletePaymentMilestone: async (id) => {
+    await handleAsync(() => paymentMilestonesService.delete(id), 'تم حذف الدفعة من الجدول');
   },
 
   addSiteReport: async (report) => {

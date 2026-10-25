@@ -27,6 +27,7 @@ export type InsightAction =
   | 'phases'
   | 'boq'
   | 'invoices'
+  | 'schedule'
   | 'profit'
   | 'statement';
 
@@ -86,6 +87,18 @@ export interface InsightInput {
   categories?: readonly InsightCategoryRow[];
   custody?: readonly InsightCustodyLine[];
   invoices?: readonly Invoice[];
+  /** The agreed payment schedule, only when the client has one and the viewer sees the payments. */
+  schedule?: InsightSchedule;
+}
+
+/** What the payment schedule says that matters (see `buildPaymentSchedule`). */
+export interface InsightSchedule {
+  overdueAmount: number;
+  overdueCount: number;
+  /** The longest-late instalment. */
+  oldest?: { title: string; daysLate: number };
+  /** The nearest instalment that is not late yet but falls due within the week. */
+  dueSoon?: { title: string; remaining: number; daysUntil: number };
 }
 
 /* ── Arabic count phrases ─────────────────────────────────────────────── */
@@ -142,6 +155,7 @@ const PRIORITY = [
   'account-deficit',
   'custody-overdrawn',
   'invoices-overdue',
+  'schedule-overdue',
   'percentage-deficit',
   'phase-over-budget',
   'category-over-budget',
@@ -151,6 +165,7 @@ const PRIORITY = [
   'no-recent-payment',
   'debts-overdue',
   'large-expense',
+  'schedule-due-soon',
   'invoices-unpaid',
   'workers-due',
 ];
@@ -476,6 +491,40 @@ function invoiceRules(input: InsightInput, out: ClientInsight[]) {
   }
 }
 
+/** The agreed instalments: one that is late is urgent after a month, one due within the week is a heads-up. */
+function scheduleRules(input: InsightInput, out: ClientInsight[]) {
+  const schedule = input.schedule;
+  if (!schedule) return;
+
+  if (schedule.overdueCount > 0 && schedule.oldest) {
+    const { title, daysLate } = schedule.oldest;
+    out.push({
+      id: 'schedule-overdue',
+      severity: daysLate >= 30 ? 'danger' : 'warning',
+      title:
+        schedule.overdueCount === 1
+          ? `«${title}» متأخرة عن موعدها`
+          : `${countWords(schedule.overdueCount, { one: 'دفعة واحدة', two: 'دفعتان', few: 'دفعات', many: 'دفعة' })} متأخرة من جدول الدفعات`,
+      reason:
+        schedule.overdueCount === 1
+          ? `المتبقي ${money(schedule.overdueAmount)} وقد مضى ${daysWord(daysLate)} على موعدها.`
+          : `المتبقي ${money(schedule.overdueAmount)}، وأقدمها «${clip(title, 24)}» متأخرة ${daysWord(daysLate)}.`,
+      action: 'schedule',
+    });
+  }
+
+  if (schedule.dueSoon) {
+    const { title, remaining, daysUntil } = schedule.dueSoon;
+    out.push({
+      id: 'schedule-due-soon',
+      severity: 'info',
+      title: `«${title}» تستحق ${daysUntil === 0 ? 'اليوم' : `بعد ${daysWord(daysUntil)}`}`,
+      reason: `المطلوب من العميل ${money(remaining)}.`,
+      action: 'schedule',
+    });
+  }
+}
+
 /** Every observation that applies, most urgent first. */
 export function buildClientInsights(input: InsightInput): ClientInsight[] {
   const out: ClientInsight[] = [];
@@ -490,5 +539,6 @@ export function buildClientInsights(input: InsightInput): ClientInsight[] {
   workersRule(input, out);
   debtsRule(input, out);
   invoiceRules(input, out);
+  scheduleRules(input, out);
   return out.sort((a, b) => RANK[a.severity] - RANK[b.severity] || priorityOf(a.id) - priorityOf(b.id));
 }

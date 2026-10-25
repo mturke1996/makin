@@ -6,6 +6,7 @@ import { useGlobalFundStore } from '../../../stores/useGlobalFundStore';
 import { useAccess } from '../../../core/access/useAccess';
 import { computeUserFundAllocTotals } from '../../../core/finance/custodyFifo';
 import { buildPhaseBudgetRows } from '../../../core/finance/projectBudget';
+import { buildPaymentSchedule } from '../../../core/finance/paymentSchedule';
 import { buildWorkerLedgers, sumMoney, summarizeWorkerLedgers } from '../../../core/finance/workerLedger';
 import { computeClientAccount } from '../../../core/finance/clientProfitTotals';
 import type { WorkerEntry } from './workers';
@@ -35,6 +36,7 @@ export function useClientProfileData(clientId: string | undefined) {
     projectPhases,
     boqItems,
     siteReports,
+    paymentMilestones,
     isLoading,
   } = useDataStore();
 
@@ -76,6 +78,12 @@ export function useClientProfileData(clientId: string | undefined) {
         ? payments.filter((p) => p.clientId === clientId).sort((a, b) => dayjs(b.paymentDate).diff(dayjs(a.paymentDate)))
         : [],
     [caps.payments, payments, clientId]
+  );
+
+  // The agreed instalments are laid against everything the client has paid, so they need the payments too.
+  const clientMilestones = useMemo(
+    () => (caps.payments ? paymentMilestones.filter((m) => m.clientId === clientId) : []),
+    [caps.payments, paymentMilestones, clientId]
   );
 
   const clientDebts = useMemo(
@@ -181,6 +189,11 @@ export function useClientProfileData(clientId: string | undefined) {
     return computeUserFundAllocTotals(deposits, mine);
   }, [fundTransactions, expenses, user, caps.expenseScope]);
 
+  const schedule = useMemo(
+    () => buildPaymentSchedule(clientMilestones, sumMoney(clientPayments.map((p) => p.amount))),
+    [clientMilestones, clientPayments]
+  );
+
   const summary = useMemo<ClientSummary>(() => {
     const totalExpenses = sumMoney(clientExpenses.map((e) => e.amount));
     const totalDebts = sumMoney(clientDebts.map((d) => d.remainingAmount));
@@ -212,6 +225,8 @@ export function useClientProfileData(clientId: string | undefined) {
     systemUsers,
     clientExpenses,
     clientPayments,
+    clientMilestones,
+    schedule,
     clientDebts,
     workerEntries,
     clientWorkers,

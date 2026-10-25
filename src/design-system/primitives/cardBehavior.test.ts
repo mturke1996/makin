@@ -72,7 +72,7 @@ it('renders a calm empty state with no dead action', async () => {
   expect(host.querySelectorAll('button')).toHaveLength(0);
 });
 
-const stats: ClientModuleStats = { expenses: 0, payments: 0, debts: 0, workers: 0, balances: 0, phases: 0, boq: 0, reports: 0, custodyRemaining: 0, custodyGiven: 0, custodyExact: true, phasesBudget: 0, boqTotal: 0, latestProgress: undefined, invoices: 0, invoicesRemaining: 0, invoicesOverdue: 0, letters: 0 };
+const stats: ClientModuleStats = { expenses: 0, payments: 0, debts: 0, workers: 0, balances: 0, phases: 0, boq: 0, reports: 0, custodyRemaining: 0, custodyGiven: 0, custodyExact: true, phasesBudget: 0, boqTotal: 0, latestProgress: undefined, invoices: 0, invoicesRemaining: 0, invoicesOverdue: 0, letters: 0, milestones: 0, scheduleRemaining: 0, scheduleOverdue: 0 };
 const summary: ClientSummary = { ...computeClientAccount({ totalExpenses: 0, totalDebts: 0, totalPaid: 0 }), totalExpenses: 0, totalDebts: 0, totalPaid: 0, totalWorkersDue: 0, totalWorkersAgreed: 0, totalWorkersPaid: 0 };
 const caps: ClientProfileCaps = { expenseScope: 'all', payments: true, debts: true, workers: true, custody: true, projects: true, invoices: true, letters: true, showSummary: true };
 it('keeps all four primary client record sections visible and usable even with no transactions', async () => {

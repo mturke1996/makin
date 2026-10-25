@@ -5,7 +5,7 @@ import './pdfFonts';
 import { ar, arDate } from './arabicPDF';
 import type { Invoice, Client } from '../../types';
 import { getPdfBrand } from './pdfBrand';
-import { INK, PdfDocTitle, PdfInfoCard, PdfNotesBox, PdfPage, PdfTotalsBlock, makePdfStyles } from './pdfKit';
+import { PdfDocTitle, PdfInfoCard, PdfNotesBox, PdfPage, PdfTotalsBlock, makePdfStyles } from './pdfKit';
 import { PdfTable, type PdfColumn } from './PdfTable';
 
 const STATUS_AR: Record<string, string> = {

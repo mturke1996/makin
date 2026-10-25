@@ -69,6 +69,7 @@ describe('sidebar and drawer visibility', () => {
       'invoices',
       'new-invoice',
       'payments',
+      'receivables',
       'expenses',
       'expense-invoices',
       'fund',
@@ -82,6 +83,15 @@ describe('sidebar and drawer visibility', () => {
     expect(sidebarIds(viewer)).not.toContain('new-invoice');
     expect(sidebarIds(viewer)).toContain('expense-invoices');
     expect(sidebarIds(salem)).not.toContain('expense-invoices');
+  });
+
+  it('lists the receivables for whoever sees payments, and for nobody else', () => {
+    expect(sidebarIds(admin)).toContain('receivables');
+    expect(sidebarIds(fatima)).toContain('receivables');
+    expect(sidebarIds(viewer)).toContain('receivables');
+    expect(sidebarIds(salem)).not.toContain('receivables');
+    expect(sidebarIds(ali)).not.toContain('receivables');
+    expect(sidebarIds(nobody)).not.toContain('receivables');
   });
 
   it('drops a group when nothing in it is left', () => {

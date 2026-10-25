@@ -4,8 +4,9 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Font, renderToBuffer } from '@react-pdf/renderer';
 import type { DocumentProps } from '@react-pdf/renderer';
-import type { Client, Expense, Invoice, Letter, Payment, StandaloneDebt, Worker } from '../../types';
+import type { Client, Expense, Invoice, Letter, Payment, PaymentMilestone, StandaloneDebt, Worker } from '../../types';
 import { buildWorkerLedgers } from '../../core/finance/workerLedger';
+import { buildPaymentSchedule } from '../../core/finance/paymentSchedule';
 import { DebtsPDF, ExpensesPDF, FullReportPDF, PaymentsPDF, WorkersPDF } from './ClientReportsPDF';
 import { InvoicePDF } from './InvoicePDF';
 import { LetterPDF } from './LetterPDF';
@@ -75,6 +76,18 @@ const budget = {
   ],
 };
 
+const milestone = (id: string, order: number, title: string, amount: number, dueDate: string) =>
+  ({ id, clientId: client.id, title, amount, dueDate, order, createdAt: at, updatedAt: at }) as PaymentMilestone;
+const schedule = buildPaymentSchedule(
+  [
+    milestone('m1', 1, 'الدفعة الأولى: مقدمة العقد', 60000, '2026-08-15'),
+    milestone('m2', 2, 'عند صب الهيكل الخرساني', 40000, '2026-10-01'),
+    milestone('m3', 3, 'أعمال التشطيبات', 50000, '2026-12-15'),
+  ],
+  85000,
+  new Date('2026-10-25T09:00:00'),
+);
+
 const invoice: Invoice = {
   id: 'inv1', invoiceNumber: 'MK-2026-001', clientId: client.id, items: [{ id: 'a', description: 'أعمال الحفر والأساسات (المرحلة الأولى)', quantity: 1, unitPrice: 60000, total: 60000 }, { id: 'b', description: 'الدفعة الأولى من الهيكل الخرساني', quantity: 1, unitPrice: 50000, total: 50000 }],
   subtotal: 110000, taxRate: 0, taxAmount: 0, total: 110000, status: 'partially_paid', issueDate: '2026-09-15', dueDate: '2026-10-15', notes: 'تُسدَّد الدفعات بالتحويل البنكي أو نقداً في المكتب.', createdAt: at, updatedAt: at,
@@ -92,7 +105,7 @@ describe('MAKIN PDF documents', () => {
     ['debts.pdf', () => createElement(DebtsPDF, { client, debts, total: 5000 }), 1],
     ['workers.pdf', () => createElement(WorkersPDF, { client, workers: [elec, plumb], expenses }), 2],
     ['worker-statement.pdf', () => createElement(WorkerStatementPDF, { client, entry: buildWorkerLedgers([elec], expenses)[0] }), 1],
-    ['full-report.pdf', () => createElement(FullReportPDF, { client, expenses, payments, debts, workers: [elec, plumb], summary, budget }), 3],
+    ['full-report.pdf', () => createElement(FullReportPDF, { client, expenses, payments, debts, workers: [elec, plumb], summary, budget, schedule }), 3],
     ['receipt.pdf', () => createElement(ReceiptPDF, { receipt: buildReceipt({ payment: payments[1], number: 'RC-2026-0007', client, invoice, allPayments: payments }) }), 1],
     ['invoice.pdf', () => createElement(InvoicePDF, { invoice, client }), 1],
     ['letter.pdf', () => createElement(LetterPDF, { letter }), 1],

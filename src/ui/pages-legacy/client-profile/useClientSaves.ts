@@ -11,6 +11,7 @@ import type {
   Expense,
   ExpenseCategory,
   Payment,
+  PaymentMilestone,
   ProjectPhase,
   SiteReport,
   StandaloneDebt,
@@ -22,6 +23,7 @@ import type {
   ClientFormValues,
   DebtFormValues,
   ExpenseFormValues,
+  MilestoneFormValues,
   PaymentFormValues,
   PhaseFormValues,
   SiteReportFormValues,
@@ -32,6 +34,7 @@ import { buildProjectPatch } from './details/clientFields';
 export type ProfileSheetKey =
   | 'expenses'
   | 'payments'
+  | 'schedule'
   | 'debts'
   | 'workers'
   | 'balances'
@@ -50,6 +53,8 @@ interface Options {
   afterSave: (sheet: ProfileSheetKey | null) => void;
   /** Phases the next order number is derived from. */
   phaseCount: number;
+  /** Instalments the next order number is derived from. */
+  milestoneCount: number;
 }
 
 /**
@@ -57,7 +62,7 @@ interface Options {
  * as the old inline handlers did, calls the store, and closes the form only when the save worked
  * (the store already toasts a failure, so the form stays open with what was typed).
  */
-export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount }: Options) {
+export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, milestoneCount }: Options) {
   const user = useAuthStore((s) => s.user);
   const {
     workers,
@@ -74,6 +79,9 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount }:
     updateProjectPhase,
     addBoqItem,
     updateBoqItem,
+    addPaymentMilestone,
+    addPaymentMilestones,
+    updatePaymentMilestone,
     addSiteReport,
     updateSiteReport,
   } = useDataStore();
@@ -292,6 +300,49 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount }:
       }
     }, 'boq');
 
+  const saveMilestone = (edit: PaymentMilestone | null | undefined, data: MilestoneFormValues) =>
+    attempt(async () => {
+      const now = nowIso();
+      const fields = {
+        title: data.title.trim(),
+        amount: parseDecimalInput(data.amount) ?? 0,
+        dueDate: data.dueDate,
+        order: parseInt(String(data.order), 10) || milestoneCount + 1,
+        notes: data.notes?.trim() || (edit?.notes ? (null as unknown as undefined) : undefined),
+      };
+      if (edit) {
+        await updatePaymentMilestone(edit.id, { ...fields, updatedAt: now });
+      } else {
+        await addPaymentMilestone({
+          id: crypto.randomUUID(),
+          clientId: clientId!,
+          ...fields,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: author,
+        });
+      }
+    }, 'schedule');
+
+  /** The "split the contract" shortcut: several instalments created together, numbered after the existing ones. */
+  const saveSchedule = (drafts: readonly { title: string; amount: number; dueDate: string }[]) =>
+    attempt(async () => {
+      const now = nowIso();
+      await addPaymentMilestones(
+        drafts.map((draft, i) => ({
+          id: crypto.randomUUID(),
+          clientId: clientId!,
+          title: draft.title,
+          amount: draft.amount,
+          dueDate: draft.dueDate,
+          order: milestoneCount + i + 1,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: author,
+        })),
+      );
+    }, 'schedule');
+
   const saveSiteReport = (edit: SiteReport | null | undefined, data: SiteReportFormValues) => {
     if (!data.workCompleted?.trim()) {
       toast.error('أدخل الأعمال المنفذة');
@@ -360,6 +411,8 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount }:
     saveBalance,
     savePhase,
     saveBoq,
+    saveMilestone,
+    saveSchedule,
     saveSiteReport,
     saveClient,
     saveProfit,

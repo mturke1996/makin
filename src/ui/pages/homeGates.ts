@@ -39,6 +39,8 @@ export interface HomeGates {
   corrections: boolean;
   /** Phase budgets against spending: needs the phases (projects) and every expense. */
   budgets: boolean;
+  /** Agreed instalments that are late: needs the payments that cover them. */
+  schedule: boolean;
 
   /** The pooled fund balance next to the custody shortcut belongs to whoever manages custody. */
   pooledFund: boolean;
@@ -78,6 +80,7 @@ export function homeGates(p: Principal | null | undefined): HomeGates {
     approvals: can(p, 'expenses.edit.all'),
     corrections: can(p, 'expenses.create'),
     budgets: can(p, 'projects.view') && scope === 'all',
+    schedule: payments,
     pooledFund: can(p, 'custody.manage'),
     newInvoice: can(p, 'invoices.manage'),
     newExpense: can(p, 'expenses.create'),
@@ -114,6 +117,7 @@ function areaOfPath(path: string): AppModule | 'admin' | null | undefined {
     workers: 'workers',
     invoices: 'invoices',
     payments: 'payments',
+    receivables: 'payments',
     debts: 'debts',
     expenses: 'expenses',
     fund: 'balances',

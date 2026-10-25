@@ -5,11 +5,12 @@ import type { MyFundStats } from '../../core/hooks/useMyFundStats';
 import { approvalCounts, approvalStatusOf, expensePhrase } from '../../core/finance/expenseApproval';
 import { budgetState } from '../../core/finance/budgetStatus';
 import { buildPhaseBudgetRows } from '../../core/finance/projectBudget';
-import type { Client, Expense, Invoice, Payment, ProjectPhase } from '../../types';
+import { buildReceivables } from '../../core/finance/paymentSchedule';
+import type { Client, Expense, Invoice, Payment, PaymentMilestone, ProjectPhase } from '../../types';
 
 type Translate = (ar: string, en: string) => string;
 
-export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near';
+export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near' | 'schedule-overdue';
 
 export interface AttentionItem {
   key: string;
@@ -37,6 +38,8 @@ export interface AttentionAllow {
   corrections?: boolean;
   /** Phase budgets against spending: needs the phases AND every expense. */
   budgets?: boolean;
+  /** Agreed instalments past their date: needs the payments they are covered by. */
+  schedule?: boolean;
 }
 
 interface BuildArgs {
@@ -48,6 +51,8 @@ interface BuildArgs {
   /** The expenses this person may list (everyone's or only their own), and who they are. */
   expenses?: Expense[];
   phases?: ProjectPhase[];
+  /** The agreed payment schedules of all clients. */
+  milestones?: PaymentMilestone[];
   userId?: string;
   allow: AttentionAllow;
   t: Translate;
@@ -68,7 +73,7 @@ function sinceDays(days: number, t: Translate): string {
  * that area, and an amount is quoted only when the data behind it is complete.
  */
 export function buildAttentionItems({
-  invoices, payments, clients, debts, custody, expenses = [], phases = [], userId, allow, t, now,
+  invoices, payments, clients, debts, custody, expenses = [], phases = [], milestones = [], userId, allow, t, now,
 }: BuildArgs): AttentionItem[] {
   const items: AttentionItem[] = [];
   const today = dayjs(now).startOf('day');
@@ -98,6 +103,37 @@ export function buildAttentionItems({
         subtitle: `${t('الأقدم', 'Oldest')} ${sinceDays(oldest.days, t)}`,
         amount: allow.invoiceAmounts ? sumMoney(overdue.map((o) => o.remaining ?? 0)) : undefined,
         path: '/invoices',
+      });
+    }
+  }
+
+  if (allow.schedule && milestones.length > 0) {
+    const { late, overdueTotal } = buildReceivables({ clients, payments, milestones, now });
+    if (late.length === 1) {
+      const row = late[0];
+      const first = row.overdue[0];
+      items.push({
+        key: `schedule-${row.client.id}`,
+        tone: row.oldestDays >= 30 ? 'danger' : 'warning',
+        kind: 'schedule-overdue',
+        title: row.client.name,
+        subtitle:
+          row.overdue.length === 1
+            ? `${t('دفعة', 'Instalment')} «${first.title}» ${t('متأخرة', 'overdue')} ${sinceDays(first.daysLate, t)}`
+            : `${t(`${row.overdue.length} دفعات متأخرة`, `${row.overdue.length} instalments overdue`)} · ${t('الأقدم', 'Oldest')} ${sinceDays(first.daysLate, t)}`,
+        amount: overdueTotal,
+        path: `/clients/${row.client.id}?section=schedule`,
+      });
+    } else if (late.length > 1) {
+      const oldest = late[0];
+      items.push({
+        key: 'schedule-many',
+        tone: oldest.oldestDays >= 30 ? 'danger' : 'warning',
+        kind: 'schedule-overdue',
+        title: t(`دفعات متأخرة عند ${late.length} عملاء`, `Overdue instalments from ${late.length} clients`),
+        subtitle: `${t('الأقدم', 'Oldest')}: ${oldest.client.name} ${sinceDays(oldest.oldestDays, t)}`,
+        amount: overdueTotal,
+        path: '/receivables',
       });
     }
   }

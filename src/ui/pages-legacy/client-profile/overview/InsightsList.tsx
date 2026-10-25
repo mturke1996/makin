@@ -13,7 +13,7 @@ export interface InsightsListProps {
 }
 const ACTIONS: Record<InsightAction, string> = {
   expenses: 'مراجعة المصروفات', payments: 'مراجعة التحصيل', debts: 'فتح الديون', workers: 'مراجعة مستحقات العمال',
-  balances: 'مراجعة العهد', phases: 'متابعة المراحل', boq: 'مراجعة جدول الكميات', invoices: 'مراجعة الفواتير', profit: 'مراجعة النسبة', statement: 'فتح كشف الحساب',
+  balances: 'مراجعة العهد', phases: 'متابعة المراحل', boq: 'مراجعة جدول الكميات', invoices: 'مراجعة الفواتير', schedule: 'فتح جدول الدفعات', profit: 'مراجعة النسبة', statement: 'فتح كشف الحساب',
 };
 /** Priorities, evidence and explicit destinations; unavailable actions remain readable. */
 export function InsightsList({ insights, onAction, unavailable = [], limit = INSIGHTS_SHOWN, className }: InsightsListProps) {

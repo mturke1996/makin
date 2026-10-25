@@ -13,6 +13,7 @@ import {
   AddCircleOutline,
   History,
   Groups,
+  HourglassEmpty,
 } from '../../design-system/icons';
 import { ComponentType } from 'react';
 import type { AppModule } from '../../core/access/modules';
@@ -53,6 +54,8 @@ const NEW_INVOICE: NavItem = {
   permission: 'invoices.manage',
 };
 const PAYMENTS: NavItem = { id: 'payments', label: 'المدفوعات', labelEn: 'Payments', path: '/payments', icon: PaymentsIcon, module: 'payments' };
+/** Who is late and by how long. Whoever sees payments also sees the clients list (the permission requires it), so debtors can be named. */
+const RECEIVABLES: NavItem = { id: 'receivables', label: 'المتأخرات', labelEn: 'Receivables', path: '/receivables', icon: HourglassEmpty, module: 'payments' };
 const EXPENSES: NavItem = { id: 'expenses', label: 'المصروفات', labelEn: 'Expenses', path: '/expenses', icon: ReceiptLong, module: 'expenses' };
 const EXPENSE_INVOICES: NavItem = {
   id: 'expense-invoices',
@@ -76,7 +79,7 @@ export const PRIMARY_NAV: NavItem[] = [HOME, CLIENTS, EXPENSES, PAYMENTS, FUND];
 export const BOTTOM_NAV_FALLBACKS: NavItem[] = [INVOICES, DEBTS, LETTERS];
 
 /** Additional destinations: shown in the sidebar (desktop) and the drawer (mobile). */
-export const SECONDARY_NAV: NavItem[] = [WORKERS, NEW_INVOICE, DEBTS, EXPENSES, EXPENSE_INVOICES, LETTERS, USERS, AUDIT, SETTINGS];
+export const SECONDARY_NAV: NavItem[] = [WORKERS, NEW_INVOICE, RECEIVABLES, DEBTS, EXPENSES, EXPENSE_INVOICES, LETTERS, USERS, AUDIT, SETTINGS];
 
 export interface NavGroupDef {
   key: string;
@@ -91,7 +94,7 @@ export interface NavGroupDef {
  */
 export const NAV_GROUPS: readonly NavGroupDef[] = [
   { key: 'overview', titleAr: 'عام', titleEn: 'Overview', items: [HOME, CLIENTS, WORKERS] },
-  { key: 'revenue', titleAr: 'الفواتير والمدفوعات', titleEn: 'Invoices & payments', items: [INVOICES, NEW_INVOICE, PAYMENTS] },
+  { key: 'revenue', titleAr: 'الفواتير والمدفوعات', titleEn: 'Invoices & payments', items: [INVOICES, NEW_INVOICE, PAYMENTS, RECEIVABLES] },
   { key: 'spending', titleAr: 'المصروفات والعهد', titleEn: 'Expenses & custody', items: [EXPENSES, EXPENSE_INVOICES, FUND, DEBTS] },
   { key: 'admin', titleAr: 'المستندات والإدارة', titleEn: 'Documents & admin', items: [LETTERS, USERS, AUDIT, SETTINGS] },
 ];

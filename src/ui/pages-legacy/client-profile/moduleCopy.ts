@@ -15,6 +15,7 @@ const FORMS = {
   balances: { none: 'لا حركات بعد', one: 'حركة واحدة', two: 'حركتان', few: 'حركات', many: 'حركة' },
   phases: { none: 'لا مراحل بعد', one: 'مرحلة واحدة', two: 'مرحلتان', few: 'مراحل', many: 'مرحلة' },
   boq: { none: 'لا بنود بعد', one: 'بند واحد', two: 'بندان', few: 'بنود', many: 'بنداً' },
+  milestones: { none: 'لا جدول بعد', one: 'دفعة واحدة', two: 'دفعتان', few: 'دفعات', many: 'دفعة' },
   reports: { none: 'لا تقارير بعد', one: 'تقرير واحد', two: 'تقريران', few: 'تقارير', many: 'تقريراً' },
 } satisfies Record<string, Forms>;
 

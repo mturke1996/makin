@@ -8,6 +8,7 @@ import { useDataStore } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { sumBoqItems } from '../../core/finance/projectBudget';
+import { scheduleHighlights } from '../../core/finance/paymentSchedule';
 import { buildCategoryBudgetRows } from '../../core/finance/budgetStatus';
 import { getExpenseCategoryLabel } from '../../core/utils-formatters';
 import { PROFIT_BASE_LABELS, resolveProfitBase } from '../../core/finance/clientProfitTotals';
@@ -18,6 +19,7 @@ import type {
   ClientProfitBase,
   Expense,
   Payment,
+  PaymentMilestone,
   ProjectPhase,
   SiteReport,
   StandaloneDebt,
@@ -44,9 +46,12 @@ import { PdfActions } from './client-profile/LedgerParts';
 import { ClientOverview, type InsightAction } from './client-profile/overview';
 import { PaymentFormSheet } from './client-profile/PaymentFormSheet';
 import { PaymentsSheet } from './client-profile/PaymentsSheet';
+import { GenerateScheduleSheet } from './client-profile/GenerateScheduleSheet';
+import { MilestoneFormSheet } from './client-profile/MilestoneFormSheet';
 import { PhaseFormSheet } from './client-profile/PhaseFormSheet';
 import { PhasesSheet } from './client-profile/PhasesSheet';
 import { ProfitRuleModal } from './client-profile/ProfitRuleModal';
+import { ScheduleSheet } from './client-profile/ScheduleSheet';
 import { SiteReportFormSheet } from './client-profile/SiteReportFormSheet';
 import { SiteReportsSheet } from './client-profile/SiteReportsSheet';
 import { WorkersFlow } from './client-profile/workers';
@@ -67,6 +72,8 @@ type ActiveForm =
   | { kind: 'balance'; edit?: UserBalance | null; userId?: string }
   | { kind: 'phase'; edit?: ProjectPhase | null }
   | { kind: 'boq'; edit?: BoqLineItem | null }
+  | { kind: 'milestone'; edit?: PaymentMilestone | null }
+  | { kind: 'generateSchedule' }
   | { kind: 'siteReport'; edit?: SiteReport | null }
   | { kind: 'editClient' }
   | { kind: 'profit' };
@@ -101,6 +108,7 @@ export const ClientProfilePage = () => {
     manageCustody: access.can('custody.manage'),
     manageProjects: access.can('projects.manage'),
     manageInvoices: access.can('invoices.manage'),
+    manageSchedule: access.can('payments.manage'),
     manageLetters: access.can('letters.manage'),
   };
   // The agreed percentage is a client edit, and only makes sense next to the full account it is computed from.
@@ -112,13 +120,16 @@ export const ClientProfilePage = () => {
     [caps.expenseScope, caps.projects, data.clientBoqItems, data.clientExpenses],
   );
 
+  // The late and coming instalments, for the attention list.
+  const insightSchedule = useMemo(() => scheduleHighlights(data.schedule), [data.schedule]);
+
   const [activeSheet, setActiveSheet] = useState<ProfileSheetKey | null>(null);
   // A link may open a section straight away (?section=workers|phases|boq|expenses), when this person may see it.
   useEffect(() => {
     const wanted = searchParams.get('section');
-    const allowed: Record<string, boolean> = { workers: caps.workers, phases: caps.projects, boq: caps.projects, expenses: caps.expenseScope !== 'none' };
+    const allowed: Record<string, boolean> = { schedule: caps.payments, invoices: caps.invoices, workers: caps.workers, phases: caps.projects, boq: caps.projects, expenses: caps.expenseScope !== 'none' };
     if (wanted && allowed[wanted]) setActiveSheet(wanted as ProfileSheetKey);
-  }, [searchParams, caps.workers, caps.projects, caps.expenseScope]);
+  }, [searchParams, caps.workers, caps.projects, caps.payments, caps.invoices, caps.expenseScope]);
   const [activeForm, setActiveForm] = useState<ActiveForm | null>(null);
   const [profitPercentage, setProfitPercentage] = useState('');
   const [profitBase, setProfitBase] = useState<ClientProfitBase>('expenses');
@@ -146,6 +157,7 @@ export const ClientProfilePage = () => {
     debts: data.clientDebts,
     workers: data.clientWorkers,
     budget: caps.expenseScope === 'all' && caps.projects ? { phases: data.phaseBudgetRows, categories: categoryRows } : undefined,
+    schedule: caps.payments ? data.schedule : undefined,
     summary,
   });
   const deletes = useClientDeletes({ closeForm });
@@ -153,6 +165,7 @@ export const ClientProfilePage = () => {
     clientId,
     systemUsers: data.systemUsers,
     phaseCount: clientPhases.length,
+    milestoneCount: data.clientMilestones.length,
     afterSave: (sheet) => {
       const back = returnSheet.current;
       returnSheet.current = null;
@@ -278,6 +291,7 @@ export const ClientProfilePage = () => {
     !canEditProfit && 'profit',
     caps.expenseScope === 'none' && 'expenses',
     !caps.payments && 'payments',
+    !caps.payments && 'schedule',
     !caps.debts && 'debts',
     !caps.workers && 'workers',
     !caps.custody && 'balances',
@@ -314,6 +328,9 @@ export const ClientProfilePage = () => {
         invoicesRemaining: caps.payments ? invoiceView.totals.remaining : null,
         invoicesOverdue: invoiceView.totals.overdueCount,
         letters: clientLetters.length,
+        milestones: data.schedule.rows.length,
+        scheduleRemaining: data.schedule.remaining,
+        scheduleOverdue: data.schedule.overdueCount,
       }}
     />
   );
@@ -365,6 +382,7 @@ export const ClientProfilePage = () => {
               categoryBudgetRows={categoryRows}
               custody={userBalancesSummary}
               invoices={caps.invoices ? clientInvoices : undefined}
+              schedule={insightSchedule}
               expenseScope={caps.expenseScope}
               onAction={openInsight}
               unavailableActions={unavailableInsights}
@@ -454,6 +472,35 @@ export const ClientProfilePage = () => {
           onDelete={may.deletePayments ? (p) => deletes.payment(p) : undefined}
           onDownloadPdf={caps.showSummary ? () => pdf.download('payments') : undefined}
           onSharePdf={caps.showSummary ? () => pdf.share('payments') : undefined}
+        />
+      )}
+
+      {caps.payments && (
+        <ScheduleSheet
+          open={activeSheet === 'schedule'}
+          loading={data.isLoading}
+          onClose={closeSheet}
+          client={client}
+          schedule={data.schedule}
+          contractValue={client.contractValue}
+          onAdd={may.manageSchedule ? () => setActiveForm({ kind: 'milestone', edit: null }) : undefined}
+          onGenerate={may.manageSchedule ? () => setActiveForm({ kind: 'generateSchedule' }) : undefined}
+          onEdit={
+            may.manageSchedule
+              ? (id) => {
+                  const edit = data.clientMilestones.find((m) => m.id === id);
+                  if (edit) setActiveForm({ kind: 'milestone', edit });
+                }
+              : undefined
+          }
+          onDelete={
+            may.manageSchedule
+              ? (id) => {
+                  const milestone = data.clientMilestones.find((m) => m.id === id);
+                  if (milestone) deletes.milestone(milestone);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -725,6 +772,35 @@ export const ClientProfilePage = () => {
           phases={clientPhases}
           onClose={dismissForm}
           onSubmit={(values) => saves.saveBoq(activeForm.edit, values)}
+        />
+      )}
+
+      {activeForm?.kind === 'milestone' && may.manageSchedule && (
+        <MilestoneFormSheet
+          edit={activeForm.edit}
+          nextOrder={data.clientMilestones.length + 1}
+          suggestedAmount={
+            client.contractValue && client.contractValue > data.schedule.total
+              ? Math.round((client.contractValue - data.schedule.total) * 1000) / 1000
+              : undefined
+          }
+          onClose={dismissForm}
+          onSubmit={(values) => saves.saveMilestone(activeForm.edit, values)}
+          onDelete={activeForm.edit ? () => deletes.milestone(activeForm.edit!) : undefined}
+        />
+      )}
+
+      {activeForm?.kind === 'generateSchedule' && may.manageSchedule && (
+        <GenerateScheduleSheet
+          suggestedTotal={
+            client.contractValue && client.contractValue > data.schedule.total
+              ? Math.round((client.contractValue - data.schedule.total) * 1000) / 1000
+              : 0
+          }
+          contractValue={client.contractValue}
+          existingCount={data.clientMilestones.length}
+          onClose={dismissForm}
+          onSubmit={(drafts) => saves.saveSchedule(drafts)}
         />
       )}
 

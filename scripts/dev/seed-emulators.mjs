@@ -140,12 +140,29 @@ await put('invoices', 'inv2', {
   invoiceNumber: 'MK-2026-002', clientId: 'c-shop', items: [{ id: 'a', description: 'تشطيب المعرض: الدفعة الأولى', quantity: 1, unitPrice: 70000, total: 70000 }],
   subtotal: 70000, taxRate: 0, taxAmount: 0, total: 70000, status: 'sent', issueDate: '2026-10-01', dueDate: '2026-11-01', createdBy: adminName, ...stamp(),
 });
+await put('invoices', 'inv3', {
+  invoiceNumber: 'MK-2026-003', clientId: 'c-old', items: [{ id: 'a', description: 'الدفعة الختامية: أعمال الواجهات', quantity: 1, unitPrice: 15000, total: 15000 }],
+  subtotal: 15000, taxRate: 0, taxAmount: 0, total: 15000, status: 'sent', issueDate: '2026-06-30', dueDate: '2026-07-15', createdBy: adminName, ...stamp(),
+});
 const pays = [
   ['pay1', 'inv1', 'c-villa', 60000, 'bank_transfer', '2026-09-20'],
   ['pay2', 'inv1', 'c-villa', 25000, 'cash', '2026-10-10'],
   ['pay3', 'inv2', 'c-shop', 30000, 'check', '2026-10-12'],
 ];
 for (const [id, invoiceId, clientId, amount, paymentMethod, paymentDate] of pays) await put('payments', id, { invoiceId, clientId, amount, paymentMethod, paymentDate, createdBy: adminName, ...stamp() });
+
+// ── Agreed payment schedules (payments are laid against them in order; nothing stores "paid") ──
+const milestones = [
+  ['ms1', 'c-villa', 1, 'الدفعة الأولى: مقدمة العقد', 60000, '2026-06-10'],
+  ['ms2', 'c-villa', 2, 'عند اكتمال الأساسات', 70000, '2026-09-20'],
+  ['ms3', 'c-villa', 3, 'عند صب الهيكل الخرساني', 120000, '2026-10-30'],
+  ['ms4', 'c-villa', 4, 'أعمال التشطيبات', 150000, '2026-12-20'],
+  ['ms5', 'c-villa', 5, 'التسليم النهائي', 80000, '2027-02-20'],
+  ['ms6', 'c-shop', 1, 'دفعة مقدمة', 70000, '2026-08-20'],
+  ['ms7', 'c-shop', 2, 'منتصف المشروع', 80000, '2026-11-15'],
+  ['ms8', 'c-shop', 3, 'التسليم', 60000, '2027-01-10'],
+];
+for (const [id, clientId, order, title, amount, dueDate] of milestones) await put('payment_milestones', id, { clientId, order, title, amount, dueDate, createdBy: adminName, ...stamp() });
 
 // ── Debts & custody ───────────────────────────────────────────────────────────
 await put('standalone_debts', 'd1', {
