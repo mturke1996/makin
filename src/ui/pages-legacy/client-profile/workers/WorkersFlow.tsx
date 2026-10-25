@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useDataSlice } from '../../../../stores/useDataStore';
 import { useAuthStore } from '../../../../stores/useAuthStore';
 import { useAccess } from '../../../../core/access/useAccess';
 import { formatCurrencyDisplay } from '../../../../core/utils-formatters';
 import { summarizeWorkerLedgers, type WorkerLedgerPayment } from '../../../../core/finance/workerLedger';
 import { agreementRevision, revisedAgreementHistory, workerAgreementChanged } from '../../../../core/finance/workerLedgerHistory';
+import { advanceTotal, workerProgressView } from '../../../../core/finance/workerProgress';
+import { buildWorkerVoucher } from '../../../../core/finance/workerVoucher';
+import { previousProjects } from '../../../../core/finance/workerCard';
+import { downloadPdf } from '../../../../features/pdf/pdfService';
+import { WorkerVoucherPDF } from '../../../../features/pdf/WorkerVoucherPDF';
 import type { Worker } from '../../../../types';
 import type { WorkerReportPeriod } from '../../../../features/pdf/workerReportModel';
 import { ConfirmModal, type ConfirmRequest } from './ConfirmModal';
@@ -54,7 +60,7 @@ interface WorkersFlowProps {
 export function WorkersFlow({
   open, onClose, clientId, clientName, entries, fundStats, pdfLoading, onDownloadPdf, onSharePdf, onStatementPdf, onShareStatement, initialWorkerId,
 }: WorkersFlowProps) {
-  const { addWorker, updateWorker, addExpense, updateExpense, deleteExpense, isLoading } = useDataSlice('addWorker', 'updateWorker', 'addExpense', 'updateExpense', 'deleteExpense', 'isLoading');
+  const { addWorker, updateWorker, addExpense, updateExpense, deleteExpense, isLoading, workers: allWorkers, clients } = useDataSlice('addWorker', 'updateWorker', 'addExpense', 'updateExpense', 'deleteExpense', 'isLoading', 'workers', 'clients');
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
 
@@ -123,6 +129,7 @@ export function WorkersFlow({
       name: values.name,
       jobType: values.jobType,
       phone: values.phone,
+      nationalId: values.nationalId,
       startDate: values.startDate,
       notes: values.notes,
       totalAmount: values.totalAmount,
@@ -175,6 +182,8 @@ export function WorkersFlow({
         notes: values.note,
         workerId: worker.id,
         workerName: worker.name,
+        // A cleared flag is null (Firestore strips undefined).
+        isWorkerAdvance: values.advance ? true : edit.isWorkerAdvance ? (null as unknown as undefined) : undefined,
         updatedAt: now,
       });
     } else {
@@ -192,12 +201,44 @@ export function WorkersFlow({
         updatedAt: values.createdAt,
         workerId: worker.id,
         workerName: worker.name,
+        ...(values.advance ? { isWorkerAdvance: true } : {}),
         userId: user!.id,
         createdBy: user?.displayName || 'المستخدم',
       });
     }
     payment.hide();
   };
+
+  /** The supervisor approves how much of the work is done; it is what payments are measured against. */
+  const saveProgress = async (percent: number) => {
+    if (!canManage || !selected) throw new Error('not-allowed');
+    const now = new Date().toISOString();
+    await updateWorker(
+      selected.worker.id,
+      { workProgressPercent: percent, workProgressAt: now, workProgressBy: user?.displayName || user?.email || 'المستخدم', updatedAt: now },
+      selected.worker.updatedAt,
+    );
+  };
+
+  /** The voucher the worker signs for a payment, opened as a PDF. */
+  const openVoucher = async (p: WorkerLedgerPayment) => {
+    if (!selected) return;
+    try {
+      const voucher = buildWorkerVoucher({
+        payment: p,
+        worker: selected.worker,
+        ledger: selected.ledger,
+        projectName: clientName || 'المشروع',
+        advances: advanceTotal(selected.ledger.payments),
+      });
+      await downloadPdf(createElement(WorkerVoucherPDF, { voucher }), `إيصال-صرف-${selected.worker.name}-${voucher.ref}`);
+    } catch {
+      toast.error('تعذّر إنشاء إيصال الصرف');
+    }
+  };
+
+  const progressOf = (entry: WorkerEntry) =>
+    workerProgressView({ agreed: entry.ledger.agreed, paid: entry.ledger.paid, percent: entry.worker.workProgressPercent, advances: advanceTotal(entry.ledger.payments) });
 
   const ask = (request: ConfirmRequest) => confirm.show(request);
   const runConfirm = async () => {
@@ -300,6 +341,9 @@ export function WorkersFlow({
         onEditWorker={(opts) => selected && openWorkerForm(selected.worker, !!opts?.itemize)}
         onToggleCompleted={() => selected && toggleCompleted(selected)}
         onArchiveWorker={() => selected && requestArchiveWorker(selected)}
+        onSaveProgress={saveProgress}
+        onVoucher={openVoucher}
+        previousProjects={selected ? previousProjects(selected.worker, allWorkers, clients) : []}
         onStatementPdf={onStatementPdf && selected ? (period) => onStatementPdf(selected, period) : undefined}
         onShareStatement={onShareStatement && selected ? (period) => onShareStatement(selected, period) : undefined}
         pdfLoading={pdfLoading}
@@ -325,6 +369,7 @@ export function WorkersFlow({
           worker={paymentCtx.worker}
           draftScope={user?.id ?? ''}
           ledger={paymentCtx.ledger}
+          progress={progressOf(paymentCtx)}
           edit={payment.value?.edit ?? null}
           fundStats={paymentFundStats}
           onSubmit={savePayment}

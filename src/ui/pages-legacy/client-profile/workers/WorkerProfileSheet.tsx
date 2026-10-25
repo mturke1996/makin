@@ -24,8 +24,10 @@ import {
   Segmented,
 } from '../../../../design-system/primitives';
 import type { WorkerLedgerPayment } from '../../../../core/finance/workerLedger';
+import { advanceTotal, workerProgressView } from '../../../../core/finance/workerProgress';
 import { formatDay, telHref } from './format';
 import { WorkerMoneySummary } from './WorkerMoneySummary';
+import { WorkerProgressPanel } from './WorkerProgressPanel';
 import { AgreementBreakdown } from './AgreementBreakdown';
 import { PaymentTimeline } from './PaymentTimeline';
 import { AgreementHistory } from './AgreementHistory';
@@ -49,6 +51,12 @@ interface WorkerProfileSheetProps {
   onEditWorker: (opts?: { itemize?: boolean }) => void;
   onToggleCompleted: () => void;
   onArchiveWorker: () => void;
+  /** Approves the progress of the work (`workers.manage`). */
+  onSaveProgress?: (percent: number) => Promise<void>;
+  /** Opens the voucher the worker signs for a payment. */
+  onVoucher?: (payment: WorkerLedgerPayment) => void;
+  /** Other projects this worker has been recorded on (matched by phone number). */
+  previousProjects?: string[];
   onStatementPdf?: (period?: WorkerReportPeriod) => void;
   onShareStatement?: (period?: WorkerReportPeriod) => void;
   pdfLoading?: boolean;
@@ -86,6 +94,9 @@ export function WorkerProfileSheet({
   onEditWorker,
   onToggleCompleted,
   onArchiveWorker,
+  onSaveProgress,
+  onVoucher,
+  previousProjects = [],
   onStatementPdf,
   onShareStatement,
   pdfLoading,
@@ -157,7 +168,7 @@ export function WorkerProfileSheet({
             </div>
           </section>
 
-          {(worker.phone || worker.startDate || worker.notes) && (
+          {(worker.phone || worker.nationalId || worker.startDate || worker.notes || previousProjects.length > 0) && (
             <ListGroup>
               {worker.phone && (
                 <a
@@ -180,6 +191,18 @@ export function WorkerProfileSheet({
                     اتصال
                   </span>
                 </a>
+              )}
+              {worker.nationalId && (
+                <div className="px-4 py-3">
+                  <p className="text-xs text-fg-muted">الهوية / الإقامة</p>
+                  <bdi dir="ltr" className="mt-1 block text-base font-semibold tabular-nums text-fg">{worker.nationalId}</bdi>
+                </div>
+              )}
+              {previousProjects.length > 0 && (
+                <div className="px-4 py-3">
+                  <p className="text-xs text-fg-muted">عمل سابقاً في</p>
+                  <p className="mt-1 text-sm leading-relaxed text-fg">{previousProjects.join('، ')}</p>
+                </div>
               )}
               {worker.startDate && (
                 <div className="flex min-h-14 items-center gap-3 px-4 py-2.5">
@@ -212,6 +235,23 @@ export function WorkerProfileSheet({
             onEditAgreement={
               canManage && !worker.archivedAt ? () => onEditWorker() : undefined
             }
+          />
+
+          <WorkerProgressPanel
+            // A new key resets the typed value when the approved one changes (here or on another device).
+            key={`${worker.id}:${worker.workProgressPercent ?? ''}`}
+            view={workerProgressView({
+              agreed: ledger.agreed,
+              paid: ledger.paid,
+              percent: worker.workProgressPercent,
+              advances: advanceTotal(ledger.payments),
+            })}
+            approvedLine={
+              worker.workProgressAt
+                ? `اعتُمدت ${formatDay(worker.workProgressAt.slice(0, 10))}${worker.workProgressBy ? ` بواسطة ${worker.workProgressBy}` : ''}`
+                : undefined
+            }
+            onSave={canManage && !worker.archivedAt ? onSaveProgress : undefined}
           />
 
           <Segmented<'payments' | 'agreement' | 'details'>
@@ -252,6 +292,7 @@ export function WorkerProfileSheet({
               canPay={canManage && !worker.archivedAt}
               onEdit={onEditPayment}
               onDelete={onDeletePayment}
+              onVoucher={onVoucher}
             />
           )}
 

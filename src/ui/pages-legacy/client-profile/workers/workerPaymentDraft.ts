@@ -5,6 +5,7 @@ export interface WorkerPaymentDraft {
   date: string;
   note: string;
   attempted: boolean;
+  advance?: boolean;
 }
 
 const memory = new Map<string, WorkerPaymentDraft>();

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Delete, Edit, ReceiptLong } from '../../../../design-system/icons';
+import { Delete, Edit, Receipt, ReceiptLong } from '../../../../design-system/icons';
 import {
   Amount,
   Badge,
@@ -27,6 +27,8 @@ interface PaymentTimelineProps {
   canPay: boolean;
   onEdit: (payment: WorkerLedgerPayment) => void;
   onDelete: (payment: WorkerLedgerPayment) => void;
+  /** Opens the voucher the worker signs for this payment. */
+  onVoucher?: (payment: WorkerLedgerPayment) => void;
 }
 
 function PaymentRow({
@@ -37,6 +39,7 @@ function PaymentRow({
   canDelete,
   onEdit,
   onDelete,
+  onVoucher,
 }: {
   payment: WorkerLedgerPayment;
   ordinal: number;
@@ -46,6 +49,7 @@ function PaymentRow({
   canDelete: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onVoucher?: () => void;
 }) {
   return (
     <article className="px-4 py-3.5">
@@ -53,6 +57,7 @@ function PaymentRow({
         <div className="min-w-0">
           <p className="text-sm font-semibold tabular-nums text-fg">
             الدفعة {ordinal}
+            {payment.expense.isWorkerAdvance && <Badge tone="warning" className="ms-2 align-middle">سلفة</Badge>}
             <span className="font-normal text-fg-muted">
               {payment.day ? ` · ${formatDay(payment.day)}` : ''}
             </span>
@@ -102,8 +107,13 @@ function PaymentRow({
             <Badge tone="info">مغلقة في فاتورة مصروفات</Badge>
           )}
         </div>
-        {(canEdit || canDelete) && (
+        {(canEdit || canDelete || onVoucher) && (
           <div className="-me-2 flex flex-none">
+            {onVoucher && (
+              <IconButton label={`إيصال صرف الدفعة ${ordinal}`} onClick={onVoucher}>
+                <Receipt sx={{ fontSize: 20 }} />
+              </IconButton>
+            )}
             {canEdit && (
               <IconButton label={`تعديل الدفعة ${ordinal}`} onClick={onEdit}>
                 <Edit sx={{ fontSize: 20 }} />
@@ -137,6 +147,7 @@ export function PaymentTimeline({
   canPay,
   onEdit,
   onDelete,
+  onVoucher,
 }: PaymentTimelineProps) {
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState('');
@@ -279,6 +290,7 @@ export function PaymentTimeline({
                     canDelete={canDelete(p)}
                     onEdit={() => onEdit(p)}
                     onDelete={() => onDelete(p)}
+                    onVoucher={onVoucher ? () => onVoucher(p) : undefined}
                   />
                 ))}
               </ListGroup>

@@ -2,14 +2,15 @@ import app from '../config/firebase';
 
 /** The storage service, loaded on first use; against the local emulators it talks to the storage emulator. */
 async function appStorage() {
-  const { getStorage, connectStorageEmulator } = await import('firebase/storage');
-  const storage = getStorage(app);
-  if (import.meta.env.VITE_USE_EMULATORS === 'true' && !(storage as unknown as { _emulatorConnected?: boolean })._emulatorConnected) {
-    connectStorageEmulator(storage, '127.0.0.1', 9199);
-    (storage as unknown as { _emulatorConnected?: boolean })._emulatorConnected = true;
+  const sdk = await import('firebase/storage');
+  const storage = sdk.getStorage(app);
+  if (import.meta.env.VITE_USE_EMULATORS === 'true' && !emulatorConnected.has(storage)) {
+    sdk.connectStorageEmulator(storage, '127.0.0.1', 9199);
+    emulatorConnected.add(storage);
   }
   return storage;
 }
+const emulatorConnected = new WeakSet<object>();
 
 /**
  * Removes a receipt file saved on an expense (when it is replaced, removed, or the expense is deleted).

@@ -87,6 +87,12 @@ export interface Worker {
   /** Archived workers retain their agreements, payments and outstanding obligations. */
   archivedAt?: string;
   archivedBy?: string;
+  /** نسبة الإنجاز المعتمدة (0 إلى 100): يعتمدها المشرف، وتُقارَن بما دُفع للعامل. */
+  workProgressPercent?: number;
+  workProgressAt?: string;
+  workProgressBy?: string;
+  /** رقم الهوية أو الإقامة، لبطاقة العامل (اختياري). */
+  nationalId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -163,6 +169,8 @@ export interface Expense {
   userId?: string; // Firebase Auth UID للمستخدم الذي سجل المصروف (للربط بالعهدة)
   workerId?: string; // ربط المصروف بعامل إذا كان دفعة له
   workerName?: string;
+  /** دفعة العامل سلفة: مال يُدفع قبل إنجاز العمل ويُخصم تلقائياً مما يستحقه بالإنجاز. */
+  isWorkerAdvance?: boolean;
   /** رابط صورة/PDF للفاتورة أو الإيصال */
   attachmentUrl?: string;
   attachmentName?: string;

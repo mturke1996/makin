@@ -12,6 +12,7 @@ export interface WorkerFormValues {
   name: string;
   jobType: string;
   phone: string;
+  nationalId: string;
   startDate: string;
   notes: string;
   totalAmount: number;
@@ -26,4 +27,6 @@ export interface WorkerPaymentValues {
   note: string;
   operationId: string;
   createdAt: string;
+  /** سلفة: تُدفع قبل إنجاز العمل وتُخصم تلقائياً مما يستحقه بالإنجاز. */
+  advance: boolean;
 }

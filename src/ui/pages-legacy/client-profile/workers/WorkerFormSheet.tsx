@@ -140,6 +140,16 @@ export function WorkerFormSheet({ open, onClose, clientName, edit, startItemized
             onChange={(e) => update({ ...draft, phone: e.target.value })}
           />
           <Input
+            label="رقم الهوية أو الإقامة (اختياري)"
+            dir="ltr"
+            className="text-end"
+            inputMode="numeric"
+            placeholder="يظهر في بطاقة العامل وإيصال الصرف"
+            value={draft.nationalId}
+            autoComplete="off"
+            onChange={(e) => update({ ...draft, nationalId: e.target.value })}
+          />
+          <Input
             label="تاريخ بدء العمل (اختياري)"
             type="date"
             value={draft.startDate}

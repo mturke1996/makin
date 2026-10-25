@@ -493,3 +493,25 @@ describe('payment schedule rules', () => {
     expect(order.indexOf('schedule-overdue')).toBeLessThan(order.indexOf('percentage-deficit'));
   });
 });
+
+describe('workers paid ahead of their progress', () => {
+  it('is silent when nobody is ahead', () => {
+    expect(ids(base({ workersAhead: [] }))).toEqual([]);
+    expect(ids(base({ workersAhead: [{ name: 'علي', aheadBy: 0, far: false }] }))).toEqual([]);
+  });
+
+  it('names a single worker and the amount, warning unless far ahead', () => {
+    const near = one(base({ workersAhead: [{ name: 'علي', aheadBy: 1500, far: false }] }), 'workers-ahead');
+    expect(near?.severity).toBe('warning');
+    expect(near?.title).toContain('علي');
+    expect(near?.action).toBe('workers');
+    expect(one(base({ workersAhead: [{ name: 'علي', aheadBy: 5000, far: true }] }), 'workers-ahead')?.severity).toBe('danger');
+  });
+
+  it('counts several workers and quotes the largest', () => {
+    const insight = one(base({ workersAhead: [{ name: 'علي', aheadBy: 100, far: false }, { name: 'سالم', aheadBy: 900, far: false }, { name: 'منصور', aheadBy: 50, far: true }] }), 'workers-ahead');
+    expect(insight?.title).toContain('3 عمال');
+    expect(insight?.severity).toBe('danger');
+    expect(insight?.reason).toContain('سالم');
+  });
+});

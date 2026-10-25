@@ -3,7 +3,7 @@ import { ExpandMore, Insights } from '../../../../design-system/icons';
 import { Button, EmptyState } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
 import { buildOverviewTrend, localDay } from '../../../../core/finance/clientAnalytics';
-import { buildClientInsights, type InsightAction, type InsightSchedule } from '../../../../core/finance/clientInsights';
+import { buildClientInsights, type InsightAction, type InsightSchedule, type InsightWorkerAhead } from '../../../../core/finance/clientInsights';
 import type { PhaseBudgetRow } from '../../../../core/finance/projectBudget';
 import type { CategoryBudgetRow } from '../../../../core/finance/budgetStatus';
 import type { Expense, Invoice, Payment, StandaloneDebt } from '../../../../types';
@@ -35,6 +35,8 @@ export interface ClientOverviewProps {
   invoices?: readonly Invoice[];
   /** What the agreed payment schedule says (late or due soon), when the client has one and the viewer sees payments. */
   schedule?: InsightSchedule;
+  /** Workers paid beyond their approved progress. */
+  workersAhead?: readonly InsightWorkerAhead[];
   /** Whose expenses are listed; the split by person is shown only for `'all'`. Defaults to `'all'`. */
   expenseScope?: 'all' | 'own' | 'none';
   /** Called with the action of the insight that was tapped; the page opens the matching sheet or form. */
@@ -71,6 +73,7 @@ export function ClientOverview({
   custody,
   invoices,
   schedule,
+  workersAhead,
   expenseScope = 'all',
   onAction,
   unavailableActions,
@@ -106,8 +109,9 @@ export function ClientOverview({
         custody: Object.values(custody),
         invoices,
         schedule,
+        workersAhead,
       }),
-    [today, summary, expenses, payments, debts, workerSummary, phaseBudgetRows, categoryBudgetRows, custody, invoices, schedule],
+    [today, summary, expenses, payments, debts, workerSummary, phaseBudgetRows, categoryBudgetRows, custody, invoices, schedule, workersAhead],
   );
 
   // The slot stays in every state: the way into the records must not vanish while the numbers load or when there are none.

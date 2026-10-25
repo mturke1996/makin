@@ -89,6 +89,15 @@ export interface InsightInput {
   invoices?: readonly Invoice[];
   /** The agreed payment schedule, only when the client has one and the viewer sees the payments. */
   schedule?: InsightSchedule;
+  /** Workers paid beyond the progress the supervisor approved (only those with an approved progress). */
+  workersAhead?: readonly InsightWorkerAhead[];
+}
+
+export interface InsightWorkerAhead {
+  name: string;
+  aheadBy: number;
+  /** A fifth of the agreement or more is paid ahead of the work. */
+  far: boolean;
 }
 
 /** What the payment schedule says that matters (see `buildPaymentSchedule`). */
@@ -161,6 +170,7 @@ const PRIORITY = [
   'category-over-budget',
   'phase-near-budget',
   'category-near-budget',
+  'workers-ahead',
   'custody-depleted',
   'no-recent-payment',
   'debts-overdue',
@@ -419,6 +429,23 @@ function largeExpenseRule(input: InsightInput, out: ClientInsight[]) {
   }
 }
 
+/** Money paid to a worker before the work it pays for is done: the supervisor's progress against the payments. */
+function workersAheadRule(input: InsightInput, out: ClientInsight[]) {
+  const ahead = (input.workersAhead ?? []).filter((w) => toMilli(w.aheadBy) > 0).sort((a, b) => toMilli(b.aheadBy) - toMilli(a.aheadBy));
+  if (ahead.length === 0) return;
+  const worst = ahead[0];
+  out.push({
+    id: 'workers-ahead',
+    severity: ahead.some((w) => w.far) ? 'danger' : 'warning',
+    title:
+      ahead.length === 1
+        ? `دُفع لـ ${worst.name} قبل إنجاز عمله`
+        : `${countWords(ahead.length, { one: 'عامل', two: 'عاملان', few: 'عمال', many: 'عاملاً' })} دُفع لهم قبل الإنجاز`,
+    reason: `${ahead.length === 1 ? 'المدفوع يسبق الإنجاز المعتمد' : 'الأكبر ' + worst.name + ': المدفوع يسبق الإنجاز'} بمقدار ${money(worst.aheadBy)}.`,
+    action: 'workers',
+  });
+}
+
 function workersRule(input: InsightInput, out: ClientInsight[]) {
   const due = input.totals.workersDue;
   if (due === undefined || toMilli(due) <= 0) return;
@@ -536,6 +563,7 @@ export function buildClientInsights(input: InsightInput): ClientInsight[] {
   categoryRules(input, out);
   quietPaymentRule(input, out);
   largeExpenseRule(input, out);
+  workersAheadRule(input, out);
   workersRule(input, out);
   debtsRule(input, out);
   invoiceRules(input, out);

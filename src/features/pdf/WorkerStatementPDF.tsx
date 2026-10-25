@@ -7,6 +7,7 @@ import { getPdfBrand } from './pdfBrand';
 import { INK, countWord, PdfDocTitle, PdfInfoCard, PdfPage, PdfSectionHeading, PdfSummaryStrip, makePdfStyles } from './pdfKit';
 import { PdfTable, type PdfColumn } from './PdfTable';
 import { PDF_FONT_FAMILY } from './pdfFonts';
+import { advanceTotal, workerProgressView } from '../../core/finance/workerProgress';
 import { buildWorkerStatement, type WorkerReportEntry, type WorkerReportPeriod } from './workerReportModel';
 
 const AGREEMENT_COLS: PdfColumn[] = [
@@ -54,6 +55,7 @@ export function WorkerStatementPages({ client, entry, period, letterhead = false
   const { worker, ledger } = report;
   const ref = `MK-WST-${ymd()}-${String(worker.id).slice(-4).toUpperCase()}`;
   const scope = report.scoped ? `من ${period?.from ? arDate(period.from) : 'البداية'} إلى ${period?.to ? arDate(period.to) : 'اليوم'}` : undefined;
+  const progress = worker.workProgressPercent == null ? null : workerProgressView({ agreed: ledger.agreed, paid: ledger.paid, percent: worker.workProgressPercent, advances: advanceTotal(ledger.payments) });
   const basisNotes = [...new Set(report.payments.map((p) => p.balanceBasis))].filter((b) => b !== 'recorded').map((b) => BASIS_NOTE[b]);
 
   const agreementRows = report.agreementRows.map((r) => ({
@@ -66,7 +68,7 @@ export function WorkerStatementPages({ client, entry, period, letterhead = false
   const paymentRows = report.payments.map((p, i) => ({
     n: String(i + 1),
     date: p.day ? arDate(p.day) : 'غير موثق',
-    desc: { t: p.note || 'دفعة', s: p.recordedBy ? `سجّلها ${p.recordedBy}` : undefined },
+    desc: { t: p.note || (p.expense.isWorkerAdvance ? 'سلفة' : 'دفعة'), s: [p.expense.isWorkerAdvance && p.note ? 'سلفة' : '', p.recordedBy ? `سجّلها ${p.recordedBy}` : ''].filter(Boolean).join('  ·  ') || undefined },
     amount: p.amount,
     cumulative: p.cumulativePaid,
     remaining: p.remainingAfter,
@@ -96,6 +98,7 @@ export function WorkerStatementPages({ client, entry, period, letterhead = false
         items={[
           { label: 'المشروع', value: client.name },
           { label: 'هاتف العامل', value: worker.phone },
+          { label: 'الهوية', value: worker.nationalId },
           { label: 'بدء العمل', value: worker.startDate ? arDate(worker.startDate) : undefined },
           { label: 'الحالة', value: `${report.workLabel}، ${report.accountLabel}` },
           { label: 'نطاق الدفعات', value: scope },
@@ -110,6 +113,16 @@ export function WorkerStatementPages({ client, entry, period, letterhead = false
           ...(ledger.overpaidBy > 0 ? [{ label: 'زيادة مدفوعة', value: ledger.overpaidBy, color: INK.warning }] : []),
         ]}
       />
+      {progress ? (
+        <Text style={{ ...small, color: progress.aheadBy > 0 ? INK.warning : INK.muted, marginBottom: 4 }}>
+          {ar(
+            `الإنجاز المعتمد ${progress.percent} بالمئة، والمستحق به ${formatCurrencyDisplay(progress.earned)}. ` +
+              (progress.aheadBy > 0
+                ? `المدفوع يسبق الإنجاز بمقدار ${formatCurrencyDisplay(progress.aheadBy)}${progress.advanceOutstanding > 0 ? '، منه سلف قائمة تُخصم من الإنجاز القادم' : ''}.`
+                : `المستحق الآن بعد خصم السلف ${formatCurrencyDisplay(progress.payableNow)}.`),
+          )}
+        </Text>
+      ) : null}
       {worker.notes ? <Text style={{ ...small, color: INK.text, marginBottom: 4 }}>{ar(`ملاحظات: ${worker.notes}`)}</Text> : null}
 
       <PdfSectionHeading s={s}>الاتفاق الحالي</PdfSectionHeading>

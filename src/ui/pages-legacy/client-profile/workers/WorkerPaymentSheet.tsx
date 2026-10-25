@@ -3,6 +3,7 @@ import { WarningAmber } from '../../../../design-system/icons';
 import { Amount, Button, Input, Sheet, Textarea } from '../../../../design-system/primitives';
 import { formatCurrencyDisplay } from '../../../../core/utils-formatters';
 import { fromMilli, subtractMoney, toMilli, type WorkerLedger, type WorkerLedgerPayment } from '../../../../core/finance/workerLedger';
+import { exceedsEarnedBy, type WorkerProgressView } from '../../../../core/finance/workerProgress';
 import type { Worker } from '../../../../types';
 import { CustodyOverdraftNotice } from '../profileBanners';
 import { numberToInput, parseNumberInput, todayDay } from './format';
@@ -18,6 +19,8 @@ interface WorkerPaymentSheetProps {
   onClose: () => void;
   worker: Worker;
   ledger: WorkerLedger;
+  /** The approved progress against what he has been paid, for the advance and the early-payment notices. */
+  progress: WorkerProgressView;
   /** Account-scoped drafts never appear for another signed-in user. */
   draftScope: string;
   /** الدفعة قيد التعديل، أو لا شيء لدفعة جديدة. */
@@ -28,26 +31,27 @@ interface WorkerPaymentSheetProps {
 }
 
 /** صرف دفعة لعامل أو تعديلها: المبلغ، التاريخ، الملاحظة، ومعاينة المتبقي قبل الحفظ. */
-export function WorkerPaymentSheet({ open, onClose, worker, ledger, draftScope, edit, fundStats, onSubmit }: WorkerPaymentSheetProps) {
+export function WorkerPaymentSheet({ open, onClose, worker, ledger, progress, draftScope, edit, fundStats, onSubmit }: WorkerPaymentSheetProps) {
   const scope = `${draftScope}:${worker.clientId}`;
   const [initial] = useState<WorkerPaymentDraft>(() => (!edit && readWorkerPaymentDraft(scope, worker.id)) || {
     operationId: edit?.id ?? crypto.randomUUID(), createdAt: edit?.createdAt ?? new Date().toISOString(),
-    amountText: edit ? numberToInput(edit.amount) : '', date: edit?.day || todayDay(), note: edit?.note ?? '', attempted: false,
+    amountText: edit ? numberToInput(edit.amount) : '', date: edit?.day || todayDay(), note: edit?.note ?? '', attempted: false, advance: !!edit?.expense.isWorkerAdvance,
   });
   const [amountText, setAmountText] = useState(initial.amountText);
   const [date, setDate] = useState(initial.date);
   const [note, setNote] = useState(initial.note);
   const [attempted, setAttempted] = useState(initial.attempted);
+  const [advance, setAdvance] = useState(!!initial.advance);
   const [saveError, setSaveError] = useState(initial.attempted ? 'هذه الدفعة لها محاولة حفظ غير مؤكدة. أعد المحاولة بنفس المرجع والبيانات لتأكيدها دون تكرار.' : '');
   const [errors, setErrors] = useState<{ amount?: string; date?: string }>({});
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const saving = useRef(false);
   const completed = useRef(false);
-  const draft = (): WorkerPaymentDraft => ({ ...initial, amountText, date, note, attempted });
+  const draft = (): WorkerPaymentDraft => ({ ...initial, amountText, date, note, attempted, advance });
   useEffect(() => {
-    if (!edit && !completed.current && (amountText || note || attempted)) saveWorkerPaymentDraft(scope, worker.id, { ...initial, amountText, date, note, attempted });
-  }, [edit, scope, worker.id, initial, amountText, date, note, attempted]);
+    if (!edit && !completed.current && (amountText || note || attempted)) saveWorkerPaymentDraft(scope, worker.id, { ...initial, amountText, date, note, attempted, advance });
+  }, [edit, scope, worker.id, initial, amountText, date, note, attempted, advance]);
 
   // عند التعديل نحسب «قبل هذه الدفعة» بإرجاع مبلغها إلى المتبقي.
   const editedAmount = edit?.amount ?? 0;
@@ -58,6 +62,8 @@ export function WorkerPaymentSheet({ open, onClose, worker, ledger, draftScope, 
   const amount = parsed != null && parsed > 0 ? fromMilli(toMilli(parsed)) : 0;
   const remainingAfter = subtractMoney(remainingBefore, amount);
   const exceeds = amount > 0 && remainingAfter < 0;
+  // Against the approved progress: how far this payment would take the paid total past what the work has earned.
+  const pastEarned = amount > 0 ? exceedsEarnedBy(progress, amount, editedAmount) : 0;
 
   const validate = () => {
     const next: { amount?: string; date?: string } = {};
@@ -83,7 +89,7 @@ export function WorkerPaymentSheet({ open, onClose, worker, ledger, draftScope, 
       setAttempted(true);
     }
     try {
-      const work = onSubmit({ amount, date, note: note.trim(), operationId: initial.operationId, createdAt: initial.createdAt });
+      const work = onSubmit({ amount, date, note: note.trim(), operationId: initial.operationId, createdAt: initial.createdAt, advance });
       void work.then(() => {
         completed.current = true;
         if (!edit) clearWorkerPaymentDraft(scope, worker.id);
@@ -188,6 +194,29 @@ export function WorkerPaymentSheet({ open, onClose, worker, ledger, draftScope, 
               </p>
             </div>
           )}
+          {progress.percent !== null && (
+            <div className="flex items-center justify-between gap-3 px-1 text-sm">
+              <span className="text-fg-subtle">
+                المستحق الآن بعد خصم السلف <span className="text-fg-muted">(إنجاز <bdi dir="ltr">{progress.percent}%</bdi>)</span>
+              </span>
+              <Amount amount={progress.payableNow} className="font-bold" />
+            </div>
+          )}
+          {pastEarned > 0 && !advance && (
+            <div role="status" className="flex items-start gap-2.5 rounded-md bg-warning-soft p-3.5 text-warning-ink">
+              <WarningAmber sx={{ fontSize: 20 }} aria-hidden className="mt-0.5 flex-none" />
+              <p className="text-sm leading-relaxed">
+                هذه الدفعة تسبق الإنجاز المعتمد بمقدار <Amount amount={pastEarned} bare /> د.ل. إن كانت سلفة فعلّمها أدناه لتُخصم من الإنجاز القادم.
+              </p>
+            </div>
+          )}
+          <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-border bg-surface-panel p-3">
+            <input type="checkbox" className="mt-1 size-5 flex-none accent-[var(--brand-accent,#C9972B)]" checked={advance} onChange={(e) => setAdvance(e.target.checked)} />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-fg">هذه سلفة</span>
+              <span className="block text-xs leading-relaxed text-fg-muted">مال يُدفع قبل إنجاز العمل. يُخصم تلقائياً مما يستحقه العامل كلما زاد الإنجاز، ويظهر في كشفه وإيصاله.</span>
+            </span>
+          </label>
           <CustodyOverdraftNotice stats={fundStats} amount={amount > 0 ? amount : ''} originalAmount={editedAmount} />
         </div>
 

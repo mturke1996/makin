@@ -9,6 +9,7 @@ import { useAccess } from '../../core/access/useAccess';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { sumBoqItems } from '../../core/finance/projectBudget';
 import { scheduleHighlights } from '../../core/finance/paymentSchedule';
+import { advanceTotal, workerProgressView } from '../../core/finance/workerProgress';
 import { buildCategoryBudgetRows } from '../../core/finance/budgetStatus';
 import { getExpenseCategoryLabel } from '../../core/utils-formatters';
 import { PROFIT_BASE_LABELS, resolveProfitBase } from '../../core/finance/clientProfitTotals';
@@ -122,6 +123,16 @@ export const ClientProfilePage = () => {
 
   // The late and coming instalments, for the attention list.
   const insightSchedule = useMemo(() => scheduleHighlights(data.schedule), [data.schedule]);
+
+  // Workers whose payments run ahead of the progress the supervisor approved.
+  const workersAhead = useMemo(
+    () =>
+      data.workerEntries
+        .map(({ worker, ledger }) => ({ worker, view: workerProgressView({ agreed: ledger.agreed, paid: ledger.paid, percent: worker.workProgressPercent, advances: advanceTotal(ledger.payments) }) }))
+        .filter(({ worker, view }) => !worker.archivedAt && (view.state === 'ahead' || view.state === 'far_ahead'))
+        .map(({ worker, view }) => ({ name: worker.name, aheadBy: view.aheadBy, far: view.state === 'far_ahead' })),
+    [data.workerEntries],
+  );
 
   const [activeSheet, setActiveSheet] = useState<ProfileSheetKey | null>(null);
   // A link may open a section straight away (?section=workers|phases|boq|expenses), when this person may see it.
@@ -383,6 +394,7 @@ export const ClientProfilePage = () => {
               custody={userBalancesSummary}
               invoices={caps.invoices ? clientInvoices : undefined}
               schedule={insightSchedule}
+              workersAhead={caps.workers ? workersAhead : undefined}
               expenseScope={caps.expenseScope}
               onAction={openInsight}
               unavailableActions={unavailableInsights}

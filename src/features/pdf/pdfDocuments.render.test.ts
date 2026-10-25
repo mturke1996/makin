@@ -15,6 +15,8 @@ import { PdfLogoProvider } from './pdf-logo-context';
 import { ReceiptPDF } from './ReceiptPDF';
 import { buildReceipt } from '../../core/finance/receipt';
 import { WorkerStatementPDF } from './WorkerStatementPDF';
+import { WorkerVoucherPDF } from './WorkerVoucherPDF';
+import { buildWorkerVoucher } from '../../core/finance/workerVoucher';
 
 Font.register({ family: 'MakinPdf', fonts: [{ src: resolve('public/fonts/Tajawal-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Tajawal-Bold.ttf'), fontWeight: 700 }] });
 Font.register({ family: 'MakinNum', fonts: [{ src: resolve('public/fonts/Cairo-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Cairo-Bold.ttf'), fontWeight: 700 }] });
@@ -109,7 +111,12 @@ describe('MAKIN PDF documents', () => {
     ['payments.pdf', () => createElement(PaymentsPDF, { client, payments, total: 85000 }), 1],
     ['debts.pdf', () => createElement(DebtsPDF, { client, debts, total: 5000 }), 1],
     ['workers.pdf', () => createElement(WorkersPDF, { client, workers: [elec, plumb], expenses }), 2],
-    ['worker-statement.pdf', () => createElement(WorkerStatementPDF, { client, entry: buildWorkerLedgers([elec], expenses)[0] }), 1],
+    ['worker-statement.pdf', () => { const entry = buildWorkerLedgers([elec], expenses)[0]; return createElement(WorkerStatementPDF, { client, entry: { ...entry, worker: { ...entry.worker, workProgressPercent: 25, nationalId: '119900112233' } } }); }, 1],
+    ['worker-voucher.pdf', () => {
+      const entry = buildWorkerLedgers([elec], expenses)[0];
+      const voucher = buildWorkerVoucher({ payment: entry.ledger.payments[0], worker: { ...elec, nationalId: '119900112233', workProgressPercent: 25 }, ledger: entry.ledger, projectName: client.name, advances: 0 });
+      return createElement(WorkerVoucherPDF, { voucher });
+    }, 1],
     ['full-report.pdf', () => createElement(FullReportPDF, { client, expenses, payments, debts, workers: [elec, plumb], summary, budget, schedule }), 3],
     ['receipt.pdf', () => createElement(ReceiptPDF, { receipt: buildReceipt({ payment: payments[1], number: 'RC-2026-0007', client, invoice, allPayments: payments }) }), 1],
     ['invoice.pdf', () => createElement(InvoicePDF, { invoice, client }), 1],
