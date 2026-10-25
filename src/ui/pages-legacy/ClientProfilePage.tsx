@@ -727,7 +727,7 @@ export const ClientProfilePage = () => {
               : undefined
           }
           onClose={dismissForm}
-          onSubmit={(values) => saves.saveExpense(activeForm.edit, values)}
+          onSubmit={(values, receipt) => saves.saveExpense(activeForm.edit, values, receipt)}
           onDelete={
             activeForm.edit && access.canDeleteExpense(activeForm.edit)
               ? () => deletes.expense(activeForm.edit!, true)

@@ -283,7 +283,7 @@ export interface QuickExpenseInput {
 
 /**
  * The expense exactly as the rest of the app writes a new one. No `createdByRole`, no
- * `isHiddenFromEmployees`, no attachment (the quick flow takes none).
+ * `isHiddenFromEmployees`; a receipt photo is attached after the save is confirmed.
  */
 export function buildQuickExpense(input: QuickExpenseInput): Expense {
   const iso = input.now.toISOString();

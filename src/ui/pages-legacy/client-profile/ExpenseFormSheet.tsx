@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LockOutlined } from '../../../design-system/icons';
@@ -23,6 +23,8 @@ import {
 import { CustodyOverdraftNotice, UserBalanceBanner } from './profileBanners';
 import { ProfileCallout } from './profileUi';
 import { ExpenseReviewPanel } from '../money/ExpenseReviewPanel';
+import { NO_RECEIPT_CHANGE, type ReceiptChoice } from '../money/receiptAttachment';
+import { ReceiptPhotoField } from '../money/ReceiptPhotoField';
 import { isoDay } from './ledgerUtils';
 import { expenseSchema, type ExpenseFormValues } from './schemas';
 import type { FundStats, UserBalanceInfo } from './types';
@@ -47,7 +49,7 @@ interface ExpenseFormSheetProps {
    */
   readOnlyNotice?: string | null;
   onClose: () => void;
-  onSubmit: (data: ExpenseFormValues) => Promise<unknown>;
+  onSubmit: (data: ExpenseFormValues, receipt: ReceiptChoice) => Promise<unknown>;
   onDelete?: () => void;
   /** Where the expense stands in review, with the decisions for someone who may take them. */
   review?: { canDecide: boolean; onApprove: () => Promise<void>; onReject: (reason: string) => Promise<void> };
@@ -69,6 +71,7 @@ export function ExpenseFormSheet({
   onDelete,
   review,
 }: ExpenseFormSheetProps) {
+  const [receipt, setReceipt] = useState<ReceiptChoice>(NO_RECEIPT_CHANGE);
   const { control, handleSubmit, setValue } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
@@ -124,7 +127,7 @@ export function ExpenseFormSheet({
       amountLabel="مبلغ المصروف"
       maxWidth="md"
       onClose={onClose}
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((values) => onSubmit(values, receipt))}
       submitLabel={edit ? 'حفظ التعديلات' : 'حفظ المصروف'}
       onDelete={edit && !readOnlyNotice ? onDelete : undefined}
       deleteLabel="حذف المصروف"
@@ -270,6 +273,12 @@ export function ExpenseFormSheet({
               <FormDateInput {...field} />
             </FormField>
           )}
+        />
+        <ReceiptPhotoField
+          existing={edit?.attachmentUrl ? { url: edit.attachmentUrl, name: edit.attachmentName } : null}
+          value={receipt}
+          onChange={setReceipt}
+          disabled={!!readOnlyNotice}
         />
         <Controller
           name="notes"
