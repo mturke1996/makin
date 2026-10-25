@@ -20,7 +20,7 @@ import {
   Amount,
   Button,
   EmptyState,
-  FigureStrip,
+  StatCard,
   Input,
   PageHeader,
   PageShell,
@@ -34,9 +34,12 @@ import { CategoryBreakdown, type CategoryTotal } from './money/CategoryBreakdown
 import { ExpenseFormSheet, type ExpenseFormData } from './money/ExpenseFormSheet';
 import { ExpenseRow } from './money/ExpenseRow';
 import { FundBanner } from './money/FundBanner';
-import { ConfirmDeleteModal, FigureStripSkeleton, ListSkeleton, StickyGroup } from './money/moneyUi';
+import { ConfirmDeleteModal, ListSkeleton, StickyGroup } from './money/moneyUi';
+import { MoneyKpiGrid, MoneyKpiSkeleton } from './money/moneyKpis';
+import { summarizeExpenses } from './money/moneyTrend';
+import { DeltaBadge, MiniBars, Sparkline } from '../../design-system/charts';
 import { ProfileCallout } from './client-profile/profileUi';
-import { dayKey, dayLabel, groupBy, isSameMonthAsToday, matchesQuery, sumAmounts } from './money/moneyUtils';
+import { dayKey, dayLabel, groupBy, matchesQuery, sumAmounts } from './money/moneyUtils';
 
 /**
  * Expenses. What this page lists is decided by the access policy: a field employee sees (and
@@ -129,11 +132,11 @@ export const ExpensesPage = () => {
       .sort((a, b) => b.value - a.value);
   }, [visibleExpenses]);
 
-  const totalExpenses = useMemo(() => sumAmounts(visibleExpenses.map((e) => e.amount)), [visibleExpenses]);
-  const monthExpenses = useMemo(
-    () => sumAmounts(visibleExpenses.filter((e) => isSameMonthAsToday(e.date)).map((e) => e.amount)),
-    [visibleExpenses]
-  );
+  const summary = useMemo(() => summarizeExpenses(visibleExpenses, getExpenseCategoryLabel, isAwaitingApproval), [visibleExpenses]);
+  const totalExpenses = summary.total;
+  const { trend } = summary;
+  const months = trend.flow.months.length;
+  const entries = (n: number) => (n === 1 ? 'سجل واحد' : n === 2 ? 'سجلان' : n >= 3 && n <= 10 ? `${n} سجلات` : `${n} سجلاً`);
 
   const openAdd = () => setSheet({ open: true, edit: null });
   // Every row opens: an expense the person may not change (closed, or not theirs) opens read-only with the reason.
@@ -270,7 +273,7 @@ export const ExpensesPage = () => {
 
       {loading ? (
         <>
-          <FigureStripSkeleton />
+          <MoneyKpiSkeleton />
           <ListSkeleton />
         </>
       ) : visibleExpenses.length === 0 && !filtering ? (
@@ -292,18 +295,43 @@ export const ExpensesPage = () => {
         />
       ) : (
         <>
-          <FigureStrip
-            figures={[
-              {
-                label: seesAll ? 'إجمالي المصروفات' : 'إجمالي مصروفاتي',
-                value: <Amount amount={totalExpenses} tone="danger" />,
-                tone: 'danger',
-              },
-              { label: 'هذا الشهر', value: <Amount amount={monthExpenses} /> },
-              { label: 'عدد السجلات', value: visibleExpenses.length },
-              { label: 'عدد التصنيفات', value: categoryTotals.length },
-            ]}
-          />
+          <MoneyKpiGrid count={4} label="مؤشرات المصروفات">
+            <StatCard
+              label={seesAll ? 'إجمالي المصروفات' : 'إجمالي مصروفاتي'}
+              value={<Amount amount={totalExpenses} tone="danger" />}
+              hint={entries(summary.count)}
+              trend={<Sparkline values={trend.flow.cumulativeExpenses} tone="expense" height={44} label={`إجمالي المصروفات التراكمي خلال آخر ${months} أشهر`} />}
+            />
+            <StatCard
+              label="هذا الشهر"
+              value={<Amount amount={summary.month.amount} />}
+              badge={<DeltaBadge pct={trend.expenses.changePct !== null && Math.abs(trend.expenses.changePct) >= 1000 ? null : trend.expenses.changePct} favorable="down" />}
+              hint={summary.month.count > 0 ? entries(summary.month.count) : 'لا مصروفات هذا الشهر'}
+              trend={<Sparkline values={trend.flow.expenses} tone="expense" height={44} label={`المصروفات الشهرية خلال آخر ${months} أشهر`} />}
+            />
+            {/* Someone who approves already has the «بانتظار اعتمادك» banner below; this card is for the one waiting to be approved. */}
+            {summary.pending.count > 0 && !canApprove ? (
+              <StatCard
+                label="بانتظار الاعتماد"
+                value={<Amount amount={summary.pending.amount} tone="warning" />}
+                hint={`${expensePhrase(summary.pending.count)}، اضغط للعرض`}
+                onClick={() => { setApprovalFilter('pending'); setConfirmAll(false); }}
+              />
+            ) : (
+              <StatCard
+                label="متوسط السجل"
+                value={<Amount amount={summary.average} />}
+                hint={`من ${entries(summary.count)}`}
+                trend={summary.recent.length > 1 ? <MiniBars values={summary.recent} tone="expense" height={44} groupSize={4} label="مبالغ آخر المصروفات" /> : undefined}
+              />
+            )}
+            <StatCard
+              label="أكبر تصنيف"
+              value={summary.top ? <span className="block whitespace-normal text-lg leading-7">{summary.top.label}</span> : <span className="text-base font-medium text-fg-muted">لا تصنيفات</span>}
+              hint={summary.top ? <><bdi dir="ltr">{summary.top.share < 1 ? '<1' : summary.top.share}%</bdi> من الإجمالي · <Amount amount={summary.top.amount} className="font-medium text-fg-subtle" /></> : undefined}
+              onClick={summary.top ? () => setCategoryFilter(categoryFilter === summary.top!.key ? 'all' : summary.top!.key) : undefined}
+            />
+          </MoneyKpiGrid>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
             <aside className="min-w-0 lg:sticky lg:top-6 lg:order-2">

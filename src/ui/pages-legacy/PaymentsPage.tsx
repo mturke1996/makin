@@ -12,7 +12,7 @@ import {
   Badge,
   Button,
   EmptyState,
-  FigureStrip,
+  StatCard,
   Input,
   PageHeader,
   PageShell,
@@ -21,10 +21,14 @@ import {
 } from '../../design-system/primitives';
 import type { Payment } from '../../types';
 import { PAYMENT_METHOD_LABEL, PaymentFormSheet, type PaymentFormData, type PaymentMethod } from './money/PaymentFormSheet';
-import { ConfirmDeleteModal, FigureStripSkeleton, ListSkeleton, MoneyRow, StickyGroup } from './money/moneyUi';
+import { ConfirmDeleteModal, ListSkeleton, MoneyRow, StickyGroup } from './money/moneyUi';
+import { CategoryBreakdown, type CategoryTotal } from './money/CategoryBreakdown';
+import { MoneyKpiGrid, MoneyKpiSkeleton, paymentCount } from './money/moneyKpis';
+import { summarizePayments } from './money/moneyTrend';
+import { DeltaBadge, MiniBars, Sparkline } from '../../design-system/charts';
 import { ReceiptPanel } from './money/ReceiptPanel';
 import { useReceipt } from './money/useReceipt';
-import { groupBy, isSameMonthAsToday, matchesQuery, monthKey, monthLabel, sumAmounts } from './money/moneyUtils';
+import { groupBy, matchesQuery, monthKey, monthLabel, sumAmounts } from './money/moneyUtils';
 
 type MethodFilter = 'all' | PaymentMethod;
 
@@ -104,12 +108,23 @@ export const PaymentsPage = () => {
     ];
   }, [payments, scoped]);
 
-  const total = useMemo(() => sumAmounts(payments.map((p) => p.amount)), [payments]);
-  const thisMonth = useMemo(
-    () => sumAmounts(payments.filter((p) => isSameMonthAsToday(p.paymentDate)).map((p) => p.amount)),
-    [payments]
-  );
-  const last = sorted[0];
+  const summary = useMemo(() => summarizePayments(payments), [payments]);
+  const { trend } = summary;
+  const last = summary.last;
+  const months = trend.flow.months.length;
+
+  // Where the money came in by, as the expenses page shows where it went: ranked, with shares that add up to 100.
+  const methodTotals = useMemo<CategoryTotal[]>(() => {
+    const totals = new Map<string, { amounts: number[] }>();
+    for (const p of payments) {
+      const cur = totals.get(p.paymentMethod) || { amounts: [] };
+      cur.amounts.push(p.amount);
+      totals.set(p.paymentMethod, cur);
+    }
+    return [...totals.entries()]
+      .map(([key, v]) => ({ key, label: PAYMENT_METHOD_LABEL[key as PaymentMethod] || key, value: sumAmounts(v.amounts), count: v.amounts.length }))
+      .sort((a, b) => b.value - a.value);
+  }, [payments]);
 
   const openAdd = () => setSheet({ open: true, edit: null });
   const openEdit = (p: Payment) => setSheet({ open: true, edit: p });
@@ -179,23 +194,40 @@ export const PaymentsPage = () => {
 
       {isLoading && payments.length === 0 ? (
         <>
-          <FigureStripSkeleton />
+          <MoneyKpiSkeleton />
           <ListSkeleton />
         </>
       ) : (
         <>
-          <FigureStrip
-            figures={[
-              { label: 'المحصّل هذا الشهر', value: <Amount amount={thisMonth} tone="success" />, tone: 'success' },
-              { label: 'إجمالي المحصّل', value: <Amount amount={total} /> },
-              { label: 'عدد الدفعات', value: payments.length },
-              {
-                label: 'آخر دفعة',
-                value: last ? formatDate(last.paymentDate) : '-',
-                hint: last ? nameOf(last) : undefined,
-              },
-            ]}
-          />
+          {payments.length > 0 && (
+          <MoneyKpiGrid count={4} label="مؤشرات المدفوعات">
+            <StatCard
+              label="المحصّل هذا الشهر"
+              value={<Amount amount={summary.month.amount} tone="success" />}
+              badge={<DeltaBadge pct={trend.collected.changePct !== null && Math.abs(trend.collected.changePct) >= 1000 ? null : trend.collected.changePct} favorable="up" />}
+              hint={summary.month.count > 0 ? paymentCount(summary.month.count) : 'لا دفعات هذا الشهر'}
+              trend={<Sparkline values={trend.flow.collected} tone="income" height={44} label={`المحصّل الشهري خلال آخر ${months} أشهر`} />}
+            />
+            <StatCard
+              label="إجمالي المحصّل"
+              value={<Amount amount={summary.total} />}
+              hint={paymentCount(summary.count)}
+              trend={<Sparkline values={trend.flow.cumulativeCollected} tone="net" height={44} label={`إجمالي المحصّل التراكمي خلال آخر ${months} أشهر`} />}
+            />
+            <StatCard
+              label="متوسط الدفعة"
+              value={<Amount amount={summary.average} />}
+              hint={<>أكبر دفعة <Amount amount={summary.largest} className="font-medium text-fg-subtle" /></>}
+              trend={summary.recent.length > 1 ? <MiniBars values={summary.recent} tone="income" height={44} groupSize={4} label="مبالغ آخر الدفعات" /> : undefined}
+            />
+            <StatCard
+              label="آخر دفعة"
+              value={last ? <span className="tabular-nums"><bdi dir="ltr">{formatDate(last.paymentDate)}</bdi></span> : <span className="text-base font-medium text-fg-muted">لا دفعات</span>}
+              hint={last ? <>{nameOf(last)} · <Amount amount={last.amount} className="font-medium text-fg-subtle" /></> : undefined}
+              onClick={last && canEdit ? () => openEdit(last) : undefined}
+            />
+          </MoneyKpiGrid>
+          )}
 
           {payments.length === 0 ? (
             <EmptyState
@@ -211,7 +243,17 @@ export const PaymentsPage = () => {
               }
             />
           ) : (
-            <>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+              <aside className="min-w-0 lg:sticky lg:top-6 lg:order-2">
+                <CategoryBreakdown
+                  data={methodTotals}
+                  total={summary.total}
+                  active={method}
+                  onSelect={(key) => setMethod(key as MethodFilter)}
+                  wording={{ region: 'المدفوعات حسب طريقة الدفع', title: 'حسب طريقة الدفع', count: (n) => (n === 1 ? 'طريقة واحدة' : n === 2 ? 'طريقتان' : n <= 10 ? `${n} طرق` : `${n} طريقة`), all: (n) => `عرض كل الطرق (${n})` }}
+                />
+              </aside>
+              <div className="min-w-0 space-y-5 lg:order-1">
               <div className="space-y-3">
                 <div className={canSeeClients ? 'grid gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]' : 'grid gap-3'}>
                   <Input
@@ -308,7 +350,8 @@ export const PaymentsPage = () => {
                   ))}
                 </div>
               )}
-            </>
+              </div>
+            </div>
           )}
         </>
       )}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExpandMore } from '../../../design-system/icons';
 import { Amount, Badge, Button, ProgressBar, cn } from '../../../design-system/primitives';
+import { allocateShares } from '../../../core/finance/clientAnalytics';
 
 export interface CategoryTotal {
   key: string;
@@ -17,7 +18,16 @@ interface Props {
   onSelect: (key: string) => void;
   /** Rows shown before «عرض الكل». */
   initialRows?: number;
+  /** What is broken down, for the header and the accessible name (default: spending by category). */
+  wording?: { region: string; title: string; count: (n: number) => string; all: (n: number) => string };
 }
+
+const CATEGORY_WORDING = {
+  region: 'المصروفات حسب التصنيف',
+  title: 'حسب التصنيف',
+  count: (n: number) => `${n} تصنيف`,
+  all: (n: number) => `عرض كل التصنيفات (${n})`,
+};
 
 const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
 
@@ -25,11 +35,15 @@ const isDesktop = () => typeof window !== 'undefined' && window.matchMedia('(min
  * Spending by category as a ranked list: label, share, amount and a thin bar.
  * Collapsed behind its header on phones (the list is the main content); always open on desktop.
  */
-export function CategoryBreakdown({ data, total, active, onSelect, initialRows = 4 }: Props) {
+export function CategoryBreakdown({ data, total, active, onSelect, initialRows = 4, wording = CATEGORY_WORDING }: Props) {
   const [open, setOpen] = useState(false);
   const [all, setAll] = useState(false);
   if (data.length === 0) return null;
   const rows = all ? data : data.slice(0, initialRows);
+  // The labels of the whole list add up to 100; a share that exists never reads 0.
+  const shares = allocateShares(data.map((d) => d.value));
+  const shareOf = (key: string) => shares[data.findIndex((d) => d.key === key)] ?? 0;
+  const shareText = (key: string, value: number) => (shareOf(key) === 0 && value > 0 ? '<1' : String(shareOf(key)));
   const activeLabel = active !== 'all' ? data.find((d) => d.key === active)?.label : undefined;
 
   const select = (key: string) => {
@@ -38,7 +52,7 @@ export function CategoryBreakdown({ data, total, active, onSelect, initialRows =
   };
 
   return (
-    <section aria-label="المصروفات حسب التصنيف" className="rounded-lg border border-border bg-surface-panel">
+    <section aria-label={wording.region} className="rounded-lg border border-border bg-surface-panel">
       <button
         type="button"
         aria-expanded={open}
@@ -46,11 +60,11 @@ export function CategoryBreakdown({ data, total, active, onSelect, initialRows =
         className="flex min-h-14 w-full items-center justify-between gap-3 rounded-lg px-4 text-start focus:outline-none focus-visible:shadow-focus lg:pointer-events-none"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <h2 className="text-md font-bold text-fg">حسب التصنيف</h2>
+          <h2 className="text-md font-bold text-fg">{wording.title}</h2>
           {activeLabel && <Badge tone="brand" className="max-w-[10rem] truncate">{activeLabel}</Badge>}
         </span>
         <span className="flex flex-none items-center gap-1 text-xs text-fg-muted">
-          {data.length} تصنيف
+          {wording.count(data.length)}
           <span aria-hidden className="lg:hidden">
             <ExpandMore
               sx={{ fontSize: 22 }}
@@ -63,6 +77,7 @@ export function CategoryBreakdown({ data, total, active, onSelect, initialRows =
         <ul className="border-t border-border p-2">
           {rows.map((row) => {
             const share = total > 0 ? (row.value / total) * 100 : 0;
+            const text = shareText(row.key, row.value);
             const selected = active === row.key;
             return (
               <li key={row.key}>
@@ -79,11 +94,11 @@ export function CategoryBreakdown({ data, total, active, onSelect, initialRows =
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="min-w-0 truncate text-sm font-medium text-fg">
                       {row.label}
-                      <span className="ms-2 text-xs text-fg-muted">{Math.round(share)}%</span>
+                      <span className="ms-2 text-xs text-fg-muted"><bdi dir="ltr">{text}%</bdi></span>
                     </span>
                     <Amount amount={row.value} className="flex-none text-md font-semibold" />
                   </span>
-                  <ProgressBar value={share} tone="brand" label={`${row.label}: ${Math.round(share)}% من الإجمالي`} />
+                  <ProgressBar value={share} tone="brand" label={`${row.label}: ${text}% من الإجمالي`} />
                 </button>
               </li>
             );
@@ -92,7 +107,7 @@ export function CategoryBreakdown({ data, total, active, onSelect, initialRows =
         {data.length > initialRows && (
           <div className="border-t border-border p-1.5">
             <Button variant="ghost" block onClick={() => setAll((v) => !v)} aria-expanded={all}>
-              {all ? 'عرض أقل' : `عرض كل التصنيفات (${data.length})`}
+              {all ? 'عرض أقل' : wording.all(data.length)}
             </Button>
           </div>
         )}
