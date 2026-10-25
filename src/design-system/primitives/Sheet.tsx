@@ -137,9 +137,15 @@ export function Sheet({
         >
           {bottom && <div aria-hidden className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-border-strong md:hidden" />}
           <div className="flex items-center gap-2 px-3 py-2 md:px-5">
-            <IconButton label={bottom ? 'إغلاق' : 'رجوع'} onClick={onClose} variant="ghost">
+            {/* Phones: a back arrow (the sheet is a page). Desktop and iPad: it is a panel over the page, so an explicit ✕. */}
+            <IconButton label={bottom ? 'إغلاق' : 'رجوع'} onClick={onClose} variant="ghost" className={bottom ? undefined : 'md:hidden'}>
               {bottom ? <Close sx={{ fontSize: 22 }} /> : <BackIcon sx={{ fontSize: 22 }} />}
             </IconButton>
+            {!bottom && (
+              <IconButton label="إغلاق" onClick={onClose} variant="ghost" className="hidden md:inline-flex">
+                <Close sx={{ fontSize: 22 }} />
+              </IconButton>
+            )}
             <div className="min-w-0 flex-1 px-1">
               {title && <h2 className="break-words text-lg font-bold leading-snug text-fg">{title}</h2>}
               {subtitle && <p className="break-words text-xs leading-relaxed text-fg-muted">{subtitle}</p>}

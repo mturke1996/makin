@@ -1,6 +1,8 @@
 import { ReactNode, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from './cn';
+import { Close } from '../icons';
+import { IconButton } from './IconButton';
 import { useScrollLockCounter } from '../../ui/hooks/useScrollLockCounter';
 import { useMountTransition } from '../utils/useMountTransition';
 import { useBackDismiss } from '../utils/useBackDismiss';
@@ -64,9 +66,16 @@ export function Modal({ open, onClose, title, description, children, maxWidth = 
         }}
       >
         {(title || description) && (
-          <header className="shrink-0 border-b border-border px-5 py-4">
-            {title && <h2 className="text-lg font-bold leading-snug text-fg">{title}</h2>}
-            {description && <p className="mt-1 text-sm text-fg-subtle">{description}</p>}
+          <header className="flex shrink-0 items-start gap-2 border-b border-border px-5 py-4">
+            <div className="min-w-0 flex-1">
+              {title && <h2 className="text-lg font-bold leading-snug text-fg">{title}</h2>}
+              {description && <p className="mt-1 text-sm text-fg-subtle">{description}</p>}
+            </div>
+            {dismissible && (
+              <IconButton label="إغلاق" onClick={onClose} variant="ghost" className="-me-2 -mt-1.5 hidden shrink-0 sm:inline-flex">
+                <Close sx={{ fontSize: 22 }} />
+              </IconButton>
+            )}
           </header>
         )}
         <div className="flex-1 overflow-y-auto overscroll-contain p-5 pb-[max(20px,env(safe-area-inset-bottom))]">{children}</div>
