@@ -37,6 +37,7 @@ export type ProfileSheetKey =
   | 'expenses'
   | 'payments'
   | 'schedule'
+  | 'attendance'
   | 'debts'
   | 'workers'
   | 'balances'

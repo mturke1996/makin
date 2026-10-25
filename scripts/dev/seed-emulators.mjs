@@ -71,14 +71,23 @@ const workers = [
     { id: 'i1', title: 'تمديد نقاط الإنارة', quantity: 60, unit: 'نقطة', unitPrice: 150 },
     { id: 'i2', title: 'تأسيس لوحات التوزيع', quantity: 3, unit: 'لوحة', unitPrice: 3000 }]],
   ['w-plumb', 'c-villa', 'مصطفى السباك', 'سباكة', 14000, 14000, undefined],
-  ['w-paint', 'c-shop', 'فرج الدهان', 'دهانات', 9000, 3000, undefined],
+  ['w-paint', 'c-shop', 'فرج الدهان', 'دهانات', 9000, 3000, undefined, 120],
 ];
-for (const [id, clientId, name, jobType, totalAmount, paidAmount, agreementItems] of workers) {
+for (const [id, clientId, name, jobType, totalAmount, paidAmount, agreementItems, dailyRate] of workers) {
   await put('workers', id, {
     clientId, name, jobType, totalAmount, paidAmount, remainingAmount: totalAmount - paidAmount,
-    status: paidAmount >= totalAmount ? 'completed' : 'active', startDate: '2026-08-15', agreementItems, ...stamp(),
+    status: paidAmount >= totalAmount ? 'completed' : 'active', startDate: '2026-08-15', agreementItems, dailyRate, ...stamp(),
   });
 }
+
+// ── Daily attendance: one record per worker per day (the id says so) ──────────
+const attendanceDays = [
+  ['2026-10-20', 'present'], ['2026-10-21', 'present'], ['2026-10-22', 'half'], ['2026-10-23', 'absent'], ['2026-10-24', 'present'],
+];
+for (const [date, status] of attendanceDays) {
+  await put('worker_attendance', `w-paint_${date}`, { workerId: 'w-paint', clientId: 'c-shop', date, status, createdBy: adminName, ...stamp() });
+}
+await put('worker_attendance', 'w-elec_2026-10-24', { workerId: 'w-elec', clientId: 'c-villa', date: '2026-10-24', status: 'present', createdBy: adminName, ...stamp() });
 
 // ── Phases / BOQ / site reports ───────────────────────────────────────────────
 const phases = [

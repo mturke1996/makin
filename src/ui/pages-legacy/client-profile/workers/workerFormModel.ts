@@ -22,6 +22,7 @@ export interface WorkerDraft {
   jobType: string;
   phone: string;
   nationalId: string;
+  dailyRate: string;
   startDate: string;
   notes: string;
   mode: AgreementMode;
@@ -59,6 +60,7 @@ export function draftFromWorker(worker?: Worker | null, opts?: { itemize?: boole
     jobType: worker?.jobType ?? '',
     phone: worker?.phone ?? '',
     nationalId: worker?.nationalId ?? '',
+    dailyRate: worker?.dailyRate ? numberToInput(worker.dailyRate) : '',
     startDate: worker?.startDate ?? '',
     notes: worker?.notes ?? '',
   };
@@ -169,6 +171,7 @@ export function validateDraft(draft: WorkerDraft): { errors: WorkerDraftErrors; 
       jobType: draft.jobType.trim(),
       phone,
       nationalId: draft.nationalId.trim(),
+      dailyRate: parseNumberInput(draft.dailyRate) ?? 0,
       startDate: draft.startDate,
       notes: draft.notes.trim(),
       totalAmount,

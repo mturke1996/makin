@@ -13,6 +13,8 @@ export interface WorkerFormValues {
   jobType: string;
   phone: string;
   nationalId: string;
+  /** الأجر اليومي، أو 0 إن لم يُحدَّد. */
+  dailyRate: number;
   startDate: string;
   notes: string;
   totalAmount: number;

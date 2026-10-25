@@ -26,6 +26,7 @@ export type DataKey =
   | 'boqItems'
   | 'siteReports'
   | 'paymentMilestones'
+  | 'workerAttendance'
   | 'fundTransactions';
 
 export interface WhereSpec {
@@ -57,6 +58,7 @@ export const SOURCES: Record<DataKey, SourceDef> = {
   boqItems: { collection: 'boq_items', sort: { field: 'createdAt', dir: 'desc' } },
   siteReports: { collection: 'site_reports', sort: { field: 'reportDate', dir: 'desc' } },
   paymentMilestones: { collection: 'payment_milestones', sort: { field: 'order', dir: 'asc' } },
+  workerAttendance: { collection: 'worker_attendance', sort: { field: 'date', dir: 'desc' } },
   fundTransactions: { collection: 'global_fund_transactions', sort: { field: 'createdAt', dir: 'desc' } },
 };
 
@@ -102,6 +104,8 @@ export function queriesFor(p: Principal | null | undefined, key: DataKey): Query
       return whole(can(p, 'letters.view'));
     case 'paymentMilestones':
       return whole(can(p, 'payments.view'));
+    case 'workerAttendance':
+      return whole(can(p, 'workers.view'));
     case 'projectPhases':
     case 'boqItems':
     case 'siteReports':

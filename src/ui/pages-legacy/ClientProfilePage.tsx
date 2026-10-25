@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { sumBoqItems } from '../../core/finance/projectBudget';
 import { scheduleHighlights } from '../../core/finance/paymentSchedule';
 import { advanceTotal, workerProgressView } from '../../core/finance/workerProgress';
+import { buildAttendance, attendanceOfDay } from '../../core/finance/workerAttendance';
 import { buildCategoryBudgetRows } from '../../core/finance/budgetStatus';
 import { getExpenseCategoryLabel } from '../../core/utils-formatters';
 import { PROFIT_BASE_LABELS, resolveProfitBase } from '../../core/finance/clientProfitTotals';
@@ -27,6 +28,7 @@ import type {
   UserBalance,
 } from '../../types';
 import { BalanceFormSheet } from './client-profile/BalanceFormSheet';
+import { AttendanceSheet } from './client-profile/AttendanceSheet';
 import { BalancesSheet } from './client-profile/BalancesSheet';
 import { BoqFormSheet } from './client-profile/BoqFormSheet';
 import { BoqSheet } from './client-profile/BoqSheet';
@@ -88,6 +90,8 @@ export const ClientProfilePage = () => {
   const access = useAccess();
   const receipt = useReceipt();
   const approveExpenses = useDataStore((s) => s.approveExpenses);
+  const markAttendance = useDataStore((s) => s.markAttendance);
+  const clearAttendance = useDataStore((s) => s.clearAttendance);
   const rejectExpense = useDataStore((s) => s.rejectExpense);
   const data = useClientProfileData(clientId);
   const { client, summary, userBalancesSummary, clientPhases, caps } = data;
@@ -110,6 +114,7 @@ export const ClientProfilePage = () => {
     manageProjects: access.can('projects.manage'),
     manageInvoices: access.can('invoices.manage'),
     manageSchedule: access.can('payments.manage'),
+    manageWorkers: access.can('workers.manage'),
     manageLetters: access.can('letters.manage'),
   };
   // The agreed percentage is a client edit, and only makes sense next to the full account it is computed from.
@@ -134,11 +139,14 @@ export const ClientProfilePage = () => {
     [data.workerEntries],
   );
 
+  // The roll call is for workers still on the job.
+  const onJobWorkers = useMemo(() => data.workerEntries.filter((e) => !e.worker.archivedAt && e.worker.status !== 'completed').map((e) => e.worker), [data.workerEntries]);
+
   const [activeSheet, setActiveSheet] = useState<ProfileSheetKey | null>(null);
   // A link may open a section straight away (?section=workers|phases|boq|expenses), when this person may see it.
   useEffect(() => {
     const wanted = searchParams.get('section');
-    const allowed: Record<string, boolean> = { schedule: caps.payments, invoices: caps.invoices, workers: caps.workers, phases: caps.projects, boq: caps.projects, expenses: caps.expenseScope !== 'none' };
+    const allowed: Record<string, boolean> = { schedule: caps.payments, attendance: caps.workers, invoices: caps.invoices, workers: caps.workers, phases: caps.projects, boq: caps.projects, expenses: caps.expenseScope !== 'none' };
     if (wanted && allowed[wanted]) setActiveSheet(wanted as ProfileSheetKey);
   }, [searchParams, caps.workers, caps.projects, caps.payments, caps.invoices, caps.expenseScope]);
   const [activeForm, setActiveForm] = useState<ActiveForm | null>(null);
@@ -339,6 +347,8 @@ export const ClientProfilePage = () => {
         invoicesRemaining: caps.payments ? invoiceView.totals.remaining : null,
         invoicesOverdue: invoiceView.totals.overdueCount,
         letters: clientLetters.length,
+        attendanceToday: [...attendanceOfDay(data.clientAttendance, new Date().toLocaleDateString('en-CA')).values()].filter((r) => r.status !== 'absent').length,
+        workersOnJob: onJobWorkers.length,
         milestones: data.schedule.rows.length,
         scheduleRemaining: data.schedule.remaining,
         scheduleOverdue: data.schedule.overdueCount,
@@ -516,6 +526,26 @@ export const ClientProfilePage = () => {
         />
       )}
 
+      {caps.workers && (
+        <AttendanceSheet
+          open={activeSheet === 'attendance'}
+          loading={data.isLoading}
+          onClose={closeSheet}
+          client={client}
+          workers={onJobWorkers}
+          records={data.clientAttendance}
+          canMark={may.manageWorkers}
+          onMark={(worker, day, status) => {
+            const previous = data.clientAttendance.find((r) => r.id === `${worker.id}_${day}`);
+            if (status === null) {
+              if (previous) void clearAttendance(previous.id).catch(() => undefined);
+              return;
+            }
+            void markAttendance(buildAttendance({ worker, day, status, by: user?.displayName || user?.email || 'المستخدم', previous })).catch(() => undefined);
+          }}
+        />
+      )}
+
       {caps.debts && (
         <DebtsSheet
           open={activeSheet === 'debts'}
@@ -541,6 +571,7 @@ export const ClientProfilePage = () => {
           clientId={client.id}
           clientName={client.name}
           entries={data.workerEntries}
+          attendance={data.clientAttendance}
           fundStats={data.globalFundStats}
           pdfLoading={pdf.pdfLoading}
           onDownloadPdf={caps.showSummary ? () => pdf.download('workers') : undefined}

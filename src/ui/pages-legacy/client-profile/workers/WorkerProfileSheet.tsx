@@ -28,10 +28,12 @@ import { advanceTotal, workerProgressView } from '../../../../core/finance/worke
 import { formatDay, telHref } from './format';
 import { WorkerMoneySummary } from './WorkerMoneySummary';
 import { WorkerProgressPanel } from './WorkerProgressPanel';
+import { WorkerAttendancePanel } from './WorkerAttendancePanel';
 import { AgreementBreakdown } from './AgreementBreakdown';
 import { PaymentTimeline } from './PaymentTimeline';
 import { AgreementHistory } from './AgreementHistory';
 import { LEDGER_STATUS_META } from './format';
+import type { WorkerAttendance } from '../../../../types';
 import type { WorkerReportPeriod } from '../../../../features/pdf/workerReportModel';
 import type { WorkerEntry } from './types';
 
@@ -57,6 +59,8 @@ interface WorkerProfileSheetProps {
   onVoucher?: (payment: WorkerLedgerPayment) => void;
   /** Other projects this worker has been recorded on (matched by phone number). */
   previousProjects?: string[];
+  /** This worker's attendance records. */
+  attendance?: WorkerAttendance[];
   onStatementPdf?: (period?: WorkerReportPeriod) => void;
   onShareStatement?: (period?: WorkerReportPeriod) => void;
   pdfLoading?: boolean;
@@ -97,6 +101,7 @@ export function WorkerProfileSheet({
   onSaveProgress,
   onVoucher,
   previousProjects = [],
+  attendance = [],
   onStatementPdf,
   onShareStatement,
   pdfLoading,
@@ -252,6 +257,13 @@ export function WorkerProfileSheet({
                 : undefined
             }
             onSave={canManage && !worker.archivedAt ? onSaveProgress : undefined}
+          />
+
+          <WorkerAttendancePanel
+            dailyRate={worker.dailyRate}
+            records={attendance}
+            paid={ledger.paid}
+            today={new Date().toLocaleDateString('en-CA')}
           />
 
           <Segmented<'payments' | 'agreement' | 'details'>

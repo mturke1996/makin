@@ -16,7 +16,7 @@ import {
   FirestoreError,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { Client, Invoice, Payment, StandaloneDebt, Expense, ExpenseInvoice, DebtParty, Worker, UserBalance, GlobalFundTransaction, Letter, ProjectPhase, BoqLineItem, AuditLogEntry, SiteReport, PaymentMilestone } from '../types';
+import type { Client, Invoice, Payment, StandaloneDebt, Expense, ExpenseInvoice, DebtParty, Worker, UserBalance, GlobalFundTransaction, Letter, ProjectPhase, BoqLineItem, AuditLogEntry, SiteReport, PaymentMilestone, WorkerAttendance } from '../types';
 import { addExpenseConfirmedOnce } from './expenseTransactions';
 
 export { toConstraints } from '../core/access/constraints';
@@ -179,5 +179,6 @@ export const lettersService = new FirestoreService<Letter>('letters');
 export const projectPhasesService = new FirestoreService<ProjectPhase>('project_phases');
 export const boqItemsService = new FirestoreService<BoqLineItem>('boq_items');
 export const paymentMilestonesService = new FirestoreService<PaymentMilestone>('payment_milestones');
+export const workerAttendanceService = new FirestoreService<WorkerAttendance>('worker_attendance');
 export const auditLogsService = new FirestoreService<AuditLogEntry>('audit_logs');
 export const siteReportsService = new FirestoreService<SiteReport>('site_reports');

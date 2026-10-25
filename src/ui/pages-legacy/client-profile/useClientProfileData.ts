@@ -26,7 +26,7 @@ export function useClientProfileData(clientId: string | undefined) {
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
   const fundTransactions = useGlobalFundStore((s) => s.transactions);
-  const { clients, payments, expenses, standaloneDebts, workers, userBalances, projectPhases, boqItems, siteReports, paymentMilestones, isLoading } = useDataSlice('clients', 'payments', 'expenses', 'standaloneDebts', 'workers', 'userBalances', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'isLoading');
+  const { clients, payments, expenses, standaloneDebts, workers, userBalances, projectPhases, boqItems, siteReports, paymentMilestones, workerAttendance, isLoading } = useDataSlice('clients', 'payments', 'expenses', 'standaloneDebts', 'workers', 'userBalances', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance', 'isLoading');
 
   const client = clients.find((c) => c.id === clientId);
 
@@ -80,6 +80,12 @@ export function useClientProfileData(clientId: string | undefined) {
         ? standaloneDebts.filter((d) => d.clientId === clientId).sort((a, b) => dayjs(b.date).diff(dayjs(a.date)))
         : [],
     [caps.debts, standaloneDebts, clientId]
+  );
+
+  // Attendance follows the workers permission: whoever sees the workers sees when they came.
+  const clientAttendance = useMemo(
+    () => (caps.workers ? workerAttendance.filter((r) => r.clientId === clientId) : []),
+    [caps.workers, workerAttendance, clientId]
   );
 
   const workerEntries = useMemo<WorkerEntry[]>(
@@ -214,6 +220,7 @@ export function useClientProfileData(clientId: string | undefined) {
     clientExpenses,
     clientPayments,
     clientMilestones,
+    clientAttendance,
     schedule,
     clientDebts,
     workerEntries,

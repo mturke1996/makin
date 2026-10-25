@@ -110,6 +110,20 @@ service cloud.firestore {
       allow create, update, delete: if can('payments.manage');
     }
 
+    // Daily attendance of workers: one record per worker per day (the id says so). Seen by whoever sees workers,
+    // marked by whoever manages them.
+    match /worker_attendance/{id} {
+      function validAttendance(data) {
+        return data.get('status', null) in ['present', 'half', 'absent']
+          && data.get('date', null) is string
+          && data.get('workerId', null) is string
+          && id == data.workerId + '_' + data.date;
+      }
+      allow read: if can('workers.view');
+      allow create, update: if can('workers.manage') && validAttendance(request.resource.data);
+      allow delete: if can('workers.manage');
+    }
+
     // Receipt numbering: one counter per year (receipts-2026), only ever moved up by exactly one, in the same
     // transaction that stamps the number on a payment. Nobody deletes a counter.
     match /counters/{id} {

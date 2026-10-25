@@ -93,8 +93,26 @@ export interface Worker {
   workProgressBy?: string;
   /** رقم الهوية أو الإقامة، لبطاقة العامل (اختياري). */
   nationalId?: string;
+  /** الأجر اليومي للعامل باليومية (اختياري): يُحسب منه أجر أيام الحضور. */
+  dailyRate?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** حضور عامل في يوم: سجل واحد لكل عامل في اليوم (معرّفه workerId_YYYY-MM-DD). */
+export type AttendanceStatus = 'present' | 'half' | 'absent';
+
+export interface WorkerAttendance {
+  id: string;
+  workerId: string;
+  clientId: string;
+  /** YYYY-MM-DD */
+  date: string;
+  status: AttendanceStatus;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
 }
 
 // Invoice Types

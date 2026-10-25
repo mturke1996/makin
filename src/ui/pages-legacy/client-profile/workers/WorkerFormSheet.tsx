@@ -3,6 +3,7 @@ import { Amount, Button, Input, Section, Sheet, Textarea } from '../../../../des
 import type { Worker } from '../../../../types';
 import { workerAgreementChanged } from '../../../../core/finance/workerLedgerHistory';
 import { AgreementEditor } from './AgreementEditor';
+import { NumberField } from './fields';
 import { draftFromWorker, draftTotal, validateDraft, type WorkerDraft, type WorkerDraftErrors } from './workerFormModel';
 import type { WorkerFormValues } from './types';
 
@@ -148,6 +149,14 @@ export function WorkerFormSheet({ open, onClose, clientName, edit, startItemized
             value={draft.nationalId}
             autoComplete="off"
             onChange={(e) => update({ ...draft, nationalId: e.target.value })}
+          />
+          <NumberField
+            label="الأجر اليومي (اختياري)"
+            placeholder="للعامل باليومية: يُحسب منه أجر أيام الحضور"
+            calculator="حاسبة الأجر"
+            calculatorUnit="د.ل"
+            value={draft.dailyRate}
+            onValueChange={(v) => update({ ...draft, dailyRate: v })}
           />
           <Input
             label="تاريخ بدء العمل (اختياري)"

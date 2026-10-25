@@ -15,6 +15,7 @@ import {
   boqItemsService,
   siteReportsService,
   paymentMilestonesService,
+  workerAttendanceService,
   globalFundTransactionsService,
   createExpenseInvoiceAtomic,
   deleteExpenseInvoiceAtomic,
@@ -37,6 +38,7 @@ import type {
   BoqLineItem,
   SiteReport,
   PaymentMilestone,
+  WorkerAttendance,
 } from '../types';
 import toast from 'react-hot-toast';
 import { useNotificationStore } from './useNotificationStore';
@@ -61,7 +63,7 @@ import type { Principal } from '../core/access/principal';
 const CACHE_PREFIX = 'app-cache-';
 const CACHE_OWNER_KEY = 'app-cache-owner';
 type StoreKey = Exclude<DataKey, 'fundTransactions'>;
-const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones'];
+const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance'];
 
 const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: any[], onError?: (e: any) => void) => () => void }> = {
   clients: clientsService,
@@ -78,6 +80,7 @@ const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: an
   boqItems: boqItemsService,
   siteReports: siteReportsService,
   paymentMilestones: paymentMilestonesService,
+  workerAttendance: workerAttendanceService,
 };
 
 const cacheOwnerTag = (principal: Principal | null) => (principal ? `${principal.id}|${JSON.stringify(planFor(principal))}` : '');
@@ -158,6 +161,7 @@ interface DataState {
   boqItems: BoqLineItem[];
   siteReports: SiteReport[];
   paymentMilestones: PaymentMilestone[];
+  workerAttendance: WorkerAttendance[];
   isLoading: boolean;
 
   // Initialization
@@ -233,6 +237,10 @@ interface DataState {
   updatePaymentMilestone: (id: string, data: Partial<PaymentMilestone>) => Promise<void>;
   deletePaymentMilestone: (id: string) => Promise<void>;
 
+  /** One record per worker per day (the id is fixed), so marking a day again changes it. Quiet: no toast per tap. */
+  markAttendance: (record: WorkerAttendance) => Promise<void>;
+  clearAttendance: (id: string) => Promise<void>;
+
   addSiteReport: (report: SiteReport) => Promise<void>;
   updateSiteReport: (id: string, data: Partial<SiteReport>) => Promise<void>;
   deleteSiteReport: (id: string) => Promise<void>;
@@ -273,6 +281,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   boqItems: [],
   siteReports: [],
   paymentMilestones: [],
+  workerAttendance: [],
   isLoading: true,
 
   reset: () => {
@@ -280,7 +289,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({
       clients: [], invoices: [], payments: [], expenses: [], expenseInvoices: [], standaloneDebts: [],
       debtParties: [], workers: [], userBalances: [], letters: [], projectPhases: [], boqItems: [],
-      siteReports: [], paymentMilestones: [], isLoading: true,
+      siteReports: [], paymentMilestones: [], workerAttendance: [], isLoading: true,
     });
   },
 
@@ -381,6 +390,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       const relatedPhases = state.projectPhases.filter((i) => i.clientId === id);
       const relatedBoq = state.boqItems.filter((i) => i.clientId === id);
       const relatedMilestones = state.paymentMilestones.filter((i) => i.clientId === id);
+      const relatedAttendance = state.workerAttendance.filter((i) => i.clientId === id);
       const relatedSiteReports = state.siteReports.filter((i) => i.clientId === id);
       const relatedLetters = state.letters.filter((i) => i.clientId === id);
       const relatedExpenseInvoices = state.expenseInvoices.filter((i) => i.clientId === id);
@@ -399,6 +409,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         ...relatedPhases.map((item) => projectPhasesService.delete(item.id)),
         ...relatedBoq.map((item) => boqItemsService.delete(item.id)),
         ...relatedMilestones.map((item) => paymentMilestonesService.delete(item.id)),
+        ...relatedAttendance.map((item) => workerAttendanceService.delete(item.id)),
         ...relatedSiteReports.map((item) => siteReportsService.delete(item.id)),
         ...relatedLetters.map((item) => lettersService.delete(item.id)),
         ...relatedExpenseInvoices.map((item) => expenseInvoicesService.delete(item.id)),
@@ -649,6 +660,24 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   deletePaymentMilestone: async (id) => {
     await handleAsync(() => paymentMilestonesService.delete(id), 'تم حذف الدفعة من الجدول');
+  },
+
+  // Marking the day is one tap per worker, so a toast and a notification for each would bury the screen.
+  markAttendance: async (record) => {
+    try {
+      await workerAttendanceService.add(record);
+    } catch (error) {
+      toast.error(formatFirebaseError(error));
+      throw error;
+    }
+  },
+  clearAttendance: async (id) => {
+    try {
+      await workerAttendanceService.delete(id);
+    } catch (error) {
+      toast.error(formatFirebaseError(error));
+      throw error;
+    }
   },
 
   addSiteReport: async (report) => {

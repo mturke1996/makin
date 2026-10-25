@@ -7,6 +7,7 @@ import {
   Engineering,
   Groups,
   History,
+  HowToReg,
   Payment,
   Percent,
   Receipt,
@@ -49,6 +50,9 @@ export interface ClientModuleStats {
   invoicesRemaining: number | null;
   invoicesOverdue: number;
   letters: number;
+  /** Workers marked present today, and how many are on the job. */
+  attendanceToday: number;
+  workersOnJob: number;
   /** Instalments in the agreed payment schedule. */
   milestones: number;
   /** Still to collect on that schedule. */
@@ -144,6 +148,16 @@ export function ClientModules({ stats, summary, caps, canEditProfit, onOpenSheet
       amountLabel: 'المتبقي لهم',
       amount: summary.totalWorkersDue,
       Icon: Groups,
+      tone: 'info',
+    },
+    {
+      key: 'attendance',
+      shown: caps.workers,
+      title: 'الحضور اليومي',
+      subtitle: stats.workersOnJob === 0 ? 'سجّل حضور العمال كل يوم' : `حاضرون اليوم ${stats.attendanceToday} من ${stats.workersOnJob}`,
+      amount: 0,
+      amountDisplay: <span className="text-sm font-medium text-fg-muted">تسجيل</span>,
+      Icon: HowToReg,
       tone: 'info',
     },
     {

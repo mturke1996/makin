@@ -11,7 +11,7 @@ import { buildWorkerVoucher } from '../../../../core/finance/workerVoucher';
 import { previousProjects } from '../../../../core/finance/workerCard';
 import { downloadPdf } from '../../../../features/pdf/pdfService';
 import { WorkerVoucherPDF } from '../../../../features/pdf/WorkerVoucherPDF';
-import type { Worker } from '../../../../types';
+import type { Worker, WorkerAttendance } from '../../../../types';
 import type { WorkerReportPeriod } from '../../../../features/pdf/workerReportModel';
 import { ConfirmModal, type ConfirmRequest } from './ConfirmModal';
 import { WorkerFormSheet } from './WorkerFormSheet';
@@ -43,6 +43,8 @@ interface WorkersFlowProps {
   clientName?: string;
   /** عمال العميل مع دفاترهم: الأرصدة من كل دفعات العامل، والدفعات المعروضة هي المسموحة للمستخدم. */
   entries: WorkerEntry[];
+  /** حضور عمال العميل. */
+  attendance?: WorkerAttendance[];
   /** رصيد عهدة المستخدم لتنبيه التجاوز عند صرف دفعة. */
   fundStats?: { remaining: number } | null;
   pdfLoading: boolean;
@@ -58,7 +60,7 @@ interface WorkersFlowProps {
  * كل مستوى نافذة فوق السابقة، فيعود الرجوع إلى حيث كان المستخدم.
  */
 export function WorkersFlow({
-  open, onClose, clientId, clientName, entries, fundStats, pdfLoading, onDownloadPdf, onSharePdf, onStatementPdf, onShareStatement, initialWorkerId,
+  open, onClose, clientId, clientName, entries, attendance = [], fundStats, pdfLoading, onDownloadPdf, onSharePdf, onStatementPdf, onShareStatement, initialWorkerId,
 }: WorkersFlowProps) {
   const { addWorker, updateWorker, addExpense, updateExpense, deleteExpense, isLoading, workers: allWorkers, clients } = useDataSlice('addWorker', 'updateWorker', 'addExpense', 'updateExpense', 'deleteExpense', 'isLoading', 'workers', 'clients');
   const user = useAuthStore((s) => s.user);
@@ -130,6 +132,8 @@ export function WorkersFlow({
       jobType: values.jobType,
       phone: values.phone,
       nationalId: values.nationalId,
+      // A cleared rate is removed from the record (0 means none).
+      dailyRate: values.dailyRate > 0 ? values.dailyRate : edit?.dailyRate ? (null as unknown as undefined) : undefined,
       startDate: values.startDate,
       notes: values.notes,
       totalAmount: values.totalAmount,
@@ -343,6 +347,7 @@ export function WorkersFlow({
         onArchiveWorker={() => selected && requestArchiveWorker(selected)}
         onSaveProgress={saveProgress}
         onVoucher={openVoucher}
+        attendance={selected ? attendance.filter((r) => r.workerId === selected.worker.id) : []}
         previousProjects={selected ? previousProjects(selected.worker, allWorkers, clients) : []}
         onStatementPdf={onStatementPdf && selected ? (period) => onStatementPdf(selected, period) : undefined}
         onShareStatement={onShareStatement && selected ? (period) => onShareStatement(selected, period) : undefined}

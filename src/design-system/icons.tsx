@@ -27,6 +27,7 @@ import {
   BellRinging as PhBellRinging,
   Buildings as PhBuildings,
   Calculator as PhCalculator,
+  UserCheck as PhUserCheck,
   CalendarBlank as PhCalendarBlank,
   CalendarX as PhCalendarX,
   CaretDown as PhCaretDown,
@@ -196,6 +197,7 @@ export const FilterAltOff = glyph(PhFunnelX, 'FilterAltOff');
 export const Flag = glyph(PhFlag, 'Flag');
 export const GetApp = glyph(PhDownloadSimple, 'GetApp');
 export const Groups = glyph(PhUsersThree, 'Groups');
+export const HowToReg = glyph(PhUserCheck, 'HowToReg');
 export const History = glyph(PhClockCounterClockwise, 'History');
 export const HourglassEmpty = glyph(PhHourglass, 'HourglassEmpty');
 export const Home = glyph(PhHouse, 'Home');
