@@ -1,9 +1,9 @@
-import { getStorage, ref, deleteObject } from 'firebase/storage';
 import app from '../config/firebase';
 
-const storage = getStorage(app);
-
-/** Removes an attachment saved on an older expense (the app no longer uploads new ones). */
+/**
+ * Removes an attachment saved on an older expense (the app no longer uploads new ones).
+ * The storage library is fetched only when there is something to delete, not with the app.
+ */
 export async function deleteStorageFileByUrl(url: string | undefined | null): Promise<void> {
   if (!url || typeof url !== 'string') return;
   try {
@@ -13,7 +13,8 @@ export async function deleteStorageFileByUrl(url: string | undefined | null): Pr
     const encoded = u.pathname.slice(idx + 3);
     const objectPath = decodeURIComponent(encoded.split('?')[0] || '');
     if (!objectPath) return;
-    await deleteObject(ref(storage, objectPath));
+    const { getStorage, ref, deleteObject } = await import('firebase/storage');
+    await deleteObject(ref(getStorage(app), objectPath));
   } catch (err) {
     console.warn('[storage] delete attachment failed:', err);
   }

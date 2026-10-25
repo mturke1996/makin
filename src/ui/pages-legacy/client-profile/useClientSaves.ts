@@ -1,6 +1,6 @@
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
-import { useDataStore } from '../../../stores/useDataStore';
+import { useDataSlice } from '../../../stores/useDataStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { computeBoqLineTotal } from '../../../core/finance/projectBudget';
 import { clearField } from '../../../services/firebaseService';
@@ -65,27 +65,7 @@ interface Options {
  */
 export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, milestoneCount }: Options) {
   const user = useAuthStore((s) => s.user);
-  const {
-    workers,
-    updateClient,
-    addPayment,
-    updatePayment,
-    addExpense,
-    updateExpense,
-    addStandaloneDebt,
-    updateStandaloneDebt,
-    addUserBalance,
-    updateUserBalance,
-    addProjectPhase,
-    updateProjectPhase,
-    addBoqItem,
-    updateBoqItem,
-    addPaymentMilestone,
-    addPaymentMilestones,
-    updatePaymentMilestone,
-    addSiteReport,
-    updateSiteReport,
-  } = useDataStore();
+  const { workers, updateClient, addPayment, updatePayment, addExpense, updateExpense, addStandaloneDebt, updateStandaloneDebt, addUserBalance, updateUserBalance, addProjectPhase, updateProjectPhase, addBoqItem, updateBoqItem, addPaymentMilestone, addPaymentMilestones, updatePaymentMilestone, addSiteReport, updateSiteReport } = useDataSlice('workers', 'updateClient', 'addPayment', 'updatePayment', 'addExpense', 'updateExpense', 'addStandaloneDebt', 'updateStandaloneDebt', 'addUserBalance', 'updateUserBalance', 'addProjectPhase', 'updateProjectPhase', 'addBoqItem', 'updateBoqItem', 'addPaymentMilestone', 'addPaymentMilestones', 'updatePaymentMilestone', 'addSiteReport', 'updateSiteReport');
 
   const author = user?.displayName || 'المستخدم';
   const nowIso = () => new Date().toISOString();

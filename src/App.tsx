@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { BrandProvider, useBrand } from './config/BrandProvider';
 import { useBrandStore } from './stores/useBrandStore';
 import { useAuthStore } from './stores/useAuthStore';
-import { useDataStore } from './stores/useDataStore';
+import { useDataSlice } from './stores/useDataStore';
 import { useGlobalFundStore } from './stores/useGlobalFundStore';
 import { useNotificationStore } from './stores/useNotificationStore';
 
@@ -41,6 +41,39 @@ const AuditLogPage           = lazy(() => import('./ui/pages/AuditLogPage').then
 const InstallPage            = lazy(() => import('./ui/pages/InstallPage').then(m => ({ default: m.InstallPage })));
 const ReceivablesPage        = lazy(() => import('./ui/pages/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })));
 const WorkersPage            = lazy(() => import('./ui/pages/WorkersPage').then(m => ({ default: m.WorkersPage })));
+
+/**
+ * The screens people open most, fetched one after another once the app is idle, so the first tap on them finds
+ * the code already here. Skipped on a metered or very slow connection.
+ */
+const PREFETCH_PAGES: Array<() => Promise<unknown>> = [
+  () => import('./ui/pages-legacy/ClientProfilePage'),
+  () => import('./ui/pages-legacy/ClientsPage'),
+  () => import('./ui/pages-legacy/ExpensesPage'),
+  () => import('./ui/pages-legacy/PaymentsPage'),
+];
+
+function usePrefetchPages(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType ?? '')) return;
+    let cancelled = false;
+    const idle = (run: () => void) =>
+      typeof requestIdleCallback === 'function' ? requestIdleCallback(run, { timeout: 4000 }) : window.setTimeout(run, 2000);
+    const next = (i: number) => {
+      if (cancelled || i >= PREFETCH_PAGES.length) return;
+      idle(() => {
+        if (cancelled) return;
+        PREFETCH_PAGES[i]().catch(() => undefined).finally(() => next(i + 1));
+      });
+    };
+    next(0);
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+}
 
 
 function AppRouterBody({ isAuthenticated }: { isAuthenticated: boolean }) {
@@ -88,10 +121,11 @@ function AppRouterBody({ isAuthenticated }: { isAuthenticated: boolean }) {
 
 function AppContent() {
   const { checkAuth, isAuthenticated, isLoading, profileMissing } = useAuthStore();
-  const { initialize } = useDataStore();
+  const { initialize } = useDataSlice('initialize');
   const principal = usePrincipal();
   // Resubscribe only when what this person may download actually changes.
   const planKey = planSignature(principal);
+  usePrefetchPages(isAuthenticated && !profileMissing);
 
   useEffect(() => {
     const unsub = checkAuth();

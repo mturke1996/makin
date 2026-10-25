@@ -19,7 +19,7 @@ import { daysWord } from '../../core/finance/clientInsights';
 import { buildReminderText, reminderHref } from '../../core/finance/paymentReminder';
 import { buildReceivables, type AgingBucket, type ClientReceivable, type ReceivableItem } from '../../core/finance/paymentSchedule';
 import { formatDate } from '../../core/utils-formatters';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { whatsappHref } from '../pages-legacy/client-profile/details/contactLinks';
 import { FigureStripSkeleton, ListSkeleton } from '../pages-legacy/money/moneyUi';
 
@@ -37,7 +37,7 @@ export const ReceivablesPage = () => {
   const navigate = useNavigate();
   const brand = useBrand();
   const access = useAccess();
-  const { clients, payments, invoices, paymentMilestones, isLoading } = useDataStore();
+  const { clients, payments, invoices, paymentMilestones, isLoading } = useDataSlice('clients', 'payments', 'invoices', 'paymentMilestones', 'isLoading');
   const canSeeInvoices = access.can('invoices.view');
 
   const report = useMemo(

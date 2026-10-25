@@ -16,7 +16,7 @@ import {
 } from '../../design-system/icons';
 import { useBrand } from '../../config/BrandProvider';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useGlobalFundStore } from '../../stores/useGlobalFundStore';
 import { useAccess } from '../../core/access/useAccess';
 import type { AppModule } from '../../core/access';
@@ -50,7 +50,7 @@ export function HomePage() {
   const rtl = brand.direction === 'rtl';
   const t = useMemo(() => (ar: string, en: string) => (rtl ? ar : en), [rtl]);
   const user = useAuthStore((s) => s.user);
-  const { payments, clients, expenses, invoices, standaloneDebts, workers, projectPhases, paymentMilestones, isLoading } = useDataStore();
+  const { payments, clients, expenses, invoices, standaloneDebts, workers, projectPhases, paymentMilestones, isLoading } = useDataSlice('payments', 'clients', 'expenses', 'invoices', 'standaloneDebts', 'workers', 'projectPhases', 'paymentMilestones', 'isLoading');
   const access = useAccess();
   const { frequent } = useSmartNav();
   const fundBalance = useGlobalFundStore((s) => s.getCurrentBalance());

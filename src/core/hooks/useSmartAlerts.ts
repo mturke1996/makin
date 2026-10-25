@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useAccess } from '../access/useAccess';
 import { alertAllowFor, buildSmartAlerts } from './smartAlerts';
@@ -7,7 +7,7 @@ import { alertAllowFor, buildSmartAlerts } from './smartAlerts';
 const DAY_MS = 86_400_000;
 
 export function useSmartAlerts() {
-  const { invoices, payments, clients, projectPhases, expenses, standaloneDebts, isLoading } = useDataStore();
+  const { invoices, payments, clients, projectPhases, expenses, standaloneDebts, isLoading } = useDataSlice('invoices', 'payments', 'clients', 'projectPhases', 'expenses', 'standaloneDebts', 'isLoading');
   const items = useNotificationStore((s) => s.items);
   const push = useNotificationStore((s) => s.push);
   const triggeredRef = useRef(false);

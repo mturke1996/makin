@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Add, RequestQuote, Search } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { clearField } from '../../services/firebaseService';
 import { useAccess } from '../../core/access/useAccess';
@@ -31,10 +31,7 @@ type StatusFilter = 'all' | DebtStatus;
 const TYPE_LABEL: Record<TypeView, string> = { all: 'الكل', client: 'ديون العملاء', external: 'ديون خارجية' };
 
 export const DebtsPage = () => {
-  const {
-    standaloneDebts, clients, debtParties, isLoading,
-    addStandaloneDebt, updateStandaloneDebt, payStandaloneDebt, deleteStandaloneDebt,
-  } = useDataStore();
+  const { standaloneDebts, clients, debtParties, isLoading, addStandaloneDebt, updateStandaloneDebt, payStandaloneDebt, deleteStandaloneDebt } = useDataSlice('standaloneDebts', 'clients', 'debtParties', 'isLoading', 'addStandaloneDebt', 'updateStandaloneDebt', 'payStandaloneDebt', 'deleteStandaloneDebt');
   const { user } = useAuthStore();
   const access = useAccess();
   const canManage = access.can('debts.manage');

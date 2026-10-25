@@ -198,7 +198,8 @@ export default defineConfig(({ mode }) => {
               'firebase/app',
               'firebase/auth',
               'firebase/firestore',
-              'firebase/messaging',
+              // firebase/messaging is imported on demand (core/push/fcmClient): pinning it here would put it in the
+              // chunk the first screen preloads.
             ],
             'vendor-state': [
               'zustand',

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import {
   clientsService,
   invoicesService,
@@ -95,6 +96,9 @@ const dropCache = () => {
   });
   try { localStorage.removeItem(CACHE_OWNER_KEY); } catch {}
 };
+
+/** How long snapshots are gathered before the store is set once for all of them. */
+export const SNAPSHOT_BATCH_MS = 30;
 
 // Debounced save to avoid excessive writes
 const saveCacheTimers: Record<string, any> = {};
@@ -297,11 +301,28 @@ export const useDataStore = create<DataState>((set, get) => ({
     const hasCachedData = planned.some((key) => (initial[key] ?? []).length > 0);
     set({ ...initial, isLoading: planned.length > 0 && !hasCachedData } as Partial<DataState>);
 
+    // Snapshots of the fourteen collections arrive one after another, often within a few milliseconds of each other
+    // (the cache answers them all at start-up). Setting the store for each one re-renders every screen that reads it
+    // fourteen times in a row; the patches are collected and applied together instead, and «loading» ends in the
+    // same patch as the last data, so a screen never shows an empty list between the two.
+    let patch: Partial<DataState> = {};
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      flushTimer = null;
+      const next = patch;
+      patch = {};
+      if (Object.keys(next).length > 0) set(next);
+    };
+    const queue = (next: Partial<DataState>) => {
+      Object.assign(patch, next);
+      if (flushTimer === null) flushTimer = setTimeout(flush, SNAPSHOT_BATCH_MS);
+    };
+
     // Every query of every planned data set must report once before we stop showing "loading".
     const pending = new Set<string>(planned.flatMap((key) => plan[key].map((_, i) => `${key}:${i}`)));
     const settle = (id: string) => {
       pending.delete(id);
-      if (pending.size === 0) set({ isLoading: false });
+      if (pending.size === 0) queue({ isLoading: false });
     };
 
     const unsubs: Array<() => void> = [];
@@ -315,7 +336,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             (rows) => {
               parts[i] = rows;
               const merged = sortRecords(mergeById(parts), SOURCES[key].sort);
-              set({ [key]: merged } as Partial<DataState>);
+              queue({ [key]: merged } as Partial<DataState>);
               saveCache(key, merged);
               settle(id);
             },
@@ -331,9 +352,10 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
 
     // Timeout fallback: if data doesn't load in 8s, stop showing loading
-    const timeout = setTimeout(() => set({ isLoading: false }), 8000);
+    const timeout = setTimeout(() => queue({ isLoading: false }), 8000);
     return () => {
       clearTimeout(timeout);
+      if (flushTimer !== null) clearTimeout(flushTimer);
       unsubs.forEach((u) => u());
     };
   },
@@ -639,3 +661,18 @@ export const useDataStore = create<DataState>((set, get) => ({
     await handleAsync(() => siteReportsService.delete(id), 'تم حذف تقرير الموقع');
   },
 }));
+
+/**
+ * Reads only the named parts of the data store. A screen that takes the whole store re-renders whenever ANY
+ * collection changes (a new letter redraws the home page); this one re-renders only when one of the parts it
+ * asked for changes. Actions are stable, so asking for them costs nothing.
+ */
+export function useDataSlice<K extends keyof DataState>(...keys: K[]): Pick<DataState, K> {
+  return useDataStore(
+    useShallow((state) => {
+      const slice = {} as Pick<DataState, K>;
+      for (const key of keys) slice[key] = state[key];
+      return slice;
+    }),
+  );
+}

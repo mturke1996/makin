@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Add, Payments as PaymentsIcon, Receipt, Search } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { clearField } from '../../services/firebaseService';
 import { useAccess } from '../../core/access/useAccess';
@@ -29,7 +29,7 @@ import { groupBy, isSameMonthAsToday, matchesQuery, monthKey, monthLabel, sumAmo
 type MethodFilter = 'all' | PaymentMethod;
 
 export const PaymentsPage = () => {
-  const { payments, clients, invoices, isLoading, addPayment, updatePayment, deletePayment } = useDataStore();
+  const { payments, clients, invoices, isLoading, addPayment, updatePayment, deletePayment } = useDataSlice('payments', 'clients', 'invoices', 'isLoading', 'addPayment', 'updatePayment', 'deletePayment');
   const { user } = useAuthStore();
   const access = useAccess();
   const receipt = useReceipt();

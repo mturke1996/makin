@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { Add, LockOutlined } from '../../design-system/icons';
-import { useDataStore } from '../../stores/useDataStore';
+import { useDataSlice } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
 import { Button, EmptyState, Input, PageHeader, PageShell, Section, Select, Textarea } from '../../design-system/primitives';
@@ -20,7 +20,7 @@ export const NewInvoicePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
-  const { clients, addInvoice, updateInvoice, invoices } = useDataStore();
+  const { clients, addInvoice, updateInvoice, invoices } = useDataSlice('clients', 'addInvoice', 'updateInvoice', 'invoices');
   const { user } = useAuthStore();
   const access = useAccess();
   const canManage = access.can('invoices.manage');
