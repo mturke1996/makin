@@ -13,6 +13,7 @@ import {
   PhoneAndroid,
   Share,
   WifiOff,
+  WhatsApp,
   Menu as MenuIcon,
 } from '../design-system/icons';
 import toast from 'react-hot-toast';
@@ -26,6 +27,8 @@ import {
   useInstallStore,
   type InstallEnv,
 } from './installPrompt';
+import { shareLink, shareLinkOnWhatsapp, type LinkShare } from './shareLink';
+import { copyText } from '../ui/pages-legacy/client-profile/activity/shareText';
 
 /** رابط صفحة التثبيت العامة (تُشارك مع الموظفين). */
 export function installPageUrl(): string {
@@ -164,26 +167,21 @@ export function InstallQr({ url, size = 168, className }: { url: string; size?: 
 }
 
 async function copyInstallLink() {
-  try {
-    await navigator.clipboard.writeText(installPageUrl());
-    toast.success('تم نسخ رابط التثبيت');
-  } catch {
-    toast.error('تعذّر نسخ الرابط');
-  }
+  const result = await copyText(installPageUrl());
+  if (result) toast.success('تم نسخ رابط التثبيت');
+  else toast.error('تعذّر نسخ الرابط');
 }
 
+const installShare = (appName: string): LinkShare => ({
+  title: appName,
+  message: `ثبّت تطبيق ${appName} على هاتفك من هذا الرابط:`,
+  url: installPageUrl(),
+});
+
 export async function shareInstallLink(appName: string) {
-  const url = installPageUrl();
-  const text = `ثبّت تطبيق ${appName} على هاتفك من هذا الرابط:`;
-  try {
-    if (navigator.share) {
-      await navigator.share({ title: appName, text, url });
-      return;
-    }
-  } catch {
-    return; // أُلغيت المشاركة
-  }
-  await copyInstallLink();
+  const result = await shareLink(installShare(appName));
+  if (result === 'copied') toast.success('تم نسخ رابط التثبيت، الصقه في أي محادثة');
+  else if (result === 'failed') toast.error('تعذّرت المشاركة، انسخ الرابط يدوياً');
 }
 
 /** QR + share/copy actions for installing on another phone. */
@@ -198,6 +196,9 @@ export function InstallShare({ title, description, qrSize = 112 }: { title: stri
         <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
           <Button variant="outline" leftIcon={<Share sx={{ fontSize: 18 }} />} onClick={() => void shareInstallLink(brand.name)}>
             مشاركة الرابط
+          </Button>
+          <Button variant="outline" leftIcon={<WhatsApp sx={{ fontSize: 18 }} />} onClick={() => shareLinkOnWhatsapp(installShare(brand.name))}>
+            واتساب
           </Button>
           <Button variant="ghost" leftIcon={<ContentCopy sx={{ fontSize: 18 }} />} onClick={() => void copyInstallLink()}>
             نسخ الرابط
