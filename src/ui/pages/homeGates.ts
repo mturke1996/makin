@@ -33,6 +33,10 @@ export interface HomeGates {
   overdueDebts: boolean;
   /** The person's own custody: needs their deposits AND their own expenses to be exact. */
   custody: boolean;
+  /** Expenses waiting for approval: for whoever may decide them. */
+  approvals: boolean;
+  /** Their own expenses that were sent back: for anyone who records expenses. */
+  corrections: boolean;
 
   /** The pooled fund balance next to the custody shortcut belongs to whoever manages custody. */
   pooledFund: boolean;
@@ -69,6 +73,8 @@ export function homeGates(p: Principal | null | undefined): HomeGates {
     overdueInvoiceAmounts: invoices && payments,
     overdueDebts: can(p, 'debts.view'),
     custody: ownCustody,
+    approvals: can(p, 'expenses.edit.all'),
+    corrections: can(p, 'expenses.create'),
     pooledFund: can(p, 'custody.manage'),
     newInvoice: can(p, 'invoices.manage'),
     newExpense: can(p, 'expenses.create'),

@@ -5,6 +5,7 @@ import './pdfFonts';
 import type { Client, Expense, Payment, StandaloneDebt, Worker } from '../../types';
 import { expenseCategories, expenseHasQuantityLine, formatCurrencyDisplay, formatExpenseNotesOnly, formatQuantityWithUnit } from '../../core/utils-formatters';
 import { buildWorkerLedgers, summarizeWorkerLedgers } from '../../core/finance/workerLedger';
+import { APPROVAL_LABEL, approvalCounts, approvalStatusOf } from '../../core/finance/expenseApproval';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand } from './pdfBrand';
 import { PDF_FONT_FAMILY } from './pdfFonts';
@@ -68,7 +69,8 @@ const EXP_COLS: PdfColumn[] = [
 
 const expenseRow = (e: Expense) => ({
   date: arDate(e.date),
-  desc: { t: e.description, s: [catLabel(e.category), e.workerName].filter(Boolean).join('  ·  ') },
+  // An expense still waiting for approval, or sent back, says so; an approved one carries no mark.
+  desc: { t: e.description, s: [catLabel(e.category), e.workerName, approvalStatusOf(e) === 'approved' ? '' : APPROVAL_LABEL[approvalStatusOf(e)]].filter(Boolean).join('  ·  ') },
   qty: expenseHasQuantityLine(e) ? { t: formatQuantityWithUnit(e.quantity!, e.unit), s: `بسعر ${formatCurrencyDisplay(e.unitPrice!)}` } : { t: '—' },
   notes: formatExpenseNotesOnly(e.notes) || '—',
   amount: e.amount,
@@ -141,6 +143,7 @@ export const ExpensesPDF: React.FC<{ client: Client; expenses: Expense[]; total:
   const ref = docRef('EXP', client);
   const groups = topGroups(sumBy(expenses, (e) => catLabel(e.category), (e) => e.amount));
   const average = expenses.length ? total / expenses.length : 0;
+  const awaiting = approvalCounts(expenses);
   return (
     <Document title={`مصروفات-${client.name}`} author={B.fullName} language="ar">
       <PdfPage B={B} s={s} letterhead runningTitle={`كشف المصروفات  ·  ${client.name}`} docRef={ref}>
@@ -149,7 +152,13 @@ export const ExpensesPDF: React.FC<{ client: Client; expenses: Expense[]; total:
         <PdfSummaryStrip
           s={s}
           cells={[
-            { label: 'إجمالي المصروفات', value: total, color: INK.danger, accent: true },
+            {
+              label: 'إجمالي المصروفات',
+              value: total,
+              color: INK.danger,
+              accent: true,
+              hint: awaiting.pending > 0 ? `منها ${formatCurrencyDisplay(awaiting.pendingAmount)} بانتظار الاعتماد` : undefined,
+            },
             { label: 'عدد السجلات', value: expenses.length, count: true },
             { label: 'متوسط السجل', value: average },
             { label: 'أكبر تصنيف', value: groups[0]?.label ?? '—', count: true, hint: groups[0] && total > 0 ? `${Math.round((groups[0].amount / total) * 100)} بالمئة من الإجمالي` : undefined },

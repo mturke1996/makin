@@ -173,20 +173,22 @@ describe('expenses', () => {
   });
 
   it('lets an employee record an expense in their own name only', async () => {
-    await expectOk(write('field', 'expenses', 'n1', { clientId: 'c1', userId: 'u-field', amount: 1 }));
-    await expectNo(write('field', 'expenses', 'n2', { clientId: 'c1', userId: 'u-field2', amount: 1 }));
-    await expectNo(write('field', 'expenses', 'n3', { clientId: 'c1', amount: 1 }));
-    await expectNo(write('field', 'expenses', 'n4', { clientId: 'c1', userId: 'u-field', amount: 1, isClosed: true }));
-    await expectNo(write('nobody', 'expenses', 'n5', { clientId: 'c1', userId: 'u-nobody', amount: 1 }));
-    await expectNo(write('viewer', 'expenses', 'n6', { clientId: 'c1', userId: 'u-viewer', amount: 1 }));
+    const waiting = { approvalStatus: 'pending' };
+    await expectOk(write('field', 'expenses', 'n1', { clientId: 'c1', userId: 'u-field', amount: 1, ...waiting }));
+    await expectNo(write('field', 'expenses', 'n2', { clientId: 'c1', userId: 'u-field2', amount: 1, ...waiting }));
+    await expectNo(write('field', 'expenses', 'n3', { clientId: 'c1', amount: 1, ...waiting }));
+    await expectNo(write('field', 'expenses', 'n4', { clientId: 'c1', userId: 'u-field', amount: 1, isClosed: true, ...waiting }));
+    await expectNo(write('nobody', 'expenses', 'n5', { clientId: 'c1', userId: 'u-nobody', amount: 1, ...waiting }));
+    await expectNo(write('viewer', 'expenses', 'n6', { clientId: 'c1', userId: 'u-viewer', amount: 1, ...waiting }));
   });
 
   it('lets an owner edit their open expense but not give it away, close it or touch a colleague\'s', async () => {
-    await expectOk(patch('field', 'expenses', 'e-field', { amount: 55 }));
-    await expectNo(patch('field', 'expenses', 'e-field', { userId: 'u-field2' }));
-    await expectNo(patch('field', 'expenses', 'e-field', { isClosed: true }));
-    await expectNo(patch('field', 'expenses', 'e-field2', { amount: 1 }));
-    await expectNo(patch('field', 'expenses', 'e-legacy', { amount: 1 }));
+    const waiting = { approvalStatus: 'pending' };
+    await expectOk(patch('field', 'expenses', 'e-field', { amount: 55, ...waiting }));
+    await expectNo(patch('field', 'expenses', 'e-field', { userId: 'u-field2', ...waiting }));
+    await expectNo(patch('field', 'expenses', 'e-field', { isClosed: true, ...waiting }));
+    await expectNo(patch('field', 'expenses', 'e-field2', { amount: 1, ...waiting }));
+    await expectNo(patch('field', 'expenses', 'e-legacy', { amount: 1, ...waiting }));
   });
 
   it('freezes a closed expense for its owner and for edit-all alike, but edit-all may reopen it', async () => {

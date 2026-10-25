@@ -175,7 +175,20 @@ export interface Expense {
   isHiddenFromEmployees?: boolean;
   /** هل تمت مراجعة/اعتماد المصروف من قبل المدير؟ */
   isVerifiedByAdmin?: boolean;
+  /**
+   * حالة الاعتماد. ما سجّله صاحب صلاحية التعديل الشامل يُعتمد فوراً، وما سجّله غيره ينتظر اعتماده.
+   * غائبة عن السجلات القديمة، وهي تُعامل كمعتمدة. المصروف المرفوض يبقى محتسباً في الحساب حتى يُصحَّح أو يُحذف.
+   */
+  approvalStatus?: ExpenseApprovalStatus;
+  /** من اعتمد أو رفض (uid) واسمه ووقت ذلك. */
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  /** سبب الرفض، إلزامي عند الرفض. */
+  rejectionReason?: string;
 }
+
+export type ExpenseApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 // ═══════════════════════════════════════════════
 // Project Phases & BOQ (مراحل المشروع + جدول الكميات)

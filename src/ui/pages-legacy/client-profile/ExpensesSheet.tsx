@@ -24,6 +24,7 @@ import {
   type GroupBy,
   type RecordSort,
 } from '../../../core/finance/clientRecords';
+import { approvalCounts, matchesApprovalFilter, type ApprovalFilter } from '../../../core/finance/expenseApproval';
 import type { Client, Expense } from '../../../types';
 import { LedgerGroup, PdfActions } from './LedgerParts';
 import { countPhrase } from './moduleCopy';
@@ -90,11 +91,13 @@ export function ExpensesSheet({
 
   const [query, setQuery] = useState<ExpenseQuery>(EMPTY_EXPENSE_QUERY);
   const [roleFilter, setRoleFilter] = useState<AuthorFilter>('all');
+  const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>('all');
   const [grouping, setGrouping] = useState<Exclude<GroupBy, 'none'>>('month');
   const [breakdown, setBreakdown] = useState<Breakdown>('category');
   useResetOnClose(open, () => {
     setQuery(EMPTY_EXPENSE_QUERY);
     setRoleFilter('all');
+    setApprovalFilter('all');
     setGrouping('month');
     setBreakdown('category');
   });
@@ -103,6 +106,8 @@ export function ExpensesSheet({
   const showRoles = seesAll && systemUsers.length > 0;
   const authorCounts = useMemo(() => countByAuthorRole(clientExpenses, authorRoles), [clientExpenses, authorRoles]);
   const activeRole: AuthorFilter = showRoles ? roleFilter : 'all';
+  const review = useMemo(() => approvalCounts(clientExpenses), [clientExpenses]);
+  const hasReview = review.pending > 0 || review.rejected > 0 || approvalFilter !== 'all';
 
   const ctx = useMemo<ExpenseContext>(() => {
     const names = new Map<string, string>();
@@ -114,9 +119,12 @@ export function ExpensesSheet({
     return {
       categoryLabel: expenseCategoryLabel,
       nameOfUser: (id) => names.get(id),
-      predicate: activeRole === 'all' ? undefined : (e) => matchesAuthorFilter(e, authorRoles, activeRole),
+      predicate:
+        activeRole === 'all' && approvalFilter === 'all'
+          ? undefined
+          : (e) => (activeRole === 'all' || matchesAuthorFilter(e, authorRoles, activeRole)) && matchesApprovalFilter(e, approvalFilter),
     };
-  }, [systemUsers, authorRoles, activeRole]);
+  }, [systemUsers, authorRoles, activeRole, approvalFilter]);
 
   // Typing stays instant; the list catches up when the keyboard lets it.
   const deferredSearch = useDeferredValue(query.search);
@@ -140,19 +148,20 @@ export function ExpensesSheet({
       ),
     [filtered, groupBy]
   );
-  const resetKey = JSON.stringify([effective, activeRole, groupBy]);
+  const resetKey = JSON.stringify([effective, activeRole, approvalFilter, groupBy]);
   const { limit, more } = usePagedLimit(resetKey);
   const page = useMemo(() => limitGroups(groups, limit), [groups, limit]);
 
   const hasSearch = query.search.trim() !== '';
   const filtering =
-    hasSearch || query.categories.length > 0 || query.people.length > 0 || !isOpenRange(query.range) || activeRole !== 'all';
+    hasSearch || query.categories.length > 0 || query.people.length > 0 || !isOpenRange(query.range) || activeRole !== 'all' || approvalFilter !== 'all';
 
   const patch = (next: Partial<ExpenseQuery>) => setQuery((q) => ({ ...q, ...next }));
   const toggle = (list: readonly string[], key: string) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
   const clearAll = () => {
     setQuery(EMPTY_EXPENSE_QUERY);
     setRoleFilter('all');
+    setApprovalFilter('all');
   };
 
   const active: ActiveFilter[] = [
@@ -168,6 +177,9 @@ export function ExpensesSheet({
     })),
     ...(activeRole !== 'all'
       ? [{ key: 'role', label: `المُدخل: ${ROLE_LABEL[activeRole]}`, onRemove: () => setRoleFilter('all') }]
+      : []),
+    ...(approvalFilter !== 'all'
+      ? [{ key: 'approval', label: `الحالة: ${approvalFilter === 'pending' ? 'بانتظار الاعتماد' : 'مرفوضة'}`, onRemove: () => setApprovalFilter('all') }]
       : []),
     ...(!isOpenRange(query.range)
       ? [
@@ -313,6 +325,20 @@ export function ExpensesSheet({
                       />
                     )}
                   </div>
+                </FilterGroup>
+              )}
+              {hasReview && (
+                <FilterGroup title="الاعتماد">
+                  <Segmented<ApprovalFilter>
+                    aria-label="تصفية المصروفات حسب الاعتماد"
+                    value={approvalFilter}
+                    onChange={setApprovalFilter}
+                    options={[
+                      { value: 'all', label: 'الكل', count: clientExpenses.length },
+                      { value: 'pending', label: 'بانتظار الاعتماد', count: review.pending },
+                      { value: 'rejected', label: 'مرفوضة', count: review.rejected },
+                    ]}
+                  />
                 </FilterGroup>
               )}
               <FilterGroup title="الترتيب">

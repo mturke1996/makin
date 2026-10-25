@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Add, Receipt, Search, TrendingDown } from '../../design-system/icons';
+import { Add, Check, HourglassEmpty, CancelOutlined, Receipt, Search, TrendingDown } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import toast from 'react-hot-toast';
 import { EXPENSE_CLOSED_MESSAGE, expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
+import { approvalCounts, expensePhrase, isAwaitingApproval, matchesApprovalFilter, type ApprovalFilter } from '../../core/finance/expenseApproval';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useAccess } from '../../core/access/useAccess';
 import {
@@ -25,6 +26,7 @@ import {
   PageShell,
   Segmented,
   Select,
+  cn,
 } from '../../design-system/primitives';
 import type { Expense } from '../../types';
 import { useUsersDirectory } from './client-profile/useUsersDirectory';
@@ -33,6 +35,7 @@ import { ExpenseFormSheet, type ExpenseFormData } from './money/ExpenseFormSheet
 import { ExpenseRow } from './money/ExpenseRow';
 import { FundBanner } from './money/FundBanner';
 import { ConfirmDeleteModal, FigureStripSkeleton, ListSkeleton, StickyGroup } from './money/moneyUi';
+import { ProfileCallout } from './client-profile/profileUi';
 import { dayKey, dayLabel, groupBy, isSameMonthAsToday, matchesQuery, sumAmounts } from './money/moneyUtils';
 
 /**
@@ -43,12 +46,14 @@ import { dayKey, dayLabel, groupBy, isSameMonthAsToday, matchesQuery, sumAmounts
 export const ExpensesPage = () => {
   const navigate = useNavigate();
   const access = useAccess();
-  const { expenses, addExpense, updateExpense, deleteExpense, clients, isLoading } = useDataStore();
+  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, isLoading } = useDataStore();
   const user = useAuthStore((s) => s.user);
   const myFundStats = useMyFundStats();
 
   const seesAll = access.expenseScope === 'all';
   const canCreate = access.can('expenses.create');
+  // Whoever may edit all expenses decides which ones are approved (the rules say the same).
+  const canApprove = access.can('expenses.edit.all');
 
   // The directory tells admin from employee on each row; only people who see everyone's expenses need it.
   const directory = useUsersDirectory(seesAll && access.canViewDirectory);
@@ -58,6 +63,11 @@ export const ExpensesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [authorFilter, setAuthorFilter] = useState<AuthorFilter>('all');
+  const [approvalFilter, setApprovalFilter] = useState<ApprovalFilter>(() => {
+    const wanted = new URLSearchParams(window.location.search).get('status');
+    return wanted === 'pending' || wanted === 'rejected' ? wanted : 'all';
+  });
+  const [confirmAll, setConfirmAll] = useState(false);
   const [sheet, setSheet] = useState<{ open: boolean; edit: Expense | null }>({ open: false, edit: null });
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,6 +88,7 @@ export const ExpensesPage = () => {
   // The store may also hold worker payments made by others; only what the policy lists belongs here.
   const visibleExpenses = useMemo(() => access.listableExpenses(expenses), [access, expenses]);
   const authorCounts = useMemo(() => countByAuthorRole(visibleExpenses, authorRoles), [visibleExpenses, authorRoles]);
+  const review = useMemo(() => approvalCounts(visibleExpenses), [visibleExpenses]);
 
   const filtered = useMemo(
     () =>
@@ -94,14 +105,14 @@ export const ExpensesPage = () => {
             clientName.get(e.clientId)
           );
           const matchAuthor = !showRoles || matchesAuthorFilter(e, authorRoles, authorFilter);
-          return matchCategory && matchSearch && matchAuthor;
+          return matchCategory && matchSearch && matchAuthor && matchesApprovalFilter(e, approvalFilter);
         })
         .sort(
           (a, b) =>
             new Date(b.date).getTime() - new Date(a.date).getTime() ||
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ),
-    [visibleExpenses, searchQuery, categoryFilter, authorFilter, showRoles, authorRoles, clientName]
+    [visibleExpenses, searchQuery, categoryFilter, authorFilter, approvalFilter, showRoles, authorRoles, clientName]
   );
   const groups = useMemo(() => groupBy(filtered, (e) => dayKey(e.date)), [filtered]);
 
@@ -192,17 +203,35 @@ export const ExpensesPage = () => {
     }
   };
 
-  const filtering = !!searchQuery.trim() || categoryFilter !== 'all' || (showRoles && authorFilter !== 'all');
+  const filtering = !!searchQuery.trim() || categoryFilter !== 'all' || (showRoles && authorFilter !== 'all') || approvalFilter !== 'all';
   const resetFilters = () => {
     setSearchQuery('');
     setCategoryFilter('all');
     setAuthorFilter('all');
+    setApprovalFilter('all');
+  };
+
+  const waitingToApprove = useMemo(() => filtered.filter((e) => isAwaitingApproval(e) && !isExpenseLocked(e)), [filtered]);
+  const approveAllShown = async () => {
+    try {
+      await approveExpenses(waitingToApprove.map((e) => e.id));
+    } finally {
+      setConfirmAll(false);
+    }
   };
 
   const authorOptions = [
     { value: 'all' as AuthorFilter, label: 'الكل', count: authorCounts.all },
     { value: 'employee' as AuthorFilter, label: 'مصروفات الموظفين', count: authorCounts.employee },
     { value: 'admin' as AuthorFilter, label: 'مصروفات الإدارة', count: authorCounts.admin },
+  ];
+
+  // The status filter appears only when something is waiting or was sent back.
+  const hasReview = review.pending > 0 || review.rejected > 0 || approvalFilter !== 'all';
+  const statusOptions = [
+    { value: 'all' as ApprovalFilter, label: 'كل الحالات', count: visibleExpenses.length },
+    { value: 'pending' as ApprovalFilter, label: 'بانتظار الاعتماد', count: review.pending },
+    { value: 'rejected' as ApprovalFilter, label: 'مرفوضة', count: review.rejected },
   ];
 
   const loading = isLoading && expenses.length === 0;
@@ -286,6 +315,39 @@ export const ExpensesPage = () => {
 
             <div className="min-w-0 space-y-5 lg:order-1">
               <div className="space-y-3">
+                {canApprove && review.pending > 0 && approvalFilter !== 'pending' && (
+                  <ProfileCallout
+                    tone="warning"
+                    icon={<HourglassEmpty sx={{ fontSize: 22 }} />}
+                    title={`${expensePhrase(review.pending)} بانتظار اعتمادك`}
+                    figure={<Amount amount={review.pendingAmount} />}
+                    figureLabel="القيمة"
+                    action={<Button size="sm" variant="outline" onClick={() => setApprovalFilter('pending')}>مراجعة</Button>}
+                  />
+                )}
+                {!canApprove && review.rejected > 0 && approvalFilter !== 'rejected' && (
+                  <ProfileCallout
+                    tone="danger"
+                    icon={<CancelOutlined sx={{ fontSize: 22 }} />}
+                    title={`${expensePhrase(review.rejected, { one: 'مرفوض', two: 'مرفوضان', few: 'مرفوضة', many: 'مرفوضاً' })} يحتاج تصحيحك`}
+                    action={<Button size="sm" variant="outline" onClick={() => setApprovalFilter('rejected')}>عرض</Button>}
+                  />
+                )}
+                {canApprove && approvalFilter === 'pending' && waitingToApprove.length > 0 && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-panel px-3.5 py-2.5">
+                    <p className="text-sm text-fg-muted">
+                      {confirmAll ? `سيُعتمد ${waitingToApprove.length} مصروفاً بقيمة ${formatCurrencyDisplay(sumAmounts(waitingToApprove.map((e) => e.amount)))}` : 'راجع كل مصروف، أو اعتمد ما أمامك دفعة واحدة'}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant={confirmAll ? 'primary' : 'outline'}
+                      leftIcon={<Check sx={{ fontSize: 18 }} />}
+                      onClick={() => (confirmAll ? void approveAllShown() : setConfirmAll(true))}
+                    >
+                      {confirmAll ? 'تأكيد الاعتماد' : `اعتماد الكل (${waitingToApprove.length})`}
+                    </Button>
+                  </div>
+                )}
                 {showRoles && (
                   <Segmented<AuthorFilter>
                     layout="scroll"
@@ -295,7 +357,7 @@ export const ExpensesPage = () => {
                     onChange={setAuthorFilter}
                   />
                 )}
-                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_16rem]">
+                <div className={cn('grid gap-3', hasReview ? 'sm:grid-cols-[minmax(0,1fr)_13rem_13rem]' : 'sm:grid-cols-[minmax(0,1fr)_16rem]')}>
                   <Input
                     leftIcon={<Search sx={{ fontSize: 20 }} />}
                     placeholder={seesAll ? 'بحث بالوصف أو اسم المُدخل' : 'بحث بالوصف أو التصنيف'}
@@ -303,6 +365,17 @@ export const ExpensesPage = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
+                  {hasReview && (
+                    <Select
+                      aria-label="تصفية حسب حالة الاعتماد"
+                      value={approvalFilter}
+                      onChange={(e) => { setApprovalFilter(e.target.value as ApprovalFilter); setConfirmAll(false); }}
+                    >
+                      {statusOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{`${o.label} (${o.count})`}</option>
+                      ))}
+                    </Select>
+                  )}
                   <Select
                     aria-label="تصفية حسب التصنيف"
                     value={categoryFilter}
@@ -352,6 +425,7 @@ export const ExpensesPage = () => {
                           canEdit={access.canEditExpense(exp)}
                           onOpen={() => openExpense(exp)}
                           onDelete={access.canDeleteExpense(exp) ? () => askDelete(exp) : undefined}
+                          onApprove={canApprove && !isExpenseLocked(exp) ? () => void approveExpenses([exp.id]) : undefined}
                         />
                       ))}
                     </StickyGroup>
@@ -373,6 +447,21 @@ export const ExpensesPage = () => {
         onClose={closeSheet}
         onSubmit={handleSubmit}
         onDelete={sheet.edit && access.canDeleteExpense(sheet.edit) ? (e) => askDelete(e) : undefined}
+        review={
+          sheet.edit
+            ? {
+                canDecide: canApprove && !isExpenseLocked(sheet.edit),
+                onApprove: async () => {
+                  await approveExpenses([sheet.edit!.id]);
+                  closeSheet();
+                },
+                onReject: async (reason) => {
+                  await rejectExpense(sheet.edit!.id, reason);
+                  closeSheet();
+                },
+              }
+            : undefined
+        }
       />
 
       <ConfirmDeleteModal

@@ -144,6 +144,34 @@ service cloud.firestore {
           .hasOnly(['isClosed', 'closedAt', 'expenseInvoiceId', 'updatedAt']);
       }
 
+      // ── Approval ────────────────────────────────────────────────────────────
+      // Whoever may edit all expenses decides; everybody else's expense must say it is waiting for review,
+      // with no reviewer, so nobody approves their own record and an edit sends it back to review.
+      function approvalKeys() {
+        return ['approvalStatus', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectionReason'];
+      }
+
+      function approvalUntouched() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(approvalKeys());
+      }
+
+      function waitingForReview(data) {
+        return data.get('approvalStatus', null) == 'pending'
+          && data.get('reviewedBy', null) == null
+          && data.get('reviewedByName', null) == null
+          && data.get('reviewedAt', null) == null
+          && data.get('rejectionReason', null) == null;
+      }
+
+      // A decision carries the deciding person's own uid, and a rejection carries its reason.
+      function validDecision(data) {
+        let status = data.get('approvalStatus', null);
+        return status in ['pending', 'approved', 'rejected']
+          && (status == 'pending' || data.get('reviewedBy', null) == request.auth.uid)
+          && (status != 'rejected'
+            || (data.get('rejectionReason', null) is string && data.rejectionReason.size() > 0));
+      }
+
       function matchingInvoiceAfter() {
         let invoiceId = request.resource.data.get('expenseInvoiceId', null);
         return invoiceId is string && invoiceId.size() > 0
@@ -173,22 +201,26 @@ service cloud.firestore {
         && validWorkerLink(request.resource.data)
         && request.resource.data.get('isClosed', false) == false
         && request.resource.data.get('expenseInvoiceId', null) == null
-        && (can('expenses.edit.all') || (can('expenses.create')
+        && ((can('expenses.edit.all') && validDecision(request.resource.data))
+          || (can('expenses.create')
             && request.resource.data.get('userId', null) == request.auth.uid
-            && request.resource.data.get('isClosed', false) == false));
+            && request.resource.data.get('isClosed', false) == false
+            && waitingForReview(request.resource.data)));
 
-      // Open expenses: edit-all, or the owner (who may not hand it to someone else nor close it).
+      // Open expenses: edit-all, or the owner (who may not hand it to someone else nor close it, and whose
+      // edit always leaves the expense waiting for review).
       // Closed expenses are frozen, except that edit-all may reopen one (deleting its expense invoice)
       // and may refresh the author's NAME on it (renaming a user rewrites it on their records).
       allow update: if (isOpen()
           && request.resource.data.get('isClosed', false) == false
           && request.resource.data.get('expenseInvoiceId', null) == resource.data.get('expenseInvoiceId', null)
           && validFinancialChange()
-          && (can('expenses.edit.all')
+          && ((can('expenses.edit.all') && (approvalUntouched() || validDecision(request.resource.data)))
               || (can('expenses.create')
                   && isMine()
                   && request.resource.data.get('userId', null) == resource.data.get('userId', null)
-                  && request.resource.data.get('isClosed', false) == false)))
+                  && request.resource.data.get('isClosed', false) == false
+                  && waitingForReview(request.resource.data))))
         || (isOpen() && can('expenses.edit.all')
             && request.resource.data.get('isClosed', false) == true
             && onlyClosureFields() && matchingInvoiceAfter())

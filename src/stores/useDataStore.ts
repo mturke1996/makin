@@ -46,6 +46,9 @@ import {
 } from '../core/finance/invoicePayments';
 import { addMoney, subtractMoney } from '../core/finance/money';
 import { EXPENSE_CLOSED_MESSAGE, isExpenseLocked } from '../core/finance/expenseLock';
+import { approvalDecision, approvalFieldsForNew, approvalPatchOnEdit, type ApprovalActor } from '../core/finance/expenseApproval';
+import { buildPrincipal, can } from '../core/access/principal';
+import { useAuthStore } from './useAuthStore';
 import { SOURCES, mergeById, planFor, sortRecords, type DataKey } from '../core/access/dataPlan';
 import type { Principal } from '../core/access/principal';
 
@@ -97,6 +100,24 @@ const saveCache = (key: string, data: any[]) => {
   saveCacheTimers[key] = setTimeout(() => {
     try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch {}
   }, 500);
+};
+
+/** The signed-in person as the approval rules see them. */
+const approvalActor = (): ApprovalActor => {
+  const user = useAuthStore.getState().user;
+  return {
+    id: user?.id ?? '',
+    name: user?.displayName || user?.email || 'مستخدم',
+    canApprove: can(buildPrincipal(user), 'expenses.edit.all'),
+  };
+};
+
+/** Approval fields are decided here, never by a form: a screen cannot hand itself an approved expense. */
+const APPROVAL_KEYS = ['approvalStatus', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'rejectionReason'] as const;
+const withoutApproval = (data: Partial<Expense>): Partial<Expense> => {
+  const rest = { ...data };
+  for (const key of APPROVAL_KEYS) delete rest[key];
+  return rest;
 };
 
 // Helper: toast + in-app activity feed + clearer Firebase error text
@@ -152,6 +173,10 @@ interface DataState {
   
   addExpense: (expense: Expense) => Promise<void>;
   updateExpense: (id: string, data: Partial<Expense>) => Promise<void>;
+  /** Approver only (the rules refuse anyone else). Locked expenses are skipped. */
+  approveExpenses: (ids: string[]) => Promise<void>;
+  /** Approver only. A rejection must say why. */
+  rejectExpense: (id: string, reason: string) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   
   addExpenseInvoice: (invoice: ExpenseInvoice) => Promise<void>;
@@ -427,13 +452,36 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   // Expense Actions
   addExpense: async (expense) => {
-    await handleAsync(() => expensesService.addConfirmedOnce(expense), 'تم تسجيل المصروف بنجاح');
+    // The same operation id always gets the same approval fields, so a retry is still the same submission.
+    const stamped: Expense = { ...withoutApproval(expense), ...approvalFieldsForNew(approvalActor(), expense.createdAt) } as Expense;
+    await handleAsync(() => expensesService.addConfirmedOnce(stamped), 'تم تسجيل المصروف بنجاح');
   },
   updateExpense: async (id, data) => {
     await handleAsync(async () => {
-      if (isExpenseLocked(get().expenses.find((e) => e.id === id))) throw new Error(EXPENSE_CLOSED_MESSAGE);
-      await expensesService.update(id, data);
+      const existing = get().expenses.find((e) => e.id === id);
+      if (isExpenseLocked(existing)) throw new Error(EXPENSE_CLOSED_MESSAGE);
+      // A change by anyone who cannot approve sends an approved or rejected expense back to review.
+      const sendBack = existing ? approvalPatchOnEdit(existing, approvalActor()) : {};
+      await expensesService.update(id, { ...withoutApproval(data), ...sendBack });
     }, 'تم تحديث المصروف');
+  },
+  approveExpenses: async (ids) => {
+    const targets = get().expenses.filter((e) => ids.includes(e.id) && !isExpenseLocked(e));
+    if (targets.length === 0) return;
+    const message = targets.length === 1 ? `تم اعتماد المصروف «${targets[0].description}»` : `تم اعتماد ${targets.length} مصروفاً`;
+    await handleAsync(async () => {
+      const now = new Date().toISOString();
+      const decision = approvalDecision('approved', approvalActor(), now);
+      for (const e of targets) await expensesService.update(e.id, { ...decision, updatedAt: now });
+    }, message);
+  },
+  rejectExpense: async (id, reason) => {
+    const target = get().expenses.find((e) => e.id === id);
+    if (!target) throw new Error('المصروف غير موجود');
+    if (isExpenseLocked(target)) throw new Error(EXPENSE_CLOSED_MESSAGE);
+    const now = new Date().toISOString();
+    const decision = approvalDecision('rejected', approvalActor(), now, reason);
+    await handleAsync(() => expensesService.update(id, { ...decision, updatedAt: now }), `تم رفض المصروف «${target.description}»`);
   },
   deleteExpense: async (id) => {
     await handleAsync(async () => {

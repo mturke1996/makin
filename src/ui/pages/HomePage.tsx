@@ -86,15 +86,19 @@ export function HomePage() {
         clients,
         debts: standaloneDebts,
         custody: gates.custody ? myFundStats : null,
+        expenses: listable,
+        userId: user?.id,
         allow: {
           invoices: gates.overdueInvoices,
           invoiceAmounts: gates.overdueInvoiceAmounts,
           debts: gates.overdueDebts,
           custody: gates.custody,
+          approvals: gates.approvals,
+          corrections: gates.corrections,
         },
         t,
       }),
-    [invoices, payments, clients, standaloneDebts, myFundStats, gates, t]
+    [invoices, payments, clients, standaloneDebts, listable, user?.id, myFundStats, gates, t]
   );
 
   const firstName = user?.displayName?.trim().split(/\s+/)[0] || '';

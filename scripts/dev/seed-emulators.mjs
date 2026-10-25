@@ -110,10 +110,16 @@ const ex = [
   ['e13', 'c-villa', 'دفعة للسباك مصطفى (تسوية كاملة)', 14000, 'labor', '2026-10-16', undefined, undefined, undefined, 'w-plumb', 'مصطفى السباك'],
   ['e12', 'c-shop', 'دفعة للدهان فرج', 3000, 'labor', '2026-10-22', undefined, undefined, undefined, 'w-paint', 'فرج الدهان'],
 ];
+// Approval: what the admin records is approved on the spot; what the site employee records waits for review
+// (one of them was already sent back with a reason).
+const byStaff = { e4: { approvalStatus: 'pending' }, e11: { approvalStatus: 'pending' }, e6: { approvalStatus: 'rejected', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now, rejectionReason: 'لا توجد فاتورة، أرفق إيصال النقل' } };
 for (const [id, clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName] of ex) {
+  const staff = id in byStaff;
   await put('expenses', id, {
     clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName, isClosed: false,
-    createdBy: id === 'e4' ? 'سالم (موقع)' : adminName, userId: id === 'e4' ? staffUid : adminUid, createdByRole: id === 'e4' ? 'employee' : 'admin', ...stamp(),
+    createdBy: staff ? 'سالم (موقع)' : adminName, userId: staff ? staffUid : adminUid, createdByRole: staff ? 'employee' : 'admin',
+    ...(staff ? byStaff[id] : { approvalStatus: 'approved', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now }),
+    ...stamp(),
   });
 }
 

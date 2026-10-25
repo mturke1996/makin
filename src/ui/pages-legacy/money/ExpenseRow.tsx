@@ -1,4 +1,5 @@
-import { AttachFile, PersonOutline, Shield, VisibilityOutlined } from '../../../design-system/icons';
+import { AttachFile, Check, PersonOutline, Shield, VisibilityOutlined } from '../../../design-system/icons';
+import { isAwaitingApproval } from '../../../core/finance/expenseApproval';
 import { Amount, Avatar, Badge } from '../../../design-system/primitives';
 import {
   expenseHasQuantityLine,
@@ -8,6 +9,7 @@ import {
 } from '../../../core/utils-formatters';
 import type { Role } from '../../../core/access/principal';
 import type { Expense } from '../../../types';
+import { ApprovalBadge } from './ApprovalBadge';
 import { MoneyRow } from './moneyUi';
 
 interface Props {
@@ -25,9 +27,11 @@ interface Props {
   onOpen: () => void;
   /** Omitted when the policy does not let this person delete the expense. */
   onDelete?: () => void;
+  /** Given to someone who may approve: a waiting expense then offers a one-press approval on wide screens. */
+  onApprove?: () => void;
 }
 
-export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, canEdit, onOpen, onDelete }: Props) {
+export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, canEdit, onOpen, onDelete, onApprove }: Props) {
   const author = e.createdBy || (authorRole === 'employee' ? 'موظف' : 'الإدارة');
   const hasQty = expenseHasQuantityLine({ quantity: e.quantity, unitPrice: e.unitPrice });
 
@@ -64,6 +68,7 @@ export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, can
               {formatQuantityWithUnit(e.quantity!, e.unit)} × {formatCurrencyDisplay(e.unitPrice!)}
             </Badge>
           )}
+          <ApprovalBadge expense={e} />
           {e.isClosed && <Badge tone="info">مغلق</Badge>}
           {e.invoiceNumber && <span className="text-xs text-fg-muted">فاتورة {e.invoiceNumber}</span>}
           {e.attachmentUrl && (
@@ -81,7 +86,19 @@ export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, can
       editLabel={canEdit ? `تعديل مصروف ${e.description}` : `عرض مصروف ${e.description}`}
       deleteLabel={`حذف مصروف ${e.description}`}
       desktopActions={
-        e.attachmentUrl && (
+        <>
+          {onApprove && isAwaitingApproval(e) && (
+            <button
+              type="button"
+              onClick={onApprove}
+              aria-label={`اعتماد مصروف ${e.description}`}
+              title="اعتماد"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-success-ink transition-colors duration-fast ease-out hover:bg-success-soft focus:outline-none focus-visible:shadow-focus"
+            >
+              <Check sx={{ fontSize: 20 }} />
+            </button>
+          )}
+          {e.attachmentUrl && (
           <a
             href={e.attachmentUrl}
             target="_blank"
@@ -92,7 +109,8 @@ export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, can
           >
             <AttachFile sx={{ fontSize: 20 }} />
           </a>
-        )
+          )}
+        </>
       }
     />
   );

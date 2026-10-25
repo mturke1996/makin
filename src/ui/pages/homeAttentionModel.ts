@@ -2,11 +2,12 @@ import dayjs from 'dayjs';
 import { findOverdueInvoices } from '../../core/finance/overdueInvoices';
 import { sumMoney, toMilli } from '../../core/finance/money';
 import type { MyFundStats } from '../../core/hooks/useMyFundStats';
-import type { Client, Invoice, Payment } from '../../types';
+import { approvalCounts, approvalStatusOf, expensePhrase } from '../../core/finance/expenseApproval';
+import type { Client, Expense, Invoice, Payment } from '../../types';
 
 type Translate = (ar: string, en: string) => string;
 
-export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty';
+export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected';
 
 export interface AttentionItem {
   key: string;
@@ -28,6 +29,10 @@ export interface AttentionAllow {
   invoiceAmounts: boolean;
   debts: boolean;
   custody: boolean;
+  /** An approver: expenses waiting for a decision. */
+  approvals?: boolean;
+  /** Anyone who records expenses: their own that were sent back for correction. */
+  corrections?: boolean;
 }
 
 interface BuildArgs {
@@ -36,6 +41,9 @@ interface BuildArgs {
   clients: Client[];
   debts: DebtLike[];
   custody: MyFundStats | null;
+  /** The expenses this person may list (everyone's or only their own), and who they are. */
+  expenses?: Expense[];
+  userId?: string;
   allow: AttentionAllow;
   t: Translate;
   /** For tests; defaults to now. */
@@ -55,7 +63,7 @@ function sinceDays(days: number, t: Translate): string {
  * that area, and an amount is quoted only when the data behind it is complete.
  */
 export function buildAttentionItems({
-  invoices, payments, clients, debts, custody, allow, t, now,
+  invoices, payments, clients, debts, custody, expenses = [], userId, allow, t, now,
 }: BuildArgs): AttentionItem[] {
   const items: AttentionItem[] = [];
   const today = dayjs(now).startOf('day');
@@ -85,6 +93,42 @@ export function buildAttentionItems({
         subtitle: `${t('الأقدم', 'Oldest')} ${sinceDays(oldest.days, t)}`,
         amount: allow.invoiceAmounts ? sumMoney(overdue.map((o) => o.remaining ?? 0)) : undefined,
         path: '/invoices',
+      });
+    }
+  }
+
+  if (allow.approvals) {
+    const waiting = expenses.filter((e) => approvalStatusOf(e) === 'pending' && !e.isClosed);
+    if (waiting.length > 0) {
+      const counts = approvalCounts(waiting);
+      const oldest = Math.max(...waiting.map((e) => today.diff(dayjs(e.createdAt || e.date).startOf('day'), 'day')));
+      items.push({
+        key: 'expense-approval',
+        tone: 'warning',
+        kind: 'expense-approval',
+        title: t(`${expensePhrase(waiting.length)} بانتظار الاعتماد`, `${waiting.length} expense${waiting.length === 1 ? '' : 's'} awaiting approval`),
+        subtitle: oldest > 0 ? `${t('الأقدم', 'Oldest')} ${sinceDays(oldest, t)}` : t('سُجّلت اليوم', 'Recorded today'),
+        amount: counts.pendingAmount,
+        path: '/expenses?status=pending',
+      });
+    }
+  }
+
+  if (allow.corrections && userId) {
+    const sentBack = expenses.filter((e) => e.userId === userId && approvalStatusOf(e) === 'rejected' && !e.isClosed);
+    if (sentBack.length > 0) {
+      const reason = sentBack.length === 1 ? sentBack[0].rejectionReason : undefined;
+      items.push({
+        key: 'expense-rejected',
+        tone: 'danger',
+        kind: 'expense-rejected',
+        title: t(
+          `${expensePhrase(sentBack.length, { one: 'مرفوض', two: 'مرفوضان', few: 'مرفوضة', many: 'مرفوضاً' })} يحتاج تصحيحك`,
+          `${sentBack.length} of your expenses ${sentBack.length === 1 ? 'was' : 'were'} sent back`,
+        ),
+        subtitle: reason || t('عدّل المصروف ليعود إلى المراجعة', 'Fix it and it returns to review'),
+        amount: approvalCounts(sentBack).rejected > 0 ? sentBack.reduce((sum, e) => sum + e.amount, 0) : undefined,
+        path: '/expenses?status=rejected',
       });
     }
   }

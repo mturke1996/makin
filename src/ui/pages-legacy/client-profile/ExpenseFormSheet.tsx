@@ -22,6 +22,7 @@ import {
 } from './FormSheetKit';
 import { CustodyOverdraftNotice, UserBalanceBanner } from './profileBanners';
 import { ProfileCallout } from './profileUi';
+import { ExpenseReviewPanel } from '../money/ExpenseReviewPanel';
 import { isoDay } from './ledgerUtils';
 import { expenseSchema, type ExpenseFormValues } from './schemas';
 import type { FundStats, UserBalanceInfo } from './types';
@@ -48,6 +49,8 @@ interface ExpenseFormSheetProps {
   onClose: () => void;
   onSubmit: (data: ExpenseFormValues) => Promise<unknown>;
   onDelete?: () => void;
+  /** Where the expense stands in review, with the decisions for someone who may take them. */
+  review?: { canDecide: boolean; onApprove: () => Promise<void>; onReject: (reason: string) => Promise<void> };
 }
 
 export function ExpenseFormSheet({
@@ -64,6 +67,7 @@ export function ExpenseFormSheet({
   onClose,
   onSubmit,
   onDelete,
+  review,
 }: ExpenseFormSheetProps) {
   const { control, handleSubmit, setValue } = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -126,6 +130,7 @@ export function ExpenseFormSheet({
       deleteLabel="حذف المصروف"
       readOnly={!!readOnlyNotice}
     >
+      {edit && review && <ExpenseReviewPanel expense={edit} {...review} />}
       {readOnlyNotice && (
         <ProfileCallout tone="info" icon={<LockOutlined sx={{ fontSize: 22 }} />} title="للاطلاع فقط">
           {readOnlyNotice}

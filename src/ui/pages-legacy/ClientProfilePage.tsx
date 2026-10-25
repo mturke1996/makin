@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowForward, ExpandMore, PostAdd, Payment as PaymentIcon, PersonOff, ReceiptLong } from '../../design-system/icons';
 import { Button, Card, CardHeader, CardTitle, CardDescription, ClientProfileHero, EmptyState, PageShell } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
-import { expenseReadOnlyNotice } from '../../core/finance/expenseLock';
+import { expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
+import { useDataStore } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { sumBoqItems } from '../../core/finance/projectBudget';
@@ -73,6 +74,8 @@ export const ClientProfilePage = () => {
   const [searchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
+  const approveExpenses = useDataStore((s) => s.approveExpenses);
+  const rejectExpense = useDataStore((s) => s.rejectExpense);
   const data = useClientProfileData(clientId);
   const { client, summary, userBalancesSummary, clientPhases, caps } = data;
   const { clientInvoices, clientLetters } = useClientExtras(clientId, caps);
@@ -631,6 +634,21 @@ export const ClientProfilePage = () => {
           // A closed expense, or one this person may not change, opens read-only and says why.
           readOnlyNotice={
             activeForm.edit ? expenseReadOnlyNotice(activeForm.edit, access.canEditExpense(activeForm.edit)) : null
+          }
+          review={
+            activeForm.edit
+              ? {
+                  canDecide: access.can('expenses.edit.all') && !isExpenseLocked(activeForm.edit),
+                  onApprove: async () => {
+                    await approveExpenses([activeForm.edit!.id]);
+                    dismissForm();
+                  },
+                  onReject: async (reason) => {
+                    await rejectExpense(activeForm.edit!.id, reason);
+                    dismissForm();
+                  },
+                }
+              : undefined
           }
           onClose={dismissForm}
           onSubmit={(values) => saves.saveExpense(activeForm.edit, values)}

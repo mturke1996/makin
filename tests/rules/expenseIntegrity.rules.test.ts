@@ -14,6 +14,8 @@ function expense(id: string, extra: Partial<Expense> = {}): Expense {
   return {
     id, clientId: 'c1', userId: 'u-field', description: 'مواد بناء', category: 'materials', amount: 10,
     date: '2026-10-24', isClosed: false, createdAt: '2026-10-24T10:00:00Z', updatedAt: '2026-10-24T10:00:00Z',
+    // Anybody may record an expense waiting for review; only an approver may write another status.
+    approvalStatus: 'pending',
     ...extra,
   };
 }

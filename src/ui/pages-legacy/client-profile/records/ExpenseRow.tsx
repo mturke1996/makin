@@ -5,6 +5,8 @@ import type { Role } from '../../../../core/access/principal';
 import { formatDayText } from '../../../../core/finance/clientRecords';
 import { expenseHasQuantityLine } from '../../../../core/utils-formatters';
 import type { Expense } from '../../../../types';
+import { isAwaitingApproval, isRejected } from '../../../../core/finance/expenseApproval';
+import { ApprovalBadge } from '../../money/ApprovalBadge';
 import { ExpenseQuantityChip } from '../ExpenseQuantityBlock';
 import { LedgerRow } from '../LedgerParts';
 import { expenseCategoryLabel } from './recordLabels';
@@ -59,8 +61,9 @@ export const ExpenseRow = memo(function ExpenseRow({
       }
       note={e.notes}
       meta={
-        (showAuthor || e.isClosed) && (
+        (showAuthor || e.isClosed || isAwaitingApproval(e) || isRejected(e)) && (
           <>
+            <ApprovalBadge expense={e} />
             {showAuthor &&
               (authorRole === 'employee' ? (
                 <Badge tone="info">

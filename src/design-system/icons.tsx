@@ -62,6 +62,7 @@ import {
   HandCoins as PhHandCoins,
   HandWaving as PhHandWaving,
   HardHat as PhHardHat,
+  Hourglass as PhHourglass,
   House as PhHouse,
   Info as PhInfo,
   Lightning as PhLightning,
@@ -196,6 +197,7 @@ export const Flag = glyph(PhFlag, 'Flag');
 export const GetApp = glyph(PhDownloadSimple, 'GetApp');
 export const Groups = glyph(PhUsersThree, 'Groups');
 export const History = glyph(PhClockCounterClockwise, 'History');
+export const HourglassEmpty = glyph(PhHourglass, 'HourglassEmpty');
 export const Home = glyph(PhHouse, 'Home');
 export const Info = glyph(PhInfo, 'Info');
 export const InfoOutlined = glyph(PhInfo, 'InfoOutlined');

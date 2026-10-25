@@ -21,6 +21,7 @@ import {
 import type { Client, Expense } from '../../../types';
 import { CustodyOverdraftNotice } from '../client-profile/profileBanners';
 import { ProfileCallout } from '../client-profile/profileUi';
+import { ExpenseReviewPanel } from './ExpenseReviewPanel';
 import { FormBody, FormSection } from './moneyUi';
 import { isoDay } from './moneyUtils';
 
@@ -55,6 +56,8 @@ interface Props {
   onSubmit: (data: ExpenseFormData) => Promise<void>;
   /** Omitted when the access policy does not let this person delete the expense. */
   onDelete?: (expense: Expense) => void;
+  /** Where the expense stands in review, with the decisions for someone who may take them. */
+  review?: { canDecide: boolean; onApprove: () => Promise<void>; onReject: (reason: string) => Promise<void> };
 }
 
 type FormState = {
@@ -85,7 +88,7 @@ const blank = (clientId: string): FormState => ({
   qtyOpen: false,
 });
 
-export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readOnlyNotice, onClose, onSubmit, onDelete }: Props) {
+export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readOnlyNotice, onClose, onSubmit, onDelete, review }: Props) {
   const [form, setForm] = useState<FormState>(() => blank(''));
   const [attempted, setAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -202,6 +205,7 @@ export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readO
       }
     >
       <FormBody>
+        {edit && review && <ExpenseReviewPanel expense={edit} {...review} />}
         {readOnlyNotice && (
           <ProfileCallout tone="info" icon={<LockOutlined sx={{ fontSize: 22 }} />} title="للاطلاع فقط">
             {readOnlyNotice}

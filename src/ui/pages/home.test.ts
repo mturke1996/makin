@@ -221,4 +221,33 @@ describe('buildAttentionItems', () => {
     expect(buildAttentionItems({ ...base, invoices: [], debts: [], custody, allow: all }).map((i) => i.kind)).toEqual(['custody-deficit']);
     expect(buildAttentionItems({ ...base, invoices: [], debts: [], custody, allow: { ...all, custody: false } })).toEqual([]);
   });
+
+  describe('expense review', () => {
+    const exp = (id: string, userId: string, approvalStatus?: 'pending' | 'rejected' | 'approved', extra = {}) =>
+      ({ id, clientId: 'c1', userId, description: id, amount: 100, category: 'other', date: '2026-10-20', createdAt: '2026-10-21T08:00:00Z', isClosed: false, approvalStatus, ...extra }) as Expense;
+    const noOthers = { invoices: [], debts: [] };
+    const review = [exp('a', 'u-field', 'pending'), exp('b', 'u-field', 'pending', { amount: 50.5 }), exp('c', 'u-field', 'rejected', { rejectionReason: 'الفاتورة ناقصة' }), exp('d', 'u-acct', 'approved'), exp('e', 'u-acct')];
+
+    it('tells an approver how many are waiting, how much, and since when', () => {
+      const [item] = buildAttentionItems({ ...base, ...noOthers, expenses: review, userId: 'u-acct', allow: { ...all, approvals: true } });
+      expect(item.kind).toBe('expense-approval');
+      expect(item.title).toBe('مصروفان بانتظار الاعتماد');
+      expect(item.amount).toBe(150.5);
+      expect(item.path).toBe('/expenses?status=pending');
+    });
+
+    it('shows nothing about approval to someone who cannot decide, and ignores closed expenses', () => {
+      expect(buildAttentionItems({ ...base, ...noOthers, expenses: review, userId: 'u-acct', allow: all })).toEqual([]);
+      const closed = review.map((e) => ({ ...e, isClosed: true }));
+      expect(buildAttentionItems({ ...base, ...noOthers, expenses: closed, userId: 'u-acct', allow: { ...all, approvals: true } })).toEqual([]);
+    });
+
+    it('tells a person which of their own expenses were sent back, with the reason', () => {
+      const [item] = buildAttentionItems({ ...base, ...noOthers, expenses: review, userId: 'u-field', allow: { ...all, corrections: true } });
+      expect(item.kind).toBe('expense-rejected');
+      expect(item.tone).toBe('danger');
+      expect(item.subtitle).toBe('الفاتورة ناقصة');
+      expect(buildAttentionItems({ ...base, ...noOthers, expenses: review, userId: 'u-other', allow: { ...all, corrections: true } })).toEqual([]);
+    });
+  });
 });
