@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { can, canAccessModule, expenseScope, type Principal } from '../access';
 import { buildPhaseBudgetRows } from '../finance/projectBudget';
 import { findOverdueInvoices } from '../finance/overdueInvoices';
-import { formatCurrency } from '../utils-formatters';
+import { formatCurrencyDisplay } from '../utils-formatters';
 import type { Client, Expense, Invoice, Payment, ProjectPhase, StandaloneDebt } from '../../types';
 
 export interface SmartAlert {
@@ -77,7 +77,7 @@ export function buildSmartAlerts({ allow, invoices, payments, clients, projectPh
           key: `phase-over-${row.phase.id}`,
           type: 'error',
           title: 'تجاوز ميزانية مرحلة',
-          body: `${client.name} · ${row.phase.name} (+${formatCurrency(row.actual - row.budget)})`,
+          body: `${client.name} · ${row.phase.name} (+${formatCurrencyDisplay(row.actual - row.budget)})`,
           href: `/clients/${client.id}`,
         });
       }
@@ -92,7 +92,7 @@ export function buildSmartAlerts({ allow, invoices, payments, clients, projectPh
         key: `debt-overdue-${debt.id}`,
         type: 'warning',
         title: 'دين متأخر',
-        body: `${debt.partyName} · ${formatCurrency(debt.remainingAmount)}`,
+        body: `${debt.partyName} · ${formatCurrencyDisplay(debt.remainingAmount)}`,
         href: '/debts',
       });
     }

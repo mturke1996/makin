@@ -42,9 +42,17 @@ export function multiplyQuantityPrice(quantity: number, unitPrice: number): numb
   return Number.isFinite(quantity) && Number.isFinite(unitPrice) ? roundMoney(quantity * unitPrice) : 0;
 }
 
-/** تنسيق مبلغ/سعر — يحافظ على الكسور إن وُجدت، وإلا يُنسّق كعدد صحيح */
+/**
+ * تنسيق مبلغ/سعر. العدد الصحيح بلا كسور، وما فيه كسر يُعرض دائماً بثلاث خانات (مليم): «8,908.500» لا «8,908.5»،
+ * فلا تتفاوت خانات الأرقام بين سطر وآخر، وتصطف الفواصل في الأعمدة. الدقة المحاسبية في التطبيق هي الألف من الدينار.
+ */
 export function formatAmountDisplay(amount: number): string {
-  return Number.isInteger(amount) ? formatCurrencyNumber(amount) : formatDecimalNumber(amount);
+  if (!Number.isFinite(amount)) return '0';
+  const rounded = roundMoney(amount);
+  if (Number.isInteger(rounded)) return formatCurrencyNumber(rounded);
+  const sign = rounded < 0 ? '-' : '';
+  const [whole, fraction] = Math.abs(rounded).toFixed(3).split('.');
+  return `${sign}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${fraction}`;
 }
 
 /** تنسيق عملة — يحافظ على الكسور إن وُجدت (الرقم ثم العملة — مناسب للعربية) */
