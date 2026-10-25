@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Delete, LockOutlined } from '../../../design-system/icons';
+import { AttachFile, Delete, LockOutlined } from '../../../design-system/icons';
 import {
   Amount,
   Button,
@@ -22,8 +22,6 @@ import type { Client, Expense, ProjectPhase } from '../../../types';
 import { CustodyOverdraftNotice } from '../client-profile/profileBanners';
 import { ProfileCallout } from '../client-profile/profileUi';
 import { ExpenseReviewPanel } from './ExpenseReviewPanel';
-import { NO_RECEIPT_CHANGE, type ReceiptChoice } from './receiptAttachment';
-import { ReceiptPhotoField } from './ReceiptPhotoField';
 import { FormBody, FormSection } from './moneyUi';
 import { isoDay } from './moneyUtils';
 
@@ -43,8 +41,6 @@ export interface ExpenseFormData {
   unit?: string;
   /** Editing an expense that had a quantity line and the user removed it. */
   clearQuantity: boolean;
-  /** What was done with the receipt photo (uploaded by the caller, which knows the expense id). */
-  receipt: ReceiptChoice;
 }
 
 interface Props {
@@ -102,14 +98,12 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
   const [form, setForm] = useState<FormState>(() => blank(''));
   const [attempted, setAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [receipt, setReceipt] = useState<ReceiptChoice>(NO_RECEIPT_CHANGE);
 
   const firstClientId = clients[0]?.id || '';
   useEffect(() => {
     if (!open) return;
     setAttempted(false);
     setSaving(false);
-    setReceipt(NO_RECEIPT_CHANGE);
     setForm(
       edit
         ? {
@@ -176,7 +170,6 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
         notes: form.notes.trim(),
         ...(hasQty ? { quantity, unitPrice, unit: form.unit.trim() || undefined } : {}),
         clearQuantity: !hasQty && !!edit && expenseHasQuantityLine({ quantity: edit.quantity, unitPrice: edit.unitPrice }),
-        receipt,
       });
       onClose();
     } catch {
@@ -384,11 +377,17 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
               value={form.invoiceNumber}
               onChange={(e) => set('invoiceNumber', e.target.value)}
             />
-            <ReceiptPhotoField
-              existing={edit?.attachmentUrl ? { url: edit.attachmentUrl, name: edit.attachmentName } : null}
-              value={receipt}
-              onChange={setReceipt}
-            />
+            {edit?.attachmentUrl && (
+              <a
+                href={edit.attachmentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent-ink"
+              >
+                <AttachFile aria-hidden sx={{ fontSize: 18 }} />
+                عرض {edit.attachmentName || 'المرفق المحفوظ'}
+              </a>
+            )}
             <Textarea
               label="ملاحظات"
               rows={2}

@@ -32,7 +32,6 @@ import type {
 import type { SystemUser } from './types';
 import { buildProjectPatch } from './details/clientFields';
 import { useReceipt } from '../money/useReceipt';
-import { receiptPatch, type ReceiptChoice } from '../money/receiptAttachment';
 
 export type ProfileSheetKey =
   | 'expenses'
@@ -109,10 +108,8 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
       }
     }, 'payments');
 
-  const saveExpense = (edit: Expense | null | undefined, data: ExpenseFormValues, receiptChoice: ReceiptChoice) =>
+  const saveExpense = (edit: Expense | null | undefined, data: ExpenseFormValues) =>
     attempt(async () => {
-      const expenseId = edit?.id ?? crypto.randomUUID();
-      const attachment = await receiptPatch(expenseId, edit, receiptChoice);
       const amount = parseDecimalInput(data.amount) ?? 0;
       const quantity = parseDecimalInput(data.quantity);
       const unitPrice = parseDecimalInput(data.unitPrice);
@@ -140,7 +137,6 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
           workerName: workerName ?? cleared,
           phaseId: phaseId ?? cleared,
           ...(hasQuantity ? { quantity, unitPrice, unit: unit ?? '' } : { quantity: 0, unitPrice: 0, unit: '' }),
-          ...attachment,
           updatedAt: nowIso(),
           // The owner (userId, createdBy) is set once, at creation: the rules refuse a change of owner.
         });
@@ -151,7 +147,7 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
         }
         const now = nowIso();
         await addExpense({
-          id: expenseId,
+          id: crypto.randomUUID(),
           clientId: clientId!,
           description: data.description.trim(),
           amount,
@@ -162,7 +158,6 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
           isClosed: false,
           phaseId,
           ...(hasQuantity ? { quantity, unitPrice, unit } : {}),
-          ...attachment,
           createdAt: now,
           updatedAt: now,
           workerId,

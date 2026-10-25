@@ -11,8 +11,6 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataStore } from '../../stores/useDataStore';
 import { expensesService } from '../../services/firebaseService';
 import type { Expense } from '../../types';
-import { NO_RECEIPT_CHANGE, receiptPatch, type ReceiptChoice } from '../pages-legacy/money/receiptAttachment';
-import { ReceiptPhotoField } from '../pages-legacy/money/ReceiptPhotoField';
 import { AmountEntry } from './AmountEntry';
 import { QuantityEntry } from './QuantityEntry';
 import { CategoryChoice } from './CategoryChoice';
@@ -101,11 +99,6 @@ export default function QuickExpenseSheet({
     remaining,
   } = useQuickExpenseModel(draft.personId);
   const addExpense = useDataStore((s) => s.addExpense);
-  const updateExpense = useDataStore((s) => s.updateExpense);
-  // The photo of the receipt is not part of the saved draft: it is uploaded once the expense is confirmed saved.
-  const [receipt, setReceipt] = useState<ReceiptChoice>(NO_RECEIPT_CHANGE);
-  const receiptRef = useRef(receipt);
-  receiptRef.current = receipt;
   const projectPhases = useDataStore((s) => s.projectPhases);
   const [phase, setPhase] = useState<Phase>('form');
   const [error, setError] = useState('');
@@ -182,19 +175,6 @@ export default function QuickExpenseSheet({
     if (phase !== 'done') writeQuickDraft(projectId, userId, draft);
   }, [draft, userId, phase]);
 
-  const attachReceipt = async (expense: Expense) => {
-    const choice = receiptRef.current;
-    if (!choice.photo) return;
-    const attachment = await receiptPatch(expense.id, null, choice);
-    if (attachment.attachmentUrl) {
-      try {
-        await updateExpense(expense.id, { ...attachment, updatedAt: new Date().toISOString() });
-      } catch {
-        /* the store already told the person */
-      }
-    }
-    if (mounted.current) setReceipt(NO_RECEIPT_CHANGE);
-  };
   const complete = (expense: Expense) => {
     clearQuickDraft(projectId, userId, expense.id);
     if (!mounted.current || operation.current?.id !== expense.id) return;
@@ -304,10 +284,7 @@ export default function QuickExpenseSheet({
     setError('');
     const work = addExpense(expense);
     void work.then(
-      () => {
-        complete(expense);
-        void attachReceipt(expense);
-      },
+      () => complete(expense),
       () => {},
     );
     try {
@@ -591,7 +568,6 @@ export default function QuickExpenseSheet({
                 value={draft.notes}
                 onChange={(e) => patch({ notes: e.target.value })}
               />
-              <ReceiptPhotoField value={receipt} onChange={setReceipt} disabled={!!operation.current} />
               {canPickPerson && (
                 <Group title="لمن هذا المصروف؟">
                   <EmployeePicker

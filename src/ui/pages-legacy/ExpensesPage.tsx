@@ -41,7 +41,6 @@ import { DeltaBadge, MiniBars, Sparkline } from '../../design-system/charts';
 import { ProfileCallout } from './client-profile/profileUi';
 import { dayKey, dayLabel, groupBy, limitGroups, matchesQuery, sumAmounts } from './money/moneyUtils';
 import { ShowMoreRows } from './money/ShowMoreRows';
-import { receiptPatch } from './money/receiptAttachment';
 import { useVisibleCount } from './client-profile/activity/useVisibleCount';
 
 /**
@@ -173,7 +172,6 @@ export const ExpensesPage = () => {
         : data.clearQuantity
           ? { quantity: 0, unitPrice: 0, unit: '' }
           : {};
-    const attachment = await receiptPatch(expenseId, editing, data.receipt);
     const payload = {
       description: data.description,
       amount: data.amount,
@@ -185,7 +183,6 @@ export const ExpensesPage = () => {
       // A removed phase is cleared with null on an edit; on a new expense there is simply none.
       ...(data.phaseId ? { phaseId: data.phaseId } : editing?.phaseId ? { phaseId: null as unknown as undefined } : {}),
       ...qtyFields,
-      ...attachment,
       updatedAt: new Date().toISOString(),
     };
     if (editing) {

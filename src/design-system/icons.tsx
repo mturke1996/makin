@@ -27,7 +27,6 @@ import {
   BellRinging as PhBellRinging,
   Buildings as PhBuildings,
   Calculator as PhCalculator,
-  Camera as PhCamera,
   CalendarBlank as PhCalendarBlank,
   CalendarX as PhCalendarX,
   CaretDown as PhCaretDown,
@@ -155,7 +154,6 @@ export const ArrowForward = glyph(PhArrowRight, 'ArrowForward');
 export const ArrowUpward = glyph(PhArrowUp, 'ArrowUpward');
 export const Assignment = glyph(PhClipboardText, 'Assignment');
 export const AttachFile = glyph(PhPaperclip, 'AttachFile');
-export const PhotoCamera = glyph(PhCamera, 'PhotoCamera');
 export const Backspace = glyph(PhBackspace, 'Backspace');
 export const Balance = glyph(PhScales, 'Balance');
 export const Bolt = glyph(PhLightning, 'Bolt');
