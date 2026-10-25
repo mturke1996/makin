@@ -18,6 +18,7 @@ import { getPdfBrand, type PdfBrandSnapshot } from './pdfBrand';
 import { getPdfCompanyInfo } from './pdfCompanyInfo';
 import { usePdfLogoDataUri, usePdfLogoRatio } from './pdf-logo-context';
 import { percentLabel, shareOfTotal } from './pdfPercent';
+import { EN, useBilingual, useLabel } from './pdfI18n';
 
 export const INK = {
   text: '#1F2633',
@@ -298,32 +299,38 @@ export const PdfDocTitle = ({
   meta?: { label: string; value: string }[];
   /** @deprecated documents no longer carry an English kicker. */
   titleEn?: string;
-}) => (
-  <View style={s.docTitleRow} wrap={false}>
-    <View style={s.docMeta}>
-      {(meta ?? [{ label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]).map((m) => (
-        <View key={m.label} style={s.docMetaRow}>
-          <Text style={[s.docMetaValue, /[\u0600-\u06FF]/.test(m.value) ? { fontFamily: FF } : null]}>{/[\u0600-\u06FF]/.test(m.value) ? ar(m.value) : m.value}</Text>
-          <Text style={s.docMetaLabel}>{ar(m.label)}</Text>
-        </View>
-      ))}
+}) => {
+  const lb = useLabel();
+  const both = useBilingual();
+  const line = subtitle ?? (both ? EN[titleAr] : undefined);
+  return (
+    <View style={s.docTitleRow} wrap={false}>
+      <View style={s.docMeta}>
+        {(meta ?? [{ label: 'تاريخ الإصدار', value: arDate(new Date().toISOString()) }]).map((m) => (
+          <View key={m.label} style={s.docMetaRow}>
+            <Text style={[s.docMetaValue, /[\u0600-\u06FF]/.test(m.value) ? { fontFamily: FF } : null]}>{/[\u0600-\u06FF]/.test(m.value) ? ar(m.value) : m.value}</Text>
+            <Text style={s.docMetaLabel}>{ar(lb(m.label))}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ flex: 1, alignItems: 'flex-end' }}>
+        <Text style={s.docTitle}>{ar(titleAr)}</Text>
+        {line ? <Text style={s.docSubtitle}>{ar(line)}</Text> : null}
+      </View>
     </View>
-    <View style={{ flex: 1, alignItems: 'flex-end' }}>
-      <Text style={s.docTitle}>{ar(titleAr)}</Text>
-      {subtitle ? <Text style={s.docSubtitle}>{ar(subtitle)}</Text> : null}
-    </View>
-  </View>
-);
+  );
+};
 
 /** The particulars of a document (client, phone, address, period) as plain labelled text. Empty values are dropped. */
 export const PdfInfoCard = ({ s, items }: { s: any; items: { label: string; value?: string | null }[] }) => {
+  const lb = useLabel();
   const shown = items.filter((i) => i.value);
   if (shown.length === 0) return null;
   return (
     <View style={s.infoRow} wrap={false}>
       {shown.map((item) => (
         <View key={item.label} style={s.infoCell}>
-          <Text style={s.infoLabel}>{ar(item.label)}</Text>
+          <Text style={s.infoLabel}>{ar(lb(item.label))}</Text>
           <Text style={isNumeric(item.value) ? s.infoValueNum : s.infoValue}>{isNumeric(item.value) ? item.value : ar(item.value)}</Text>
         </View>
       ))}
@@ -342,12 +349,13 @@ export const PdfSummaryStrip = ({
   s: any;
   cells: { label: string; value: string | number; color?: string; hint?: string; count?: boolean; accent?: boolean }[];
 }) => {
+  const lb = useLabel();
   const decimals = decimalsFor(cells.filter((c) => typeof c.value === 'number' && !c.count).map((c) => c.value as number));
   return (
     <View style={s.keyBand} wrap={false}>
       {cells.map((cell, i) => (
         <View key={i} style={[s.keyCell, i > 0 ? s.keyCellDivider : null]}>
-          <Text style={s.keyLabel}>{ar(cell.label)}</Text>
+          <Text style={s.keyLabel}>{ar(lb(cell.label))}</Text>
           {typeof cell.value === 'number' && !cell.count ? (
             <PdfAmount amount={cell.value} decimals={decimals} size={14} color={cell.color} />
           ) : typeof cell.value === 'number' || isNumeric(String(cell.value)) ? (
@@ -363,17 +371,20 @@ export const PdfSummaryStrip = ({
 };
 
 /** Section heading over a full-width hairline, marked with a short navy bar; an optional note sits on the far side. */
-export const PdfSectionHeading = ({ s, children, hint }: { s: any; children: string; hint?: string }) => (
+export const PdfSectionHeading = ({ s, children, hint }: { s: any; children: string; hint?: string }) => {
+  const lb = useLabel();
+  return (
   <View style={{ marginTop: 18, marginBottom: 8 }} minPresenceAhead={PDF_PAGINATION.section + PDF_PAGINATION.minRowHeight}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 0.6, borderBottomColor: INK.border }}>
       <Text style={{ fontSize: 7.8, color: INK.faint }}>{hint ? ar(hint) : ''}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={s.sectionTitle}>{ar(children)}</Text>
+        <Text style={s.sectionTitle}>{ar(lb(children))}</Text>
         <View style={{ width: 3.5, height: 13, backgroundColor: INK.text, marginLeft: 7 }} />
       </View>
     </View>
   </View>
-);
+  );
+};
 
 /**
  * Share of the whole as quiet horizontal bars: where the money went (categories) or how it came in (methods).
@@ -422,6 +433,7 @@ export const PdfStatement = ({
   lines: { label: string; note?: string; sign?: string; amount: number; color?: string }[];
   net: { label: string; amount: number; color?: string };
 }) => {
+  const lb = useLabel();
   const decimals = decimalsFor([...lines.map((l) => l.amount), net.amount]);
   return (
     <View wrap={false} style={{ marginBottom: 8 }}>
@@ -430,7 +442,7 @@ export const PdfStatement = ({
           <PdfAmount amount={line.amount} decimals={decimals} size={10} color={line.color} bold={false} />
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 9.6, color: INK.text, textAlign: 'right' }}>{ar(line.label)}</Text>
+              <Text style={{ fontSize: 9.6, color: INK.text, textAlign: 'right' }}>{ar(lb(line.label))}</Text>
               {line.note ? <Text style={{ fontSize: 7.6, color: INK.faint, textAlign: 'right', marginTop: 1 }}>{ar(line.note)}</Text> : null}
             </View>
             <Text style={{ width: 10, fontFamily: NUM, fontSize: 10.5, color: INK.faint, textAlign: 'center' }}>{line.sign ?? ''}</Text>
@@ -441,7 +453,7 @@ export const PdfStatement = ({
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <PdfAmount amount={net.amount} decimals={decimals} size={15} color={net.color} />
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-            <Text style={{ fontSize: 11, fontWeight: 'bold', color: INK.text, textAlign: 'right' }}>{ar(net.label)}</Text>
+            <Text style={{ fontSize: 11, fontWeight: 'bold', color: INK.text, textAlign: 'right' }}>{ar(lb(net.label))}</Text>
             <Text style={{ width: 10, fontFamily: NUM, fontSize: 11, color: INK.faint, textAlign: 'center' }}>=</Text>
           </View>
         </View>
@@ -472,6 +484,7 @@ export const PdfTotalsBlock = ({
   taxLabel?: string;
   grandLabel?: string;
 }) => {
+  const lb = useLabel();
   const taxLbl = taxLabel || (taxRate != null ? `ضريبة (${taxRate} بالمئة)` : 'الضريبة');
   const decimals = decimalsFor([subtotal, taxAmount, total]);
   return (
@@ -480,17 +493,17 @@ export const PdfTotalsBlock = ({
         <>
           <View style={s.totalLine}>
             <PdfAmount amount={subtotal} decimals={decimals} bold={false} size={9.8} />
-            <Text style={s.totalLabel}>{ar(subtotalLabel)}</Text>
+            <Text style={s.totalLabel}>{ar(lb(subtotalLabel))}</Text>
           </View>
           <View style={s.totalLine}>
             <PdfAmount amount={taxAmount} decimals={decimals} bold={false} size={9.8} />
-            <Text style={s.totalLabel}>{ar(taxLbl)}</Text>
+            <Text style={s.totalLabel}>{ar(lb(taxLbl))}</Text>
           </View>
         </>
       ) : null}
       <View style={s.grandLine}>
         <PdfAmount amount={total} decimals={decimals} size={14.5} />
-        <Text style={s.grandLbl}>{ar(grandLabel)}</Text>
+        <Text style={s.grandLbl}>{ar(lb(grandLabel))}</Text>
       </View>
       <DoubleRule />
     </View>
@@ -499,21 +512,24 @@ export const PdfTotalsBlock = ({
 
 /** Notes under a hairline. */
 /** A signature line: the role under a ruled space, the name beneath when known, and an optional seal pressed over the line. */
-export const PdfSignature = ({ role, name, stamp }: { role: string; name?: string; stamp?: React.ReactNode }) => (
+export const PdfSignature = ({ role, name, stamp }: { role: string; name?: string; stamp?: React.ReactNode }) => {
+  const lb = useLabel();
+  return (
   <View style={{ flex: 1, alignItems: 'center' }} wrap={false}>
-    <View style={{ width: '82%', height: stamp ? 76 : 44, borderBottomWidth: 0.8, borderBottomColor: INK.text, alignItems: 'center', justifyContent: 'flex-end' }}>
+    <View style={{ width: '82%', height: stamp ? 70 : 44, borderBottomWidth: 0.8, borderBottomColor: INK.text, alignItems: 'center', justifyContent: 'flex-end' }}>
       {stamp ? <View style={{ marginBottom: 3 }}>{stamp}</View> : null}
     </View>
-    <Text style={{ marginTop: 6, fontSize: 9, fontWeight: 'bold', color: INK.text, fontFamily: PDF_FONT_FAMILY }}>{ar(role)}</Text>
+    <Text style={{ marginTop: 6, fontSize: 9, fontWeight: 'bold', color: INK.text, fontFamily: PDF_FONT_FAMILY }}>{ar(lb(role))}</Text>
     {name ? <Text style={{ marginTop: 2, fontSize: 8.4, color: INK.muted, fontFamily: PDF_FONT_FAMILY }}>{ar(name)}</Text> : null}
   </View>
-);
+  );
+};
 
 /**
  * The company's electronic seal: two thin rings round the company name, "approved electronically", the document's
  * reference and its date. Drawn with views (no image), slightly tilted like a pressed stamp, in the brand ink.
  */
-export const PdfSeal = ({ B, docRef, date, size = 72 }: { B: PdfBrandSnapshot; docRef: string; date?: string; size?: number }) => {
+export const PdfSeal = ({ B, docRef, date, size = 66 }: { B: PdfBrandSnapshot; docRef: string; date?: string; size?: number }) => {
   const color = B.palette.primary || INK.text;
   const ring = (inset: number, width: number) => ({
     position: 'absolute' as const,

@@ -7,7 +7,7 @@ import { CLIENT_STATUS_LABEL } from '../../../../core/finance/clientProject';
 import { MoneyField } from '../FormSheetKit';
 import { CLIENT_NOTES_MAX, type ClientFormValues } from '../schemas';
 
-const FIELD_NAMES = ['status', 'contractValue', 'startDate', 'expectedEndDate', 'notes'] as const;
+const FIELD_NAMES = ['status', 'contractValue', 'startDate', 'expectedEndDate', 'notes', 'documentLanguage'] as const;
 
 /** The count appears once the note is getting close to its limit. */
 const NOTES_COUNTER_FROM = Math.floor(CLIENT_NOTES_MAX * 0.8);
@@ -75,6 +75,26 @@ function Fields({ control }: { control: Control<ClientFormValues> }) {
             <Input {...field} type="date" label="التسليم المتوقع" error={fieldState.error?.message} />
           )}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-fg-subtle">لغة الوثائق</span>
+        <Controller
+          name="documentLanguage"
+          control={control}
+          render={({ field }) => (
+            <Segmented
+              aria-label="لغة وثائق العميل"
+              value={field.value}
+              onChange={field.onChange}
+              options={[
+                { value: 'ar', label: 'العربية' },
+                { value: 'both', label: 'عربي وإنجليزي' },
+              ]}
+            />
+          )}
+        />
+        <p className="text-xs text-fg-muted">للعميل الأجنبي: الإيصال والفاتورة والكشوف تُطبع بالعربية والإنجليزية معاً.</p>
       </div>
 
       <Controller

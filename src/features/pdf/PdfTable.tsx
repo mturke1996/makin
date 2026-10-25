@@ -11,6 +11,7 @@
  *   sits under the description instead of taking a column of its own.
  * - No total row by default: the figure is already stated above. A table that really needs one passes `footer`.
  */
+import { useLabel } from './pdfI18n';
 import React from 'react';
 import { Text, View } from '@react-pdf/renderer';
 import { ar } from './arabicPDF';
@@ -42,9 +43,10 @@ const visualCols = (columns: PdfColumn[]) => [...columns].reverse();
 const alignOf = (kind: PdfColKind = 'text') => (kind === 'num' || kind === 'date' ? 'center' : 'right');
 
 export function PdfTh({ flex, kind = 'text', children }: { flex: number; kind?: PdfColKind; children: string }) {
+  const lb = useLabel();
   return (
     <Text style={{ flex, color: INK.white, fontSize: 8.4, fontWeight: 'bold', textAlign: alignOf(kind), lineHeight: 1.35, fontFamily: FF, paddingHorizontal: 5 }}>
-      {ar(children)}
+      {ar(lb(children))}
     </Text>
   );
 }

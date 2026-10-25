@@ -1,3 +1,4 @@
+import { withDocumentLanguage } from '../../../features/pdf/pdfI18n';
 import { createElement, useCallback, useRef, useState, type ReactElement } from 'react';
 import toast from 'react-hot-toast';
 import { downloadPdf, sharePdf } from '../../../features/pdf/pdfService';
@@ -81,8 +82,9 @@ export function useClientPdf({ client, expenses, payments, debts, workers, budge
 
   const run = useCallback(
     async (kind: ClientReportKind, mode: 'download' | 'share') => {
-      const report = build(kind);
-      if (!report || busy.current) return;
+      const built = build(kind);
+      if (!built || busy.current) return;
+      const report = { ...built, element: withDocumentLanguage(built.element, client) };
       busy.current = true;
       setPdfLoading(true);
       try {
@@ -96,7 +98,7 @@ export function useClientPdf({ client, expenses, payments, debts, workers, budge
         busy.current = false;
       }
     },
-    [build]
+    [build, client]
   );
 
   const download = useCallback((kind: ClientReportKind) => run(kind, 'download'), [run]);

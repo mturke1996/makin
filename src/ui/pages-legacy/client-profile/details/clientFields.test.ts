@@ -32,7 +32,8 @@ describe('projectFieldsOf', () => {
     const f = projectFieldsOf(
       client({ status: 'paused', contractValue: 120000.5, startDate: '2026-01-05', expectedEndDate: '2026-06-30', notes: 'ملاحظة' }),
     );
-    expect(f).toEqual({ status: 'paused', contractValue: '120000.5', startDate: '2026-01-05', expectedEndDate: '2026-06-30', notes: 'ملاحظة' });
+    expect(f).toEqual({ status: 'paused', contractValue: '120000.5', startDate: '2026-01-05', expectedEndDate: '2026-06-30', notes: 'ملاحظة', documentLanguage: 'ar' });
+    expect(projectFieldsOf(client({ documentLanguage: 'both' })).documentLanguage).toBe('both');
   });
 
   it('treats a stored zero contract value as none', () => {
@@ -78,17 +79,23 @@ describe('buildProjectPatch', () => {
       startDate: 'CLEAR',
       expectedEndDate: 'CLEAR',
       notes: 'CLEAR',
+      documentLanguage: 'CLEAR',
     });
     expect(Object.values(patch).includes(undefined)).toBe(false);
   });
 
   it('update: keeps the fields that are still filled', () => {
     const patch = buildProjectPatch(
-      { status: 'active', contractValue: '5000', startDate: '', expectedEndDate: '2026-12-01', notes: '' },
+      { status: 'active', contractValue: '5000', startDate: '', expectedEndDate: '2026-12-01', notes: '', documentLanguage: 'ar' },
       'update',
       CLEAR,
     );
-    expect(patch).toEqual({ status: 'active', contractValue: 5000, startDate: 'CLEAR', expectedEndDate: '2026-12-01', notes: 'CLEAR' });
+    expect(patch).toEqual({ status: 'active', contractValue: 5000, startDate: 'CLEAR', expectedEndDate: '2026-12-01', notes: 'CLEAR', documentLanguage: 'CLEAR' });
+  });
+
+  it('English documents are stored as «both»; Arabic, the default, stores nothing', () => {
+    expect(buildProjectPatch({ ...EMPTY_PROJECT_FIELDS, documentLanguage: 'both' }, 'create', CLEAR)).toEqual({ status: 'active', documentLanguage: 'both' });
+    expect(buildProjectPatch(EMPTY_PROJECT_FIELDS, 'create', CLEAR)).toEqual({ status: 'active' });
   });
 
   it('a zero contract value means none', () => {

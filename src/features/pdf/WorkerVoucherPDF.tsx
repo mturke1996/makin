@@ -83,11 +83,11 @@ export const WorkerVoucherPDF: React.FC<{ voucher: WorkerVoucherData }> = ({ vou
           </Text>
         ) : null}
 
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', marginTop: 26, gap: 18 }} wrap={false}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', marginTop: 14, gap: 18 }} wrap={false}>
           <PdfSignature role="المستلم (العامل)" name={voucher.workerName} />
           <PdfSignature role="الصارف" name={voucher.recordedBy} stamp={<PdfSeal B={B} docRef={voucher.ref} date={voucher.date} />} />
-          <View style={{ alignItems: 'center', width: 90 }}>
-            <PdfQr value={voucher.qr} size={84} />
+          <View style={{ alignItems: 'center', width: 84 }}>
+            <PdfQr value={voucher.qr} size={76} />
             <Text style={{ marginTop: 3, fontFamily: NUM, fontSize: 6.6, color: INK.faint }}>{voucher.ref}</Text>
           </View>
         </View>

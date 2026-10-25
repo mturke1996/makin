@@ -10,6 +10,8 @@ export interface ClientProjectFormFields {
   startDate: string;
   expectedEndDate: string;
   notes: string;
+  /** The language the client's documents are printed in. */
+  documentLanguage: 'ar' | 'both';
 }
 
 export const EMPTY_PROJECT_FIELDS: ClientProjectFormFields = {
@@ -18,6 +20,7 @@ export const EMPTY_PROJECT_FIELDS: ClientProjectFormFields = {
   startDate: '',
   expectedEndDate: '',
   notes: '',
+  documentLanguage: 'ar',
 };
 
 /** Form values for a client; a client saved before these fields existed opens as active with the rest empty. */
@@ -29,6 +32,7 @@ export function projectFieldsOf(client?: Client | null): ClientProjectFormFields
     startDate: client.startDate ?? '',
     expectedEndDate: client.expectedEndDate ?? '',
     notes: client.notes ?? '',
+    documentLanguage: client.documentLanguage === 'both' ? 'both' : 'ar',
   };
 }
 
@@ -39,7 +43,8 @@ export function hasProjectDetails(fields: Partial<ClientProjectFormFields>): boo
     !!fields.contractValue ||
     !!fields.startDate ||
     !!fields.expectedEndDate ||
-    !!fields.notes?.trim()
+    !!fields.notes?.trim() ||
+    fields.documentLanguage === 'both'
   );
 }
 
@@ -58,8 +63,8 @@ export function buildProjectPatch(
   values: Partial<ClientProjectFormFields>,
   mode: 'create' | 'update',
   clear: () => never,
-): Partial<Pick<Client, 'status' | 'contractValue' | 'startDate' | 'expectedEndDate' | 'notes'>> {
-  const patch: Partial<Pick<Client, 'status' | 'contractValue' | 'startDate' | 'expectedEndDate' | 'notes'>> = {
+): Partial<Pick<Client, 'status' | 'contractValue' | 'startDate' | 'expectedEndDate' | 'notes' | 'documentLanguage'>> {
+  const patch: Partial<Pick<Client, 'status' | 'contractValue' | 'startDate' | 'expectedEndDate' | 'notes' | 'documentLanguage'>> = {
     status: values.status ?? 'active',
   };
 
@@ -71,6 +76,8 @@ export function buildProjectPatch(
     startDate: values.startDate || undefined,
     expectedEndDate: values.expectedEndDate || undefined,
     notes: notes || undefined,
+    // Arabic is the default and is stored as no value at all.
+    documentLanguage: values.documentLanguage === 'both' ? ('both' as const) : undefined,
   };
 
   for (const key of Object.keys(optional) as (keyof typeof optional)[]) {

@@ -19,6 +19,7 @@ import { WorkerVoucherPDF } from './WorkerVoucherPDF';
 import { SupplierStatementPDF } from './SupplierStatementPDF';
 import { buildSupplierRows, supplierExpenses } from '../../core/finance/supplierLedger';
 import { buildWorkerVoucher } from '../../core/finance/workerVoucher';
+import { withDocumentLanguage } from './pdfI18n';
 
 Font.register({ family: 'MakinPdf', fonts: [{ src: resolve('public/fonts/Tajawal-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Tajawal-Bold.ttf'), fontWeight: 700 }] });
 Font.register({ family: 'MakinNum', fonts: [{ src: resolve('public/fonts/Cairo-Regular.ttf'), fontWeight: 400 }, { src: resolve('public/fonts/Cairo-Bold.ttf'), fontWeight: 700 }] });
@@ -136,6 +137,24 @@ describe('MAKIN PDF documents', () => {
       expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
       expect(pageCount(buffer)).toBeGreaterThanOrEqual(minPages);
       save(name, buffer);
+    }, 60000);
+  }
+});
+
+describe('bilingual documents', () => {
+  const foreign = { ...client, documentLanguage: 'both' } as Client;
+  const bilingual: [string, () => ReactElement][] = [
+    ['receipt-bilingual.pdf', () => createElement(ReceiptPDF, { receipt: buildReceipt({ payment: payments[1], number: 'RC-2026-0007', client: foreign, invoice, allPayments: payments }) })],
+    ['invoice-bilingual.pdf', () => createElement(InvoicePDF, { invoice, client: foreign })],
+    ['expenses-bilingual.pdf', () => createElement(ExpensesPDF, { client: foreign, expenses, total: 100 })],
+  ];
+  for (const [name, make] of bilingual) {
+    it(`renders ${name} and is larger than the Arabic-only one`, async () => {
+      const both = await renderToBuffer(withLogo(withDocumentLanguage(make(), foreign)));
+      const plain = await renderToBuffer(withLogo(withDocumentLanguage(make(), client)));
+      expect(both.subarray(0, 4).toString()).toBe('%PDF');
+      expect(both.length).toBeGreaterThan(plain.length);
+      save(name, both);
     }, 60000);
   }
 });

@@ -7,6 +7,7 @@ import type { Invoice, Client } from '../../types';
 import { getPdfBrand } from './pdfBrand';
 import { PdfDocTitle, PdfInfoCard, PdfNotesBox, PdfPage, PdfTotalsBlock, makePdfStyles } from './pdfKit';
 import { PdfTable, type PdfColumn } from './PdfTable';
+import { bilingualLabel, useBilingual } from './pdfI18n';
 
 const STATUS_AR: Record<string, string> = {
   paid: 'مدفوعة',
@@ -32,6 +33,7 @@ interface Props {
 export const InvoicePDF: React.FC<Props> = ({ invoice, client }) => {
   const B = getPdfBrand();
   const s = makePdfStyles(B);
+  const both = useBilingual();
 
   const clientName = invoice.clientId ? client?.name : invoice.tempClientName || client?.name;
   const clientPhone = invoice.clientId ? client?.phone : invoice.tempClientPhone || client?.phone;
@@ -47,7 +49,7 @@ export const InvoicePDF: React.FC<Props> = ({ invoice, client }) => {
             { label: 'رقم الفاتورة', value: invoice.invoiceNumber },
             { label: 'تاريخ الإصدار', value: arDate(invoice.issueDate) },
             { label: 'تاريخ الاستحقاق', value: arDate(invoice.dueDate) },
-            { label: 'الحالة', value: ar(STATUS_AR[invoice.status] || invoice.status) },
+            { label: 'الحالة', value: ar(bilingualLabel(STATUS_AR[invoice.status] || invoice.status, both)) },
           ]}
         />
         <PdfInfoCard s={s} items={[{ label: 'إلى السيد / السادة', value: clientName }, { label: 'الهاتف', value: clientPhone }, { label: 'العنوان', value: clientAddress }]} />

@@ -39,6 +39,8 @@ export interface Client {
   expectedEndDate?: string;
   /** ملاحظات داخلية عن العميل أو المشروع. */
   notes?: string;
+  /** لغة وثائق العميل: العربية (الافتراضي) أو العربية والإنجليزية معاً. */
+  documentLanguage?: 'ar' | 'both';
   createdAt: string;
   updatedAt: string;
   createdBy?: string; // اسم المستخدم الذي أضاف العميل

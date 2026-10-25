@@ -10,6 +10,7 @@ import { useAccess } from '../../core/access/useAccess';
 import { useDataSlice } from '../../stores/useDataStore';
 import { PrintableInvoice } from '../../features/print/PrintableInvoice';
 import { InvoicePDF } from '../../features/pdf/InvoicePDF';
+import { withDocumentLanguage } from '../../features/pdf/pdfI18n';
 import { downloadPdf, sharePdf } from '../../features/pdf/pdfService';
 import { formatCurrencyDisplay, getStatusLabel } from '../../core/utils-formatters';
 import { getInvoicePaymentSummary } from '../../core/finance/invoicePayments';
@@ -135,7 +136,7 @@ export const InvoiceDetailsPage = () => {
   const handleDownloadPdf = async () => {
     setPdfLoading(true);
     try {
-      await downloadPdf(React.createElement(InvoicePDF, { invoice, client }), `فاتورة-${invoice.invoiceNumber}`);
+      await downloadPdf(withDocumentLanguage(React.createElement(InvoicePDF, { invoice, client }), client), `فاتورة-${invoice.invoiceNumber}`);
       toast.success('تم تحميل PDF بنجاح');
     } catch {
       toast.error('فشل في إنشاء PDF');
@@ -147,7 +148,7 @@ export const InvoiceDetailsPage = () => {
   const handleSharePdf = async () => {
     setPdfLoading(true);
     try {
-      await sharePdf(React.createElement(InvoicePDF, { invoice, client }), `فاتورة-${invoice.invoiceNumber}`, {
+      await sharePdf(withDocumentLanguage(React.createElement(InvoicePDF, { invoice, client }), client), `فاتورة-${invoice.invoiceNumber}`, {
         title: `فاتورة #${invoice.invoiceNumber} - ${client.name}`,
         text: `مرفق: فاتورة رقم ${invoice.invoiceNumber} - ${client.name}`,
       });

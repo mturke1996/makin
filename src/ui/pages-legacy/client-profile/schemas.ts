@@ -83,6 +83,7 @@ export const clientSchema = z
     startDate: z.string().trim(),
     expectedEndDate: z.string().trim(),
     notes: z.string().max(CLIENT_NOTES_MAX, `الملاحظات طويلة، الحد الأقصى ${CLIENT_NOTES_MAX} حرف`),
+    documentLanguage: z.enum(['ar', 'both']),
   })
   .superRefine((v, ctx) => {
     if (v.contractValue) {

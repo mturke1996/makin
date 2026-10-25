@@ -4,6 +4,7 @@ import { useAccess } from '../../../core/access/useAccess';
 import { buildReceipt } from '../../../core/finance/receipt';
 import { db } from '../../../config/firebase';
 import { downloadPdf, sharePdf } from '../../../features/pdf/pdfService';
+import { withDocumentLanguage } from '../../../features/pdf/pdfI18n';
 import { ReceiptPDF } from '../../../features/pdf/ReceiptPDF';
 import { ensureReceiptNumber } from '../../../services/receiptNumber';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -38,16 +39,17 @@ export function useReceipt() {
           number = (await ensureReceiptNumber(db, current.id, { name: user?.displayName || user?.email || 'المستخدم' })).receiptNumber;
         }
         const { clients, invoices, payments } = useDataStore.getState();
+        const client = clients.find((c) => c.id === current.clientId);
         const receipt = buildReceipt({
           payment: { ...current, receiptNumber: number },
           number,
-          client: clients.find((c) => c.id === current.clientId),
+          client,
           invoice: invoices.find((i) => i.id === current.invoiceId),
           allPayments: payments,
           fallbackReceiver: user?.displayName,
           origin: window.location.origin,
         });
-        const element = createElement(ReceiptPDF, { receipt });
+        const element = withDocumentLanguage(createElement(ReceiptPDF, { receipt }), client);
         const file = `إيصال-${number}`;
         if (action === 'download') await downloadPdf(element, file);
         else await sharePdf(element, file, { title: `إيصال استلام ${number}`, text: `إيصال استلام ${number} بمبلغ ${receipt.amount.toLocaleString('en-US')} د.ل` });
