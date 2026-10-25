@@ -3,11 +3,15 @@ import { useDataSlice } from '../../stores/useDataStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useAccess } from '../access/useAccess';
 import { alertAllowFor, buildSmartAlerts } from './smartAlerts';
+import { useMyFundStats } from './useMyFundStats';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 const DAY_MS = 86_400_000;
 
 export function useSmartAlerts() {
-  const { invoices, payments, clients, projectPhases, expenses, standaloneDebts, isLoading } = useDataSlice('invoices', 'payments', 'clients', 'projectPhases', 'expenses', 'standaloneDebts', 'isLoading');
+  const { invoices, payments, clients, projectPhases, expenses, standaloneDebts, paymentMilestones, workers, isLoading } = useDataSlice('invoices', 'payments', 'clients', 'projectPhases', 'expenses', 'standaloneDebts', 'paymentMilestones', 'workers', 'isLoading');
+  const custody = useMyFundStats();
+  const userId = useAuthStore((s) => s.user?.id);
   const items = useNotificationStore((s) => s.items);
   const push = useNotificationStore((s) => s.push);
   const triggeredRef = useRef(false);
@@ -27,6 +31,10 @@ export function useSmartAlerts() {
       projectPhases,
       expenses: access.listableExpenses(expenses),
       standaloneDebts,
+      paymentMilestones,
+      workers,
+      userId,
+      custody,
     });
 
     for (const alert of alerts) {
@@ -46,5 +54,5 @@ export function useSmartAlerts() {
       });
     }
     // runs once per session, after the data is ready (the ref guards every later change)
-  }, [isLoading, invoices, payments, clients, projectPhases, expenses, standaloneDebts, items, push, access]);
+  }, [isLoading, invoices, payments, clients, projectPhases, expenses, standaloneDebts, paymentMilestones, workers, userId, custody, items, push, access]);
 }
