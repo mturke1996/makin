@@ -61,6 +61,18 @@ const debts: StandaloneDebt[] = [
 ];
 const summary = { totalPaid: 85000, totalExpenses: 73390, totalDebts: 5000, totalObligations: 78390, profit: 8908.5, remaining: -2298.5, totalWorkersAgreed: 32000, totalWorkersPaid: 20000, totalWorkersDue: 12000, profitPercentage: 15, profitBase: 'expenses' as const };
 
+const budget = {
+  phases: [
+    { phase: { id: 'p1', clientId: client.id, name: 'الحفر والأساسات', order: 1, status: 'completed' }, budget: 25000, actual: 25440, variance: -440, pctUsed: 100 },
+    { phase: { id: 'p2', clientId: client.id, name: 'الهيكل الخرساني', order: 2, status: 'in_progress' }, budget: 33000, actual: 27950, variance: 5050, pctUsed: 84.7 },
+  ] as any,
+  categories: [
+    { category: 'concrete', label: 'خرسانة', budget: 18000, actual: 20240, variance: -2240, ratio: 112.4, state: 'over' as const },
+    { category: 'cement', label: 'أسمنت', budget: 3990, actual: 3600, variance: 390, ratio: 90.2, state: 'near' as const },
+    { category: 'labor', label: 'أجور عمالة', budget: 0, actual: 24200, variance: -24200, ratio: null, state: 'unbudgeted' as const },
+  ],
+};
+
 const invoice: Invoice = {
   id: 'inv1', invoiceNumber: 'MK-2026-001', clientId: client.id, items: [{ id: 'a', description: 'أعمال الحفر والأساسات (المرحلة الأولى)', quantity: 1, unitPrice: 60000, total: 60000 }, { id: 'b', description: 'الدفعة الأولى من الهيكل الخرساني', quantity: 1, unitPrice: 50000, total: 50000 }],
   subtotal: 110000, taxRate: 0, taxAmount: 0, total: 110000, status: 'partially_paid', issueDate: '2026-09-15', dueDate: '2026-10-15', notes: 'تُسدَّد الدفعات بالتحويل البنكي أو نقداً في المكتب.', createdAt: at, updatedAt: at,
@@ -78,7 +90,7 @@ describe('MAKIN PDF documents', () => {
     ['debts.pdf', () => createElement(DebtsPDF, { client, debts, total: 5000 }), 1],
     ['workers.pdf', () => createElement(WorkersPDF, { client, workers: [elec, plumb], expenses }), 2],
     ['worker-statement.pdf', () => createElement(WorkerStatementPDF, { client, entry: buildWorkerLedgers([elec], expenses)[0] }), 1],
-    ['full-report.pdf', () => createElement(FullReportPDF, { client, expenses, payments, debts, workers: [elec, plumb], summary }), 3],
+    ['full-report.pdf', () => createElement(FullReportPDF, { client, expenses, payments, debts, workers: [elec, plumb], summary, budget }), 3],
     ['invoice.pdf', () => createElement(InvoicePDF, { invoice, client }), 1],
     ['letter.pdf', () => createElement(LetterPDF, { letter }), 1],
   ];

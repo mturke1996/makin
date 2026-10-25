@@ -5,6 +5,8 @@ import { DebtsPDF, ExpensesPDF, FullReportPDF, PaymentsPDF, WorkersPDF } from '.
 import { WorkerStatementPDF } from '../../../features/pdf/WorkerStatementPDF';
 import type { Client, Expense, Payment, StandaloneDebt, Worker } from '../../../types';
 import type { ClientSummary } from './types';
+import type { CategoryBudgetRow } from '../../../core/finance/budgetStatus';
+import type { PhaseBudgetRow } from '../../../core/finance/projectBudget';
 import type { WorkerReportEntry, WorkerReportPeriod } from '../../../features/pdf/workerReportModel';
 
 export type ClientReportKind = 'full' | 'expenses' | 'payments' | 'debts' | 'workers';
@@ -15,11 +17,13 @@ interface ReportInput {
   payments: Payment[];
   debts: StandaloneDebt[];
   workers: Worker[];
+  /** Only for someone who sees every expense: a budget compared with a partial total would mislead. */
+  budget?: { phases: PhaseBudgetRow[]; categories: CategoryBudgetRow[] };
   summary: ClientSummary;
 }
 
 /** Download / share of every client report, with one shared busy flag. */
-export function useClientPdf({ client, expenses, payments, debts, workers, summary }: ReportInput) {
+export function useClientPdf({ client, expenses, payments, debts, workers, budget, summary }: ReportInput) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const busy = useRef(false);
 
@@ -30,7 +34,7 @@ export function useClientPdf({ client, expenses, payments, debts, workers, summa
       switch (kind) {
         case 'full':
           return {
-            element: createElement(FullReportPDF, { client, expenses, payments, debts, workers, summary }),
+            element: createElement(FullReportPDF, { client, expenses, payments, debts, workers, budget, summary }),
             file: `تقرير-${name}`,
             title: `التقرير الشامل - ${name}`,
             text: `مرفق: التقرير الشامل لمشروع ${name}`,
@@ -69,7 +73,7 @@ export function useClientPdf({ client, expenses, payments, debts, workers, summa
           };
       }
     },
-    [client, expenses, payments, debts, workers, summary]
+    [client, expenses, payments, debts, workers, budget, summary]
   );
 
   const run = useCallback(

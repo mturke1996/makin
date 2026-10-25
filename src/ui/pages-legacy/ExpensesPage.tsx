@@ -46,7 +46,7 @@ import { dayKey, dayLabel, groupBy, isSameMonthAsToday, matchesQuery, sumAmounts
 export const ExpensesPage = () => {
   const navigate = useNavigate();
   const access = useAccess();
-  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, isLoading } = useDataStore();
+  const { expenses, addExpense, updateExpense, deleteExpense, approveExpenses, rejectExpense, clients, projectPhases, isLoading } = useDataStore();
   const user = useAuthStore((s) => s.user);
   const myFundStats = useMyFundStats();
 
@@ -171,6 +171,8 @@ export const ExpensesPage = () => {
       ...(data.invoiceNumber ? { invoiceNumber: data.invoiceNumber } : {}),
       notes: data.notes,
       clientId: data.clientId,
+      // A removed phase is cleared with null on an edit; on a new expense there is simply none.
+      ...(data.phaseId ? { phaseId: data.phaseId } : editing?.phaseId ? { phaseId: null as unknown as undefined } : {}),
       ...qtyFields,
       updatedAt: new Date().toISOString(),
     };
@@ -441,6 +443,7 @@ export const ExpensesPage = () => {
         open={sheet.open}
         edit={sheet.edit}
         clients={clients}
+        phases={projectPhases}
         userId={user?.id}
         fundStats={myFundStats}
         readOnlyNotice={editNotice}

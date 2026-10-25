@@ -8,6 +8,8 @@ import { useDataStore } from '../../stores/useDataStore';
 import { useAccess } from '../../core/access/useAccess';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { sumBoqItems } from '../../core/finance/projectBudget';
+import { buildCategoryBudgetRows } from '../../core/finance/budgetStatus';
+import { getExpenseCategoryLabel } from '../../core/utils-formatters';
 import { PROFIT_BASE_LABELS, resolveProfitBase } from '../../core/finance/clientProfitTotals';
 import { CLIENT_STATUS_LABEL, resolveClientStatus } from '../../core/finance/clientProject';
 import { sumMoney } from '../../core/finance/workerLedger';
@@ -101,10 +103,19 @@ export const ClientProfilePage = () => {
   // The agreed percentage is a client edit, and only makes sense next to the full account it is computed from.
   const canEditProfit = may.editClient && caps.showSummary;
 
+  // The estimate by category is a comparison, so it needs every expense of the client.
+  const categoryRows = useMemo(
+    () => (caps.expenseScope === 'all' && caps.projects ? buildCategoryBudgetRows(data.clientBoqItems, data.clientExpenses, getExpenseCategoryLabel) : []),
+    [caps.expenseScope, caps.projects, data.clientBoqItems, data.clientExpenses],
+  );
+
   const [activeSheet, setActiveSheet] = useState<ProfileSheetKey | null>(null);
+  // A link may open a section straight away (?section=workers|phases|boq|expenses), when this person may see it.
   useEffect(() => {
-    if (searchParams.get('section') === 'workers' && caps.workers) setActiveSheet('workers');
-  }, [searchParams, caps.workers]);
+    const wanted = searchParams.get('section');
+    const allowed: Record<string, boolean> = { workers: caps.workers, phases: caps.projects, boq: caps.projects, expenses: caps.expenseScope !== 'none' };
+    if (wanted && allowed[wanted]) setActiveSheet(wanted as ProfileSheetKey);
+  }, [searchParams, caps.workers, caps.projects, caps.expenseScope]);
   const [activeForm, setActiveForm] = useState<ActiveForm | null>(null);
   const [profitPercentage, setProfitPercentage] = useState('');
   const [profitBase, setProfitBase] = useState<ClientProfitBase>('expenses');
@@ -131,6 +142,7 @@ export const ClientProfilePage = () => {
     payments: data.clientPayments,
     debts: data.clientDebts,
     workers: data.clientWorkers,
+    budget: caps.expenseScope === 'all' && caps.projects ? { phases: data.phaseBudgetRows, categories: categoryRows } : undefined,
     summary,
   });
   const deletes = useClientDeletes({ closeForm });
@@ -267,6 +279,7 @@ export const ClientProfilePage = () => {
     !caps.workers && 'workers',
     !caps.custody && 'balances',
     !caps.projects && 'phases',
+    !caps.projects && 'boq',
     !caps.invoices && 'invoices',
     !caps.showSummary && 'statement',
   ].filter((a): a is InsightAction => !!a);
@@ -346,6 +359,7 @@ export const ClientProfilePage = () => {
               debts={data.clientDebts}
               workerSummary={caps.workers ? { remaining: summary.totalWorkersDue } : undefined}
               phaseBudgetRows={data.phaseBudgetRows}
+              categoryBudgetRows={categoryRows}
               custody={userBalancesSummary}
               invoices={caps.invoices ? clientInvoices : undefined}
               expenseScope={caps.expenseScope}
@@ -516,6 +530,7 @@ export const ClientProfilePage = () => {
             client={client}
             phases={clientPhases}
             items={data.clientBoqItems}
+            categoryRows={categoryRows}
             onAdd={may.manageProjects ? () => setActiveForm({ kind: 'boq', edit: null }) : undefined}
             onEdit={may.manageProjects ? (item) => setActiveForm({ kind: 'boq', edit: item }) : undefined}
             onDelete={

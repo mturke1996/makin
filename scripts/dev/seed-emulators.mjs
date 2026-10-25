@@ -82,13 +82,16 @@ for (const [id, clientId, name, jobType, totalAmount, paidAmount, agreementItems
 
 // ── Phases / BOQ / site reports ───────────────────────────────────────────────
 const phases = [
-  ['p1', 'c-villa', 'الحفر والأساسات', 1, 'completed', 60000],
-  ['p2', 'c-villa', 'الهيكل الخرساني', 2, 'in_progress', 140000],
+  ['p1', 'c-villa', 'الحفر والأساسات', 1, 'completed', 25000],
+  ['p2', 'c-villa', 'الهيكل الخرساني', 2, 'in_progress', 33000],
   ['p3', 'c-villa', 'التمديدات والتشطيب', 3, 'planned', 120000],
 ];
 for (const [id, clientId, name, order, status, budgetAmount] of phases) await put('project_phases', id, { clientId, name, order, status, budgetAmount, ...stamp() });
-await put('boq_items', 'b1', { clientId: 'c-villa', phaseId: 'p2', itemCode: 'S-01', description: 'صب أعمدة خرسانية مسلحة', unit: 'm3', quantity: 38, unitPrice: 920, total: 34960, ...stamp() });
-await put('boq_items', 'b2', { clientId: 'c-villa', phaseId: 'p2', itemCode: 'S-02', description: 'حديد تسليح', unit: 'ton', quantity: 9, unitPrice: 4300, total: 38700, ...stamp() });
+// The estimate, by category: concrete is under-estimated, cement is close, rebar is fine.
+await put('boq_items', 'b1', { clientId: 'c-villa', phaseId: 'p2', itemCode: 'S-01', description: 'صب خرسانة مسلحة', category: 'concrete', unit: 'm3', quantity: 20, unitPrice: 900, total: 18000, ...stamp() });
+await put('boq_items', 'b2', { clientId: 'c-villa', phaseId: 'p2', itemCode: 'S-02', description: 'حديد تسليح', category: 'rebar', unit: 'ton', quantity: 9, unitPrice: 4300, total: 38700, ...stamp() });
+await put('boq_items', 'b3', { clientId: 'c-villa', phaseId: 'p2', itemCode: 'S-03', description: 'إسمنت ومونة', category: 'cement', unit: 'piece', quantity: 133, unitPrice: 30, total: 3990, ...stamp() });
+await put('boq_items', 'b4', { clientId: 'c-villa', phaseId: 'p3', itemCode: 'F-01', description: 'لياسة داخلية', category: 'plaster', unit: 'm2', quantity: 400, unitPrice: 20, total: 8000, ...stamp() });
 await put('site_reports', 's1', {
   clientId: 'c-villa', title: 'تقرير الأسبوع الرابع: الهيكل', reportDate: '2026-10-20', weather: 'مشمس', workersOnSite: 14, progressPercent: 46,
   workCompleted: 'اكتمل صب أعمدة الدور الأرضي وبدأ تجهيز شدات السقف.', issues: 'تأخر وصول حديد الدفعة الثانية يومين.', nextSteps: 'صب سقف الدور الأرضي الخميس.', ...stamp({ createdBy: adminName }),
@@ -112,11 +115,14 @@ const ex = [
 ];
 // Approval: what the admin records is approved on the spot; what the site employee records waits for review
 // (one of them was already sent back with a reason).
+// Which phase each villa expense belongs to: the foundations are over their budget, the structure is close to it.
+const phaseOf = { e1: 'p1', e5: 'p1', e8: 'p1', e2: 'p2', e3: 'p2', e4: 'p2', e6: 'p2' };
 const byStaff = { e4: { approvalStatus: 'pending' }, e11: { approvalStatus: 'pending' }, e6: { approvalStatus: 'rejected', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now, rejectionReason: 'لا توجد فاتورة، أرفق إيصال النقل' } };
 for (const [id, clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName] of ex) {
   const staff = id in byStaff;
   await put('expenses', id, {
     clientId, description, amount, category, date, quantity, unitPrice, unit, workerId, workerName, isClosed: false,
+    phaseId: phaseOf[id],
     createdBy: staff ? 'سالم (موقع)' : adminName, userId: staff ? staffUid : adminUid, createdByRole: staff ? 'employee' : 'admin',
     ...(staff ? byStaff[id] : { approvalStatus: 'approved', reviewedBy: adminUid, reviewedByName: adminName, reviewedAt: now }),
     ...stamp(),

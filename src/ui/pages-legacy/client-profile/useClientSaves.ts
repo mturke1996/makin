@@ -274,6 +274,8 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount }:
         unitPrice,
         total: computeBoqLineTotal(quantity, unitPrice),
         phaseId: data.phaseId || undefined,
+        // Clearing a category on an existing line removes it (Firestore strips undefined, so null is the way).
+        category: data.category || (edit?.category ? (null as unknown as undefined) : undefined),
         notes: data.notes || undefined,
       };
       if (edit) {

@@ -4,7 +4,9 @@ import { Amount, Badge, Button, EmptyState, IconButton, Segmented, Sheet } from 
 import { buildShares } from '../../../core/finance/clientRecords';
 import { formatDecimalNumber } from '../../../core/utils-formatters';
 import { exportBoqToExcel, BOQ_UNIT_LABELS } from '../../../features/export/excelExport';
+import type { CategoryBudgetRow } from '../../../core/finance/budgetStatus';
 import type { Client, ProjectPhase, BoqLineItem } from '../../../types';
+import { CategoryBudgetPanel } from './CategoryBudgetPanel';
 import { LedgerGroup } from './LedgerParts';
 import { countPhrase } from './moduleCopy';
 import { FilterGroup, MultiChips, SingleChips } from './records/filterControls';
@@ -38,6 +40,8 @@ interface BoqSheetProps {
   client: Client;
   phases: ProjectPhase[];
   items: BoqLineItem[];
+  /** The estimate against the spending by category; empty (or absent) when the viewer does not see every expense. */
+  categoryRows?: readonly CategoryBudgetRow[];
   /** The three handlers are omitted when this person may not manage project follow-up (`projects.manage`). */
   onAdd?: () => void;
   onEdit?: (item: BoqLineItem) => void;
@@ -46,7 +50,7 @@ interface BoqSheetProps {
   loading?: boolean;
 }
 
-export function BoqSheet({ open, onClose, client, phases, items, onAdd, onEdit, onDelete, loading }: BoqSheetProps) {
+export function BoqSheet({ open, onClose, client, phases, items, categoryRows = [], onAdd, onEdit, onDelete, loading }: BoqSheetProps) {
   const [query, setQuery] = useState<BoqQuery>(EMPTY_BOQ_QUERY);
   useResetOnClose(open, () => setQuery(EMPTY_BOQ_QUERY));
 
@@ -140,6 +144,12 @@ export function BoqSheet({ open, onClose, client, phases, items, onAdd, onEdit, 
                 {shares.length > 1 && <ShareList title="الإجمالي حسب المرحلة" rows={shares} top={4} expandLabel="عرض التفاصيل" />}
               </RecordsSummary>
             </div>
+
+            {categoryRows.length > 0 && (
+              <div className="px-4 pb-3 lg:px-6">
+                <CategoryBudgetPanel rows={categoryRows} />
+              </div>
+            )}
 
             <RecordsFilterBar
               searchLabel="بحث في جدول الكميات"

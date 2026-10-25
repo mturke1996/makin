@@ -204,8 +204,40 @@ describe('phase budgets', () => {
     expect(i.reason).toContain('أ');
   });
 
-  it('ignores phases without a budget or within it', () => {
-    expect(ids(base({ phases: [row('أ', 0, 500), row('ب', 100, 100), row('ج', 100, 40)] }))).toEqual([]);
+  it('ignores phases without a budget or comfortably within it', () => {
+    expect(ids(base({ phases: [row('أ', 0, 500), row('ب', 100, 79), row('ج', 100, 40)] }))).toEqual([]);
+  });
+
+  it('warns early, from 80 percent of the budget up to the budget itself', () => {
+    const i = one(base({ phases: [row('الهيكل', 1000, 850)] }), 'phase-near-budget')!;
+    expect(i).toMatchObject({ severity: 'warning', action: 'phases', title: 'مرحلة الهيكل قاربت ميزانيتها' });
+    expect(i.reason).toContain('85%');
+    expect(one(base({ phases: [row('الهيكل', 1000, 1000)] }), 'phase-near-budget')).toBeDefined();
+    expect(one(base({ phases: [row('الهيكل', 1000, 1001)] }), 'phase-near-budget')).toBeUndefined(); // that one is over
+  });
+
+  it('keeps near and over apart when both exist', () => {
+    expect(ids(base({ phases: [row('أ', 100, 130), row('ب', 100, 90)] }))).toEqual(['phase-over-budget', 'phase-near-budget']);
+  });
+});
+
+describe('the estimate by category', () => {
+  const cat = (label: string, budget: number, actual: number, state: 'ok' | 'near' | 'over' | 'unbudgeted') => ({ label, budget, actual, state });
+
+  it('names a category that went past its estimate and leads to the bill of quantities', () => {
+    const i = one(base({ categories: [cat('حديد تسليح', 50000, 52000, 'over')] }), 'category-over-budget')!;
+    expect(i).toMatchObject({ severity: 'warning', action: 'boq', title: 'بند حديد تسليح تجاوز تقديره' });
+    expect(i.reason).toContain('2,000');
+  });
+
+  it('is a danger from 20 percent over, and groups several', () => {
+    expect(one(base({ categories: [cat('أ', 100, 125, 'over')] }), 'category-over-budget')!.severity).toBe('danger');
+    expect(one(base({ categories: [cat('أ', 100, 125, 'over'), cat('ب', 100, 110, 'over')] }), 'category-over-budget')!.title).toBe('تصنيفان تجاوزت تقديرها');
+  });
+
+  it('warns when a category nears its estimate, and says nothing for fine or unbudgeted ones', () => {
+    expect(one(base({ categories: [cat('خرسانة', 20000, 16500, 'near')] }), 'category-near-budget')!.title).toBe('بند خرسانة قارب تقديره');
+    expect(ids(base({ categories: [cat('أ', 100, 10, 'ok'), cat('ب', 0, 300, 'unbudgeted')] }))).toEqual([]);
   });
 });
 

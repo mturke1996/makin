@@ -6,6 +6,8 @@ import type { Client, Expense, Payment, StandaloneDebt, Worker } from '../../typ
 import { expenseCategories, expenseHasQuantityLine, formatCurrencyDisplay, formatExpenseNotesOnly, formatQuantityWithUnit } from '../../core/utils-formatters';
 import { buildWorkerLedgers, summarizeWorkerLedgers } from '../../core/finance/workerLedger';
 import { APPROVAL_LABEL, approvalCounts, approvalStatusOf } from '../../core/finance/expenseApproval';
+import { budgetState, type CategoryBudgetRow } from '../../core/finance/budgetStatus';
+import type { PhaseBudgetRow } from '../../core/finance/projectBudget';
 import { ar, arDate } from './arabicPDF';
 import { getPdfBrand } from './pdfBrand';
 import { PDF_FONT_FAMILY } from './pdfFonts';
@@ -100,6 +102,37 @@ const debtRow = (d: StandaloneDebt) => ({
   amount: d.amount,
   paid: d.paidAmount,
   remaining: d.remainingAmount,
+});
+
+/** Budget against spending: a phase or a category per row, with where it stands and how much of it is used. */
+const BUDGET_COLS: PdfColumn[] = [
+  { key: 'item', label: 'البند', flex: 2.4, kind: 'stack', bold: true },
+  { key: 'budget', label: 'الميزانية', flex: 1, kind: 'money' },
+  { key: 'actual', label: 'الفعلي', flex: 1, kind: 'money' },
+  { key: 'left', label: 'المتبقي', flex: 1, kind: 'money', bold: true },
+  { key: 'used', label: 'المستهلك', flex: 0.8, kind: 'num' },
+];
+
+const BUDGET_STATE_LABEL = { over: 'تجاوز', near: 'قارب النفاد', unbudgeted: 'بلا تقدير', ok: '', none: '' } as const;
+const usedText = (ratio: number | null) => (ratio == null ? '—' : `${Math.round(ratio)}%`);
+
+const phaseBudgetRow = (r: PhaseBudgetRow) => {
+  const state = budgetState(r.budget, r.actual);
+  return {
+    item: { t: r.phase.name, s: BUDGET_STATE_LABEL[state] || undefined },
+    budget: r.budget,
+    actual: r.actual,
+    left: r.variance,
+    used: usedText(r.budget > 0 ? (r.actual / r.budget) * 100 : null),
+  };
+};
+
+const categoryBudgetRow = (r: CategoryBudgetRow) => ({
+  item: { t: r.label, s: BUDGET_STATE_LABEL[r.state] || undefined },
+  budget: r.budget,
+  actual: r.actual,
+  left: r.state === 'unbudgeted' ? 0 : r.variance,
+  used: usedText(r.ratio),
 });
 
 const WORKER_COLS: PdfColumn[] = [
@@ -263,6 +296,8 @@ interface FullReportPDFProps {
   payments: Payment[];
   debts: StandaloneDebt[];
   workers: Worker[];
+  /** Phase budgets and the estimate by category, when the viewer sees every expense. */
+  budget?: { phases: PhaseBudgetRow[]; categories: CategoryBudgetRow[] };
   summary: {
     totalPaid: number; profit: number; profitPercentage: number; profitBase?: 'expenses' | 'payments';
     totalExpenses: number; totalDebts: number; totalObligations: number;
@@ -271,7 +306,7 @@ interface FullReportPDFProps {
   };
 }
 
-export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, payments, debts, workers, summary }) => {
+export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, payments, debts, workers, budget, summary }) => {
   const B = getPdfBrand();
   const s = makePdfStyles(B);
   const ref = docRef('RPT', client);
@@ -308,6 +343,19 @@ export const FullReportPDF: React.FC<FullReportPDFProps> = ({ client, expenses, 
         ) : null}
 
         <Breakdown s={s} title="توزيع المصروفات حسب التصنيف" groups={groups} total={summary.totalExpenses} color={INK.text} />
+
+        {budget && budget.phases.some((r) => r.budget > 0) ? (
+          <PdfTable
+            s={s}
+            heading="الميزانية مقابل الفعلي حسب المرحلة"
+            hint={countWord(budget.phases.length, { one: 'مرحلة واحدة', two: 'مرحلتان', few: 'مراحل', many: 'مرحلة' })}
+            columns={BUDGET_COLS}
+            rows={budget.phases.filter((r) => r.budget > 0 || r.actual > 0).map(phaseBudgetRow)}
+          />
+        ) : null}
+        {budget && budget.categories.length > 0 ? (
+          <PdfTable s={s} heading="التقدير مقابل الفعلي حسب التصنيف" columns={BUDGET_COLS} rows={budget.categories.map(categoryBudgetRow)} />
+        ) : null}
 
         {expenses.length > 0 ? (
           <>

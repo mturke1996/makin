@@ -37,6 +37,8 @@ export interface HomeGates {
   approvals: boolean;
   /** Their own expenses that were sent back: for anyone who records expenses. */
   corrections: boolean;
+  /** Phase budgets against spending: needs the phases (projects) and every expense. */
+  budgets: boolean;
 
   /** The pooled fund balance next to the custody shortcut belongs to whoever manages custody. */
   pooledFund: boolean;
@@ -75,6 +77,7 @@ export function homeGates(p: Principal | null | undefined): HomeGates {
     custody: ownCustody,
     approvals: can(p, 'expenses.edit.all'),
     corrections: can(p, 'expenses.create'),
+    budgets: can(p, 'projects.view') && scope === 'all',
     pooledFund: can(p, 'custody.manage'),
     newInvoice: can(p, 'invoices.manage'),
     newExpense: can(p, 'expenses.create'),

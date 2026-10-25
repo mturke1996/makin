@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Add, Edit, Delete, Timeline, FileDownload } from '../../../design-system/icons';
 import { Amount, Badge, Button, EmptyState, IconButton, ListGroup, ProgressBar, Sheet } from '../../../design-system/primitives';
 import { formatDayText } from '../../../core/finance/clientRecords';
+import { NEAR_BUDGET_RATIO } from '../../../core/finance/budgetStatus';
 import { exportPhaseBudgetToExcel, PHASE_STATUS_LABELS } from '../../../features/export/excelExport';
 import type { Client, ProjectPhase } from '../../../types';
 import type { PhaseBudgetRow } from '../../../core/finance/projectBudget';
@@ -174,7 +175,7 @@ export function PhasesSheet({
                     <div className="flex items-center gap-3">
                       <ProgressBar
                         value={summary.usedPercent}
-                        tone={overspent ? 'danger' : summary.usedPercent >= 85 ? 'warning' : 'brand'}
+                        tone={overspent ? 'danger' : summary.usedPercent >= NEAR_BUDGET_RATIO * 100 ? 'warning' : 'brand'}
                         label="استهلاك ميزانية المراحل"
                       />
                       <span className="flex-none text-xs font-semibold tabular-nums text-fg-subtle">
@@ -290,6 +291,7 @@ function PhaseItem({
               {statusLabel(phase.status)}
             </Badge>
             {over && <Badge tone="danger">تجاوز الميزانية</Badge>}
+            {!over && actualKnown && hasBudget && row.usedPercent >= NEAR_BUDGET_RATIO * 100 && <Badge tone="warning">قارب الميزانية</Badge>}
           </div>
           {dates && <p className="mt-2 text-xs tabular-nums text-fg-muted">{dates}</p>}
           {phase.notes && <p className="mt-1 line-clamp-2 text-xs text-fg-subtle">{phase.notes}</p>}
@@ -343,7 +345,7 @@ function PhaseItem({
         <div className="mt-3 flex items-center gap-3">
           <ProgressBar
             value={row.usedPercent}
-            tone={over ? 'danger' : row.usedPercent >= 85 ? 'warning' : 'brand'}
+            tone={over ? 'danger' : row.usedPercent >= NEAR_BUDGET_RATIO * 100 ? 'warning' : 'brand'}
             label={`استهلاك ميزانية ${phase.name}`}
           />
           <span className="flex-none text-xs font-semibold tabular-nums text-fg-subtle">

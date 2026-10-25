@@ -3,6 +3,7 @@ import { Input } from '../../../design-system/primitives';
 import { BOQ_UNITS, type BoqLineItem, type ProjectPhase } from '../../../types';
 import { BOQ_UNIT_LABELS } from '../../../features/export/excelExport';
 import { computeBoqLineTotal } from '../../../core/finance/projectBudget';
+import { CONSTRUCTION_EXPENSE_CATEGORIES, EXPENSE_CATEGORY_GROUPS } from '../../../core/expenseCategories';
 import {
   FormSheetShell,
   FormSection,
@@ -28,6 +29,7 @@ export function BoqFormSheet({ edit, phases, onClose, onSubmit }: BoqFormSheetPr
       quantity: edit?.quantity ?? ('' as any),
       unitPrice: edit?.unitPrice ?? ('' as any),
       phaseId: edit?.phaseId ?? '',
+      category: edit?.category ?? '',
       notes: edit?.notes ?? '',
     },
   });
@@ -52,6 +54,26 @@ export function BoqFormSheet({ edit, phases, onClose, onSubmit }: BoqFormSheetPr
           name="description"
           control={control}
           render={({ field }) => <Input {...field} label="وصف البند" placeholder="مثال: صب خرسانة مسلحة للأساسات" />}
+        />
+        <Controller
+          name="category"
+          control={control}
+          render={({ field }) => (
+            <FormField label="التصنيف (اختياري)" hint="يربط تقدير البند بمصروفات التصنيف نفسه، فتظهر المقارنة بين التقدير والفعلي.">
+              <FormSelect {...field}>
+                <option value="">بدون تصنيف</option>
+                {EXPENSE_CATEGORY_GROUPS.map((group) => (
+                  <optgroup key={group.id} label={group.label}>
+                    {CONSTRUCTION_EXPENSE_CATEGORIES.filter((c) => c.group === group.id).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </FormSelect>
+            </FormField>
+          )}
         />
         <div className="grid grid-cols-2 gap-3">
           <Controller

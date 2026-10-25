@@ -2,6 +2,7 @@ import type { ClientProfitBase, Expense, Invoice, Payment, ProjectPhase, Standal
 import { formatCurrencyDisplay } from '../utils-formatters';
 import { dayOf, monthName, monthOf, percentOf, shiftMonth } from './clientAnalytics';
 import { getInvoicePaymentSummary } from './invoicePayments';
+import { budgetState } from './budgetStatus';
 import { fromMilli, toMilli } from './money';
 import { findOverdueInvoices } from './overdueInvoices';
 
@@ -24,6 +25,7 @@ export type InsightAction =
   | 'workers'
   | 'balances'
   | 'phases'
+  | 'boq'
   | 'invoices'
   | 'profit'
   | 'statement';
@@ -54,6 +56,14 @@ export interface InsightPhaseRow {
   actual: number;
 }
 
+/** One category of the estimate against what was spent on it (see `buildCategoryBudgetRows`). */
+export interface InsightCategoryRow {
+  label: string;
+  budget: number;
+  actual: number;
+  state: 'none' | 'ok' | 'near' | 'over' | 'unbudgeted';
+}
+
 export interface InsightInput {
   /** The local day, `YYYY-MM-DD`. */
   today: string;
@@ -72,6 +82,8 @@ export interface InsightInput {
   payments: readonly Payment[];
   debts?: readonly Pick<StandaloneDebt, 'remainingAmount' | 'dueDate'>[];
   phases?: readonly InsightPhaseRow[];
+  /** The estimate by category, only when the viewer sees every expense. */
+  categories?: readonly InsightCategoryRow[];
   custody?: readonly InsightCustodyLine[];
   invoices?: readonly Invoice[];
 }
@@ -132,6 +144,9 @@ const PRIORITY = [
   'invoices-overdue',
   'percentage-deficit',
   'phase-over-budget',
+  'category-over-budget',
+  'phase-near-budget',
+  'category-near-budget',
   'custody-depleted',
   'no-recent-payment',
   'debts-overdue',
@@ -284,6 +299,61 @@ function phaseRule(input: InsightInput, out: ClientInsight[]) {
   }
 }
 
+/** A phase that has used 80% or more of its budget but has not passed it yet: the moment to act. */
+function phaseNearRule(input: InsightInput, out: ClientInsight[]) {
+  const near = (input.phases ?? []).filter((p) => budgetState(p.budget, p.actual) === 'near');
+  if (near.length === 0) return;
+  const closest = [...near].sort((a, b) => (percentOf(b.actual, b.budget) ?? 0) - (percentOf(a.actual, a.budget) ?? 0))[0];
+  const used = percentOf(closest.actual, closest.budget) ?? 0;
+  out.push({
+    id: 'phase-near-budget',
+    severity: 'warning',
+    title:
+      near.length === 1
+        ? `مرحلة ${closest.phase.name} قاربت ميزانيتها`
+        : `${countWords(near.length, { one: 'مرحلة', two: 'مرحلتان', few: 'مراحل', many: 'مرحلة' })} قاربت ميزانيتها`,
+    reason: `${near.length === 1 ? 'استُهلك' : 'الأقرب مرحلة ' + closest.phase.name + ': استُهلك'} ${pct(used)} من ${money(closest.budget)}، والمتبقي ${money(fromMilli(toMilli(closest.budget) - toMilli(closest.actual)))}.`,
+    action: 'phases',
+  });
+}
+
+/** The estimate by category (bill of quantities) against the spending on the same categories. */
+function categoryRules(input: InsightInput, out: ClientInsight[]) {
+  const rows = input.categories ?? [];
+  const over = rows
+    .filter((r) => r.state === 'over')
+    .map((r) => ({ ...r, excess: fromMilli(toMilli(r.actual) - toMilli(r.budget)) }))
+    .sort((a, b) => toMilli(b.excess) - toMilli(a.excess));
+  if (over.length > 0) {
+    const worst = over[0];
+    const worstPct = percentOf(worst.excess, worst.budget) ?? 0;
+    out.push({
+      id: 'category-over-budget',
+      severity: worstPct >= 20 ? 'danger' : 'warning',
+      title:
+        over.length === 1
+          ? `بند ${worst.label} تجاوز تقديره`
+          : `${countWords(over.length, { one: 'تصنيف', two: 'تصنيفان', few: 'تصنيفات', many: 'تصنيفاً' })} تجاوزت تقديرها`,
+      reason: `${over.length === 1 ? '' : 'الأكبر ' + worst.label + ': '}الفعلي ${money(worst.actual)} من تقدير ${money(worst.budget)}، بزيادة ${money(worst.excess)} (${pct(worstPct)}).`,
+      action: 'boq',
+    });
+  }
+  const near = rows.filter((r) => r.state === 'near');
+  if (near.length > 0) {
+    const closest = [...near].sort((a, b) => (percentOf(b.actual, b.budget) ?? 0) - (percentOf(a.actual, a.budget) ?? 0))[0];
+    out.push({
+      id: 'category-near-budget',
+      severity: 'warning',
+      title:
+        near.length === 1
+          ? `بند ${closest.label} قارب تقديره`
+          : `${countWords(near.length, { one: 'تصنيف', two: 'تصنيفان', few: 'تصنيفات', many: 'تصنيفاً' })} قاربت تقديرها`,
+      reason: `${near.length === 1 ? '' : 'الأقرب ' + closest.label + ': '}استُهلك ${pct(percentOf(closest.actual, closest.budget) ?? 0)} من تقدير ${money(closest.budget)}.`,
+      action: 'boq',
+    });
+  }
+}
+
 function sumInWindow(items: readonly { day: string | null; milli: number }[], from: string, to: string): number {
   let total = 0;
   for (const i of items) if (i.day && i.day >= from && i.day <= to) total += i.milli;
@@ -413,6 +483,8 @@ export function buildClientInsights(input: InsightInput): ClientInsight[] {
   percentageRule(input, out);
   custodyRules(input, out);
   phaseRule(input, out);
+  phaseNearRule(input, out);
+  categoryRules(input, out);
   quietPaymentRule(input, out);
   largeExpenseRule(input, out);
   workersRule(input, out);

@@ -50,7 +50,7 @@ export function HomePage() {
   const rtl = brand.direction === 'rtl';
   const t = useMemo(() => (ar: string, en: string) => (rtl ? ar : en), [rtl]);
   const user = useAuthStore((s) => s.user);
-  const { payments, clients, expenses, invoices, standaloneDebts, workers, isLoading } = useDataStore();
+  const { payments, clients, expenses, invoices, standaloneDebts, workers, projectPhases, isLoading } = useDataStore();
   const access = useAccess();
   const { frequent } = useSmartNav();
   const fundBalance = useGlobalFundStore((s) => s.getCurrentBalance());
@@ -87,6 +87,7 @@ export function HomePage() {
         debts: standaloneDebts,
         custody: gates.custody ? myFundStats : null,
         expenses: listable,
+        phases: projectPhases,
         userId: user?.id,
         allow: {
           invoices: gates.overdueInvoices,
@@ -95,10 +96,11 @@ export function HomePage() {
           custody: gates.custody,
           approvals: gates.approvals,
           corrections: gates.corrections,
+          budgets: gates.budgets,
         },
         t,
       }),
-    [invoices, payments, clients, standaloneDebts, listable, user?.id, myFundStats, gates, t]
+    [invoices, payments, clients, standaloneDebts, listable, projectPhases, user?.id, myFundStats, gates, t]
   );
 
   const firstName = user?.displayName?.trim().split(/\s+/)[0] || '';

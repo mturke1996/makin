@@ -18,7 +18,7 @@ import {
   multiplyQuantityPrice,
   parseDecimalInput,
 } from '../../../core/utils-formatters';
-import type { Client, Expense } from '../../../types';
+import type { Client, Expense, ProjectPhase } from '../../../types';
 import { CustodyOverdraftNotice } from '../client-profile/profileBanners';
 import { ProfileCallout } from '../client-profile/profileUi';
 import { ExpenseReviewPanel } from './ExpenseReviewPanel';
@@ -31,6 +31,8 @@ export interface ExpenseFormData {
   category: string;
   date: string;
   clientId: string;
+  /** The project phase this spending belongs to ('' for none): it is what the phase budget is measured against. */
+  phaseId: string;
   invoiceNumber: string;
   notes: string;
   /** Present only when a quantity x price line is filled in. */
@@ -45,6 +47,8 @@ interface Props {
   open: boolean;
   edit: Expense | null;
   clients: Client[];
+  /** Every phase this person may read; the field appears only when the chosen project has some. */
+  phases?: ProjectPhase[];
   userId?: string;
   fundStats: { remaining: number } | null;
   /**
@@ -66,6 +70,7 @@ type FormState = {
   category: string;
   date: string;
   clientId: string;
+  phaseId: string;
   invoiceNumber: string;
   notes: string;
   quantity: string;
@@ -80,6 +85,7 @@ const blank = (clientId: string): FormState => ({
   category: 'materials',
   date: isoDay(),
   clientId,
+  phaseId: '',
   invoiceNumber: '',
   notes: '',
   quantity: '',
@@ -88,7 +94,7 @@ const blank = (clientId: string): FormState => ({
   qtyOpen: false,
 });
 
-export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readOnlyNotice, onClose, onSubmit, onDelete, review }: Props) {
+export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fundStats, readOnlyNotice, onClose, onSubmit, onDelete, review }: Props) {
   const [form, setForm] = useState<FormState>(() => blank(''));
   const [attempted, setAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,6 +112,7 @@ export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readO
             category: edit.category,
             date: isoDay(edit.date),
             clientId: edit.clientId,
+            phaseId: edit.phaseId || '',
             invoiceNumber: edit.invoiceNumber || '',
             notes: edit.notes || '',
             quantity: edit.quantity != null ? String(edit.quantity) : '',
@@ -133,6 +140,7 @@ export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readO
 
   const clearQuantity = () => setForm((f) => ({ ...f, quantity: '', unit: '', unitPrice: '', qtyOpen: false }));
 
+  const clientPhases = phases.filter((p) => p.clientId === form.clientId).sort((a, b) => a.order - b.order);
   const amount = parseDecimalInput(form.amount) ?? 0;
   const quantity = parseDecimalInput(form.quantity);
   const unitPrice = parseDecimalInput(form.unitPrice);
@@ -157,6 +165,7 @@ export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readO
         category: form.category,
         date: form.date || isoDay(),
         clientId: form.clientId,
+        phaseId: clientPhases.some((p) => p.id === form.phaseId) ? form.phaseId : '',
         invoiceNumber: form.invoiceNumber.trim(),
         notes: form.notes.trim(),
         ...(hasQty ? { quantity, unitPrice, unit: form.unit.trim() || undefined } : {}),
@@ -351,6 +360,16 @@ export function ExpenseFormSheet({ open, edit, clients, userId, fundStats, readO
                 </option>
               ))}
             </Select>
+            {clientPhases.length > 0 && (
+              <Select label="المرحلة" value={form.phaseId} onChange={(e) => set('phaseId', e.target.value)}>
+                <option value="">بدون مرحلة</option>
+                {clientPhases.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            )}
             <Input
               label="رقم الفاتورة"
               autoComplete="off"

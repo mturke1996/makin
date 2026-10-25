@@ -5,6 +5,7 @@ import { cn } from '../../../../design-system/primitives/cn';
 import { buildOverviewTrend, localDay } from '../../../../core/finance/clientAnalytics';
 import { buildClientInsights, type InsightAction } from '../../../../core/finance/clientInsights';
 import type { PhaseBudgetRow } from '../../../../core/finance/projectBudget';
+import type { CategoryBudgetRow } from '../../../../core/finance/budgetStatus';
 import type { Expense, Invoice, Payment, StandaloneDebt } from '../../../../types';
 import { ClientAccountSummary } from '../ClientAccountSummary';
 import type { ClientSummary, UserBalancesSummary } from '../types';
@@ -26,6 +27,8 @@ export interface ClientOverviewProps {
   workerSummary?: { remaining: number };
   /** Empty when the viewer has no projects access. */
   phaseBudgetRows: readonly PhaseBudgetRow[];
+  /** The estimate by category against the spending, when the viewer sees every expense. */
+  categoryBudgetRows?: readonly CategoryBudgetRow[];
   /** Custody per user on this client (`userBalancesSummary`); empty when the viewer has none. */
   custody: UserBalancesSummary;
   /** This client's invoices, only when the viewer may list them (`caps.invoices`). */
@@ -62,6 +65,7 @@ export function ClientOverview({
   debts,
   workerSummary,
   phaseBudgetRows,
+  categoryBudgetRows,
   custody,
   invoices,
   expenseScope = 'all',
@@ -95,10 +99,11 @@ export function ClientOverview({
         payments,
         debts,
         phases: phaseBudgetRows,
+        categories: categoryBudgetRows,
         custody: Object.values(custody),
         invoices,
       }),
-    [today, summary, expenses, payments, debts, workerSummary, phaseBudgetRows, custody, invoices],
+    [today, summary, expenses, payments, debts, workerSummary, phaseBudgetRows, categoryBudgetRows, custody, invoices],
   );
 
   // The slot stays in every state: the way into the records must not vanish while the numbers load or when there are none.

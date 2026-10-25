@@ -115,6 +115,8 @@ export interface BoqFormValues {
   quantity: string | number;
   unitPrice: string | number;
   phaseId: string;
+  /** An expense category: ties the line's estimate to the spending on that category. Empty for none. */
+  category: string;
   notes: string;
 }
 

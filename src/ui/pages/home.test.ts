@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPrincipal } from '../../core/access';
-import type { Client, Expense, Invoice, Payment, StandaloneDebt, Worker } from '../../types';
+import type { Client, Expense, Invoice, Payment, ProjectPhase, StandaloneDebt, Worker } from '../../types';
 import { buildAttentionItems } from './homeAttentionModel';
 import { canOpenPath, homeGates, planDashboard } from './homeGates';
 import { bucketSums, computeHomeStats } from './homeStats';
@@ -248,6 +248,31 @@ describe('buildAttentionItems', () => {
       expect(item.tone).toBe('danger');
       expect(item.subtitle).toBe('الفاتورة ناقصة');
       expect(buildAttentionItems({ ...base, ...noOthers, expenses: review, userId: 'u-other', allow: { ...all, corrections: true } })).toEqual([]);
+    });
+  });
+
+  describe('phase budgets', () => {
+    const phase = (id: string, clientId: string, name: string, budgetAmount: number, order = 1) => ({ id, clientId, name, order, status: 'in_progress', budgetAmount, createdAt: '', updatedAt: '' }) as ProjectPhase;
+    const spend = (phaseId: string, amount: number) => ({ id: `e-${phaseId}-${amount}`, clientId: 'c1', phaseId, amount, description: 'x', category: 'other', date: '2026-10-20', createdAt: '2026-10-20T08:00:00Z', isClosed: false }) as Expense;
+    const none = { invoices: [], debts: [] };
+
+    it('names a phase that went past its budget and its client, with the excess', () => {
+      const items = buildAttentionItems({ ...base, ...none, phases: [phase('p1', 'c1', 'الهيكل', 1000)], expenses: [spend('p1', 1250)], allow: { ...all, budgets: true } });
+      expect(items.map((i) => i.kind)).toEqual(['budget-over']);
+      expect(items[0]).toMatchObject({ tone: 'danger', title: 'مرحلة الهيكل تجاوزت ميزانيتها', subtitle: 'شركة النور', amount: 250, path: '/clients/c1?section=phases' });
+    });
+
+    it('warns early when a phase has used 80 percent, and keeps over and near apart', () => {
+      const phases = [phase('p1', 'c1', 'الهيكل', 1000), phase('p2', 'c1', 'التشطيب', 1000, 2)];
+      const items = buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 1100), spend('p2', 850)], allow: { ...all, budgets: true } });
+      expect(items.map((i) => i.kind)).toEqual(['budget-over', 'budget-near']);
+      expect(items[1]).toMatchObject({ tone: 'warning', title: 'مرحلة التشطيب قاربت ميزانيتها' });
+    });
+
+    it('stays quiet without the gate, and for phases comfortably within budget', () => {
+      const phases = [phase('p1', 'c1', 'الهيكل', 1000)];
+      expect(buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 5000)], allow: all })).toEqual([]);
+      expect(buildAttentionItems({ ...base, ...none, phases, expenses: [spend('p1', 300)], allow: { ...all, budgets: true } })).toEqual([]);
     });
   });
 });

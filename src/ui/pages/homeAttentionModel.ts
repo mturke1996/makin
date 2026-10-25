@@ -3,11 +3,13 @@ import { findOverdueInvoices } from '../../core/finance/overdueInvoices';
 import { sumMoney, toMilli } from '../../core/finance/money';
 import type { MyFundStats } from '../../core/hooks/useMyFundStats';
 import { approvalCounts, approvalStatusOf, expensePhrase } from '../../core/finance/expenseApproval';
-import type { Client, Expense, Invoice, Payment } from '../../types';
+import { budgetState } from '../../core/finance/budgetStatus';
+import { buildPhaseBudgetRows } from '../../core/finance/projectBudget';
+import type { Client, Expense, Invoice, Payment, ProjectPhase } from '../../types';
 
 type Translate = (ar: string, en: string) => string;
 
-export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected';
+export type AttentionKind = 'invoice' | 'debt' | 'custody-deficit' | 'custody-empty' | 'expense-approval' | 'expense-rejected' | 'budget-over' | 'budget-near';
 
 export interface AttentionItem {
   key: string;
@@ -33,6 +35,8 @@ export interface AttentionAllow {
   approvals?: boolean;
   /** Anyone who records expenses: their own that were sent back for correction. */
   corrections?: boolean;
+  /** Phase budgets against spending: needs the phases AND every expense. */
+  budgets?: boolean;
 }
 
 interface BuildArgs {
@@ -43,6 +47,7 @@ interface BuildArgs {
   custody: MyFundStats | null;
   /** The expenses this person may list (everyone's or only their own), and who they are. */
   expenses?: Expense[];
+  phases?: ProjectPhase[];
   userId?: string;
   allow: AttentionAllow;
   t: Translate;
@@ -63,7 +68,7 @@ function sinceDays(days: number, t: Translate): string {
  * that area, and an amount is quoted only when the data behind it is complete.
  */
 export function buildAttentionItems({
-  invoices, payments, clients, debts, custody, expenses = [], userId, allow, t, now,
+  invoices, payments, clients, debts, custody, expenses = [], phases = [], userId, allow, t, now,
 }: BuildArgs): AttentionItem[] {
   const items: AttentionItem[] = [];
   const today = dayjs(now).startOf('day');
@@ -110,6 +115,38 @@ export function buildAttentionItems({
         subtitle: oldest > 0 ? `${t('الأقدم', 'Oldest')} ${sinceDays(oldest, t)}` : t('سُجّلت اليوم', 'Recorded today'),
         amount: counts.pendingAmount,
         path: '/expenses?status=pending',
+      });
+    }
+  }
+
+  if (allow.budgets && phases.length > 0) {
+    const rows = clients.flatMap((c) =>
+      buildPhaseBudgetRows(phases, expenses, c.id).map((r) => ({ ...r, client: c, state: budgetState(r.budget, r.actual) })),
+    );
+    const over = rows.filter((r) => r.state === 'over').sort((a, b) => b.actual - b.budget - (a.actual - a.budget));
+    const near = rows.filter((r) => r.state === 'near').sort((a, b) => b.actual / b.budget - a.actual / a.budget);
+    const sectionPath = (r: (typeof rows)[number]) => `/clients/${r.client.id}?section=phases`;
+    if (over.length > 0) {
+      const worst = over[0];
+      items.push({
+        key: 'budget-over',
+        tone: 'danger',
+        kind: 'budget-over',
+        title: over.length === 1 ? t(`مرحلة ${worst.phase.name} تجاوزت ميزانيتها`, `Phase ${worst.phase.name} is over budget`) : t(`${over.length} مراحل تجاوزت ميزانيتها`, `${over.length} phases are over budget`),
+        subtitle: over.length === 1 ? worst.client.name : `${t('الأكبر', 'Largest')}: ${worst.client.name} · ${worst.phase.name}`,
+        amount: sumMoney(over.map((r) => r.actual - r.budget)),
+        path: over.length === 1 ? sectionPath(worst) : '/clients',
+      });
+    }
+    if (near.length > 0) {
+      const closest = near[0];
+      items.push({
+        key: 'budget-near',
+        tone: 'warning',
+        kind: 'budget-near',
+        title: near.length === 1 ? t(`مرحلة ${closest.phase.name} قاربت ميزانيتها`, `Phase ${closest.phase.name} is near its budget`) : t(`${near.length} مراحل قاربت ميزانيتها`, `${near.length} phases are near their budget`),
+        subtitle: near.length === 1 ? closest.client.name : `${t('الأقرب', 'Closest')}: ${closest.client.name} · ${closest.phase.name}`,
+        path: near.length === 1 ? sectionPath(closest) : '/clients',
       });
     }
   }
