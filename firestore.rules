@@ -1,0 +1,272 @@
+rules_version = '2';
+
+// ============================================================================
+//  Firestore security rules: role + permission based access control.
+//
+//  The model lives in src/core/access (permissions.ts, policy.ts, dataPlan.ts) and these rules are
+//  its server-side twin: every browser check in the app is only a courtesy, THESE decide.
+//  tests/rules/*.test.ts replays the app's real queries against these rules on the emulator.
+//
+//  Identity   a person is "registered" when users/{uid} exists. Nobody else reads or writes anything.
+//  Roles      admin: everything. employee: exactly the permissions listed in their profile.
+//  Ownership  an expense belongs to the user whose uid is in `userId`. People with only
+//             `expenses.create` read, edit and delete THEIR OWN open expenses and nobody else's.
+//  Overlap    Firestore ORs every rule that matches a path, so each collection is named explicitly
+//             and there is NO catch-all: an unnamed collection is closed to everyone.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── identity ─────────────────────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profilePath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function registered() {
+      return signedIn() && exists(profilePath(request.auth.uid));
+    }
+
+    function profile() {
+      return get(profilePath(request.auth.uid)).data;
+    }
+
+    // A profile with no `role` is the original owner and counts as admin (same as normalizeRole in the app).
+    function isAdmin() {
+      return registered() && profile().get('role', 'admin') == 'admin';
+    }
+
+    // What an employee gets when their profile has no `permissions` list. Must equal
+    // DEFAULT_EMPLOYEE_PERMISSIONS in src/core/access/permissions.ts (a test compares them).
+    function defaultPermissions() {
+      return ['clients.view', 'expenses.create', 'custody.view.own'];
+    }
+
+    function can(permission) {
+      return isAdmin() || (registered() && permission in profile().get('permissions', defaultPermissions()));
+    }
+
+    function canReadDirectory() {
+      return can('expenses.view.all') || can('custody.manage');
+    }
+
+    // ── users: who people are and what they may do ───────────────────────────
+    match /users/{uid} {
+      // Everybody can read their own profile (the app needs it to sign in); colleagues' profiles only
+      // with a reason. Nobody but an admin changes roles, permissions or accounts.
+      allow get: if signedIn() && (request.auth.uid == uid || canReadDirectory());
+      allow list: if canReadDirectory();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Legacy app-lock settings (they held a plain-text PIN). The app no longer reads them.
+    match /settings/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // The audit trail is append-only: anyone registered adds entries in their own name, only admins
+    // read, and nobody (admins included) edits or erases history.
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if registered() && request.resource.data.get('userId', null) == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── clients, invoices, payments ──────────────────────────────────────────
+    match /clients/{id} {
+      allow read: if can('clients.view');
+      allow create, update: if can('clients.manage');
+      allow delete: if can('clients.delete');
+    }
+
+    match /invoices/{id} {
+      allow read: if can('invoices.view');
+      allow create: if can('invoices.manage');
+      // Recording a payment moves the invoice between unpaid / partial / paid: whoever may record
+      // payments may touch exactly those two fields and nothing else.
+      allow update: if can('invoices.manage')
+        || (can('payments.manage')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if can('invoices.delete');
+    }
+
+    match /payments/{id} {
+      allow read: if can('payments.view');
+      allow create, update: if can('payments.manage');
+      allow delete: if can('payments.delete');
+    }
+
+    // ── expenses: owned records ──────────────────────────────────────────────
+    match /expenses/{id} {
+      function isOpen() {
+        return resource.data.get('isClosed', false) == false;
+      }
+
+      function isMine() {
+        return resource.data.get('userId', null) == request.auth.uid;
+      }
+
+      function validAmount(data) {
+        // NaN fails comparison, and infinities fail the finite application bound (one billion LYD).
+        return data.get('amount', null) is number
+          && data.amount >= 0.001 && data.amount <= 1000000000;
+      }
+
+      function validClient(data) {
+        return data.get('clientId', null) is string && data.clientId.size() > 0
+          && exists(/databases/$(database)/documents/clients/$(data.clientId));
+      }
+
+      function validWorkerLink(data) {
+        let workerId = data.get('workerId', null);
+        return workerId == null || workerId == ''
+          || (workerId is string && can('workers.manage')
+            && exists(/databases/$(database)/documents/workers/$(workerId))
+            && get(/databases/$(database)/documents/workers/$(workerId)).data.get('clientId', null) == data.clientId);
+      }
+
+      function validFinancialChange() {
+        // Legacy name/notes housekeeping remains possible without rewriting historical money or links.
+        return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['amount', 'clientId', 'workerId', 'quantity', 'unitPrice', 'date'])
+          || (validAmount(request.resource.data) && validClient(request.resource.data)
+            && validWorkerLink(request.resource.data)
+            && (resource.data.get('workerId', null) == null || resource.data.get('workerId', '') == ''
+              || can('workers.manage')));
+      }
+
+      function onlyClosureFields() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isClosed', 'closedAt', 'expenseInvoiceId', 'updatedAt']);
+      }
+
+      function matchingInvoiceAfter() {
+        let invoiceId = request.resource.data.get('expenseInvoiceId', null);
+        return invoiceId is string && invoiceId.size() > 0
+          && getAfter(/databases/$(database)/documents/expense_invoices/$(invoiceId)).data.get('clientId', null) == resource.data.get('clientId', null)
+          && id in getAfter(/databases/$(database)/documents/expense_invoices/$(invoiceId)).data.get('expenseIds', []);
+      }
+
+      function invoiceRemovedAfter() {
+        let invoiceId = resource.data.get('expenseInvoiceId', null);
+        return invoiceId == null || invoiceId == ''
+          || (invoiceId is string && !existsAfter(/databases/$(database)/documents/expense_invoices/$(invoiceId)));
+      }
+
+      // Three ways in: see everything, see your own, or see the payments made to workers (so a worker's
+      // balance is exact). Queries must carry the matching filter: userId == uid, or workerId != null.
+      allow read: if can('expenses.view.all')
+        || (can('expenses.create') && isMine())
+        || (can('workers.view') && resource.data.get('workerId', null) != null);
+
+      // An owner settling an uncertain save may confirm that an operation ID is absent. This grants
+      // no existing document access and does not widen collection/list queries.
+      allow get: if can('expenses.create')
+        && !exists(/databases/$(database)/documents/expenses/$(id));
+
+      // Record under your own uid only, and never already closed.
+      allow create: if validAmount(request.resource.data) && validClient(request.resource.data)
+        && validWorkerLink(request.resource.data)
+        && request.resource.data.get('isClosed', false) == false
+        && request.resource.data.get('expenseInvoiceId', null) == null
+        && (can('expenses.edit.all') || (can('expenses.create')
+            && request.resource.data.get('userId', null) == request.auth.uid
+            && request.resource.data.get('isClosed', false) == false));
+
+      // Open expenses: edit-all, or the owner (who may not hand it to someone else nor close it).
+      // Closed expenses are frozen, except that edit-all may reopen one (deleting its expense invoice)
+      // and may refresh the author's NAME on it (renaming a user rewrites it on their records).
+      allow update: if (isOpen()
+          && request.resource.data.get('isClosed', false) == false
+          && request.resource.data.get('expenseInvoiceId', null) == resource.data.get('expenseInvoiceId', null)
+          && validFinancialChange()
+          && (can('expenses.edit.all')
+              || (can('expenses.create')
+                  && isMine()
+                  && request.resource.data.get('userId', null) == resource.data.get('userId', null)
+                  && request.resource.data.get('isClosed', false) == false)))
+        || (isOpen() && can('expenses.edit.all')
+            && request.resource.data.get('isClosed', false) == true
+            && onlyClosureFields() && matchingInvoiceAfter())
+        || (can('expenses.edit.all')
+            && !isOpen()
+            && request.resource.data.get('isClosed', false) == false
+            && onlyClosureFields() && invoiceRemovedAfter())
+        || (can('expenses.edit.all')
+            && !isOpen()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['createdBy']));
+
+      // Owners delete their own OPEN expenses. Delete-all holders may delete any, closed ones included:
+      // that is what removing a client or a user does. The app itself never offers deleting a closed one.
+      allow delete: if (resource.data.get('workerId', null) == null
+          || resource.data.get('workerId', '') == '' || can('workers.manage'))
+        && (can('expenses.delete.all') || (isOpen() && can('expenses.create') && isMine()));
+    }
+
+    // Expense invoices carry copies of other people's expenses, so they follow expense visibility.
+    match /expense_invoices/{id} {
+      allow read: if can('expenses.view.all');
+      allow create, update, delete: if can('expenses.edit.all');
+    }
+
+    // ── debts ────────────────────────────────────────────────────────────────
+    match /standalone_debts/{id} {
+      allow read: if can('debts.view');
+      allow create, update: if can('debts.manage');
+      allow delete: if can('debts.delete');
+    }
+
+    match /debt_parties/{id} {
+      allow read: if can('debts.view');
+      allow create, update, delete: if can('debts.manage');
+    }
+
+    // ── workers ──────────────────────────────────────────────────────────────
+    match /workers/{id} {
+      allow read: if can('workers.view');
+      allow create, delete: if can('workers.manage');
+      // A stale editor cannot erase another agreement revision. App transactions also preserve order.
+      allow update: if can('workers.manage')
+        && request.resource.data.get('agreementHistory', []) is list
+        && request.resource.data.get('agreementHistory', []).hasAll(resource.data.get('agreementHistory', []));
+    }
+
+    // ── custody: everybody's for managers, your own for the person it belongs to ─
+    match /global_fund_transactions/{id} {
+      allow read: if can('custody.manage')
+        || (can('custody.view.own') && resource.data.get('userId', null) == request.auth.uid);
+      allow create, update, delete: if can('custody.manage');
+    }
+
+    match /user_balances/{id} {
+      allow read: if can('custody.manage')
+        || (can('custody.view.own') && resource.data.get('userId', null) == request.auth.uid);
+      allow create, update, delete: if can('custody.manage');
+    }
+
+    // ── letters and project follow-up ────────────────────────────────────────
+    match /letters/{id} {
+      allow read: if can('letters.view');
+      allow create, update, delete: if can('letters.manage');
+    }
+
+    match /project_phases/{id} {
+      allow read: if can('projects.view');
+      allow create, update, delete: if can('projects.manage');
+    }
+
+    match /boq_items/{id} {
+      allow read: if can('projects.view');
+      allow create, update, delete: if can('projects.manage');
+    }
+
+    match /site_reports/{id} {
+      allow read: if can('projects.view');
+      allow create, update, delete: if can('projects.manage');
+    }
+  }
+}

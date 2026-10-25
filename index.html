@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/pwa/favicon-48.png" />
+    <link rel="mask-icon" href="/brand/favicon.svg" color="#1F2633" />
+
+    <!-- PWA: manifest is injected at build (vite-plugin-pwa) from public/manifest.json -->
+
+    <!-- Description + color identity -->
+    <meta name="description" content="نظام إدارة متكامل — فواتير، عملاء، مدفوعات، تقارير احترافية." />
+    <meta name="theme-color" content="#1F2633" />
+
+    <!-- Apply saved theme before paint (button-only, no system preference) -->
+    <script>
+      (function () {
+        var m = localStorage.getItem('theme-mode');
+        document.documentElement.setAttribute('data-theme', m === 'dark' ? 'dark' : 'light');
+      })();
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         iOS / iPhone PWA — full "add to home screen" experience.
+         Safari needs a PNG apple-touch-icon (SVG is ignored).
+         Regenerate: node scripts/generate-pwa-icons.mjs
+    ═══════════════════════════════════════════════════════════════ -->
+    <link rel="apple-touch-icon" href="/pwa/apple-touch-icon-180.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa/apple-touch-icon-180.png" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MAKIN" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="MAKIN" />
+    <meta name="format-detection" content="telephone=no, address=no, email=no" />
+
+    <!-- Prevent link highlight flash on iOS -->
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- Pre-paint background so transitions/cold-start feel instant -->
+    <style>
+      :root { color-scheme: light; }
+      html[data-theme='dark'] { color-scheme: dark; }
+      html, body {
+        background: #F5F6F9;
+        margin: 0;
+        -webkit-font-smoothing: antialiased;
+      }
+      html[data-theme='dark'], html[data-theme='dark'] body { background: #14171F; }
+      /* Hide tap flash on iOS */
+      * { -webkit-tap-highlight-color: transparent; }
+      /* Loader splash — visible only before JS mounts */
+      #root:empty::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: var(--splash-bg, #F5F6F9);
+      }
+      html[data-theme='dark'] #root:empty::before {
+        background: #14171F;
+      }
+      #root { min-height: 100dvh; }
+      /* Shown only when the app cannot start (see the script below): Arabic, with a way out. */
+      #boot-fallback {
+        position: fixed; inset: 0; z-index: 99999; display: none;
+        flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        padding: 24px; text-align: center; background: #F5F6F9; color: #14171F;
+        font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+      }
+      html[data-theme='dark'] #boot-fallback { background: #14171F; color: #F5F6F9; }
+      #boot-fallback h1 { margin: 0; font-size: 1.25rem; }
+      #boot-fallback p { margin: 0; max-width: 22rem; line-height: 1.7; opacity: .75; }
+      #boot-fallback button {
+        min-height: 48px; min-width: 14rem; border-radius: 12px; border: 0; padding: 0 20px;
+        font: inherit; font-weight: 600; cursor: pointer; background: #1F2633; color: #fff;
+      }
+      #boot-fallback button.secondary { background: transparent; color: inherit; border: 1px solid currentColor; opacity: .8; }
+    </style>
+
+    <!-- Fonts are self-hosted (@fontsource, imported in main.tsx): offline-safe, no render-blocking CDN. -->
+
+    <title>MAKIN</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript><p style="padding:24px;text-align:center">يلزم تفعيل جافاسكربت في المتصفح لتشغيل التطبيق.</p></noscript>
+    <div id="boot-fallback" role="alert">
+      <h1>تعذّر فتح التطبيق</h1>
+      <p>قد يكون هناك تحديث جديد أو اتصال ضعيف. بياناتك محفوظة على الخادم.</p>
+      <button type="button" id="boot-retry">إعادة المحاولة</button>
+      <button type="button" id="boot-reset" class="secondary">إصلاح ومسح الذاكرة المؤقتة</button>
+    </div>
+    <script>
+      (function () {
+        var fb = document.getElementById('boot-fallback');
+        var root = document.getElementById('root');
+        // Wipes the installed copy of the app (service worker + its caches), then loads it fresh from the server.
+        function reset() {
+          var jobs = [];
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+              return Promise.all(rs.map(function (r) { return r.unregister(); }));
+            }));
+          }
+          if (window.caches && caches.keys) {
+            jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+          }
+          return Promise.all(jobs).catch(function () {}).then(function () { location.replace('/?fresh=' + Date.now()); });
+        }
+        // Open the app with ?reset=1 to repair a device that keeps showing an old or broken copy.
+        if (/[?&]reset=1\b/.test(location.search)) { reset(); return; }
+        var showing = false;
+        function show() { if (!root.childElementCount) { fb.style.display = 'flex'; showing = true; } }
+        function hide() { if (showing && root.childElementCount) { fb.style.display = 'none'; showing = false; } }
+        new MutationObserver(hide).observe(root, { childList: true });
+        document.getElementById('boot-retry').onclick = function () { location.reload(); };
+        document.getElementById('boot-reset').onclick = reset;
+        // A script or stylesheet that fails to load means the app cannot start.
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK')) show();
+        }, true);
+        // ... and so does an app that has not drawn anything after a long wait.
+        setTimeout(show, 15000);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

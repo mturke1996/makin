@@ -1,0 +1,74 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+dev-dist
+*.tsbuildinfo
+
+# Local env files
+*.local
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Editor directories and files
+.vscode
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vercel
+.vercel
+
+# Firebase
+.firebase
+firebase-debug.log
+firebase-debug.*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local copies of agent/IDE skills (not app source; tools may recreate)
+/.adal/
+/.agents/
+/.augment/
+/.bob/
+/.claude/
+/.codebuddy/
+/.commandcode/
+/.continue/
+/.cortex/
+/.crush/
+/.factory/
+/.goose/
+/.iflow/
+/.junie/
+/.kilocode/
+/.kiro/
+/.kode/
+/.mcpjam/
+/.mux/
+/.neovate/
+/.openhands/
+/.pochi/
+/.qwen/
+/.trae/
+/.vibe/
+/.windsurf/
+/.zencoder/

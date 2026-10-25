@@ -1,0 +1,529 @@
+/* Fonts are self-hosted and imported in main.tsx (@fontsource) — no CDN, works offline. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — "Calm ledger"
+   Restrained product UI: tinted neutrals, one accent, semantic money colors.
+   OKLCH for neutrals; brand + semantic colors come from `applyBrandToDocument`
+   as *-base variables and are derived per theme here (so dark mode is correct
+   for any white-label palette).
+═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand bases (runtime-overridden by applyBrandToDocument) ── */
+  --brand-primary-base: #1F2633;
+  --brand-primary-rgb: 31 38 51;
+  --brand-secondary-base: #C9972B;
+  --brand-success-base: #0D9488;
+  --brand-warning-base: #D97706;
+  --brand-danger-base: #B91C1C;
+  --brand-info-base: #0369A1;
+  /* Charts: income, expense and net movement keep the same hue in every chart */
+  --chart-income: oklch(55% 0.15 258);
+  --chart-expense: oklch(61% 0.15 45);
+  --chart-net: oklch(36% 0.02 265);
+
+  /* ── Type ── */
+  --brand-font-sans: 'Cairo Variable', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+  --brand-font-mono: 'Cairo Variable', system-ui, sans-serif;
+  --brand-font-arabic: 'Cairo Variable', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+
+  /* ── Surfaces — LIGHT (neutrals tinted toward the brand hue) ── */
+  --surface-canvas: oklch(98.5% 0.003 90);
+  --surface-panel: oklch(100% 0 0);
+  --surface-raised: oklch(100% 0 0);
+  --surface-sunken: oklch(96.8% 0.004 90);
+  --surface-border: oklch(91.5% 0.004 90);
+  --surface-border-strong: oklch(86% 0.005 90);
+  --surface-hover: color-mix(in oklab, var(--brand-primary-base) 6%, transparent);
+  --surface-tint: color-mix(in oklab, var(--brand-primary-base) 4%, transparent);
+  --surface-scrim: oklch(20% 0.04 265 / 0.46);
+
+  --text-primary: oklch(19% 0.006 90);
+  --text-secondary: oklch(47% 0.008 90);
+  --text-tertiary: oklch(53.5% 0.008 90);
+  --text-inverse: oklch(99% 0.004 265);
+
+  /* ── Accent + semantic (effective values, light) ── */
+  --brand-primary: var(--brand-primary-base);
+  --brand-primary-hover: color-mix(in srgb, var(--brand-primary-base) 88%, black);
+  --brand-primary-soft: color-mix(in oklab, var(--brand-primary-base) 9%, var(--surface-panel));
+  --brand-primary-tint: color-mix(in oklab, var(--brand-primary-base) 16%, var(--surface-panel));
+  --brand-secondary: var(--brand-secondary-base);
+  --brand-success: var(--brand-success-base);
+  --brand-warning: var(--brand-warning-base);
+  --brand-danger: var(--brand-danger-base);
+  --brand-info: var(--brand-info-base);
+
+  --accent: var(--brand-primary);
+  --accent-hover: var(--brand-primary-hover);
+  --accent-soft: var(--brand-primary-soft);
+  --accent-ink: var(--brand-primary);
+  --on-accent: oklch(99% 0.004 265);
+
+  --success-soft: color-mix(in oklab, var(--brand-success-base) 11%, var(--surface-panel));
+  --warning-soft: color-mix(in oklab, var(--brand-warning-base) 13%, var(--surface-panel));
+  --danger-soft: color-mix(in oklab, var(--brand-danger-base) 9%, var(--surface-panel));
+  --info-soft: color-mix(in oklab, var(--brand-info-base) 10%, var(--surface-panel));
+  /* Text-safe variants (≥4.5:1 on panel / soft backgrounds) */
+  --success-ink: color-mix(in oklab, var(--brand-success-base) 76%, oklch(14% 0.02 265));
+  --warning-ink: color-mix(in oklab, var(--brand-warning-base) 58%, oklch(14% 0.02 265));
+  --danger-ink: color-mix(in oklab, var(--brand-danger-base) 90%, oklch(14% 0.02 265));
+  --info-ink: color-mix(in oklab, var(--brand-info-base) 80%, oklch(14% 0.02 265));
+  --on-warning: oklch(22% 0.05 75);
+
+  --brand-focus-ring: 0 0 0 3px color-mix(in oklab, var(--brand-primary-base) 30%, transparent);
+  --theme-peach-bg: var(--danger-soft);
+  --theme-peach-fg: var(--danger-ink);
+  --theme-navy-ink: var(--text-primary);
+
+  /* ── Motion ── ease-out expo-style, no bounce */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-bounce: cubic-bezier(0.22, 1, 0.36, 1); /* legacy alias — intentionally NOT a bounce */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-instant: 90ms;
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 280ms;
+
+  /* ── Shape ── soft but disciplined */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  /* legacy aliases (kept so unmigrated code softens too) */
+  --radius-hairline: var(--radius-sm);
+  --radius-widget: var(--radius-md);
+  --radius-panel: var(--radius-lg);
+  --radius-hero: var(--radius-xl);
+  --widget-border: 1px solid var(--surface-border);
+  --widget-accent: 3px solid var(--brand-primary);
+
+  /* ── Elevation ── hairline + one soft layer, shadow only for overlays */
+  --shadow-xs: 0 1px 2px oklch(25% 0.04 265 / 0.05);
+  --shadow-sm: 0 1px 2px oklch(25% 0.04 265 / 0.06), 0 2px 8px -2px oklch(25% 0.04 265 / 0.06);
+  --shadow-md: 0 2px 4px oklch(25% 0.04 265 / 0.05), 0 8px 20px -6px oklch(25% 0.04 265 / 0.1);
+  --shadow-lg: 0 4px 8px oklch(25% 0.04 265 / 0.05), 0 16px 36px -10px oklch(25% 0.04 265 / 0.16);
+  --shadow-xl: 0 8px 16px oklch(25% 0.04 265 / 0.06), 0 28px 64px -16px oklch(25% 0.04 265 / 0.26);
+  --shadow-brand: 0 1px 2px oklch(25% 0.06 265 / 0.2), 0 8px 20px -8px color-mix(in oklab, var(--brand-primary-base) 55%, transparent);
+
+  /* ── Safe areas ── */
+  --dir-sign: 1;
+  --sa-top: env(safe-area-inset-top, 0px);
+  --sa-bottom: env(safe-area-inset-bottom, 0px);
+  --sa-left: env(safe-area-inset-left, 0px);
+  --sa-right: env(safe-area-inset-right, 0px);
+}
+
+@supports (color: oklch(from red l c h)) {
+  :root {
+    --brand-primary-hover: oklch(from var(--brand-primary-base) calc(l - 0.05) c h);
+  }
+}
+
+html[dir='rtl'] { --dir-sign: -1; }
+
+/* Client identity follows the Rkeaz reference; the action toolbar keeps its normal surface. */
+.client-profile-hero {
+  --client-hero-bg: color-mix(in oklab, var(--brand-primary-base) 60%, oklch(16% 0.02 265));
+  --client-hero-fg: oklch(99% 0.002 265);
+  --client-hero-muted: oklch(83% 0.01 265);
+  --client-hero-border: color-mix(in oklab, var(--client-hero-fg) 16%, transparent);
+  --client-hero-tint: color-mix(in oklab, var(--client-hero-fg) 10%, transparent);
+  background: var(--client-hero-bg);
+}
+.client-profile-frame.hero-bezel {
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary-base) 18%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-primary-base) 28%, transparent), color-mix(in srgb, var(--brand-primary-base) 8%, transparent));
+}
+.client-profile-frame > .client-profile-hero { border-radius: calc(var(--radius-hero) - 2px); }
+.client-profile-hero .hero-action-btn { width: 2.75rem; height: 2.75rem; }
+.client-hero-action:hover { filter: brightness(1.12); }
+.client-hero-action-primary { border-color: var(--client-hero-fg); background: var(--client-hero-fg); color: var(--brand-primary-base); }
+.client-profile-finances { container-type: inline-size; }
+@container (min-width: 40rem) {
+  .client-profile-finance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ── DARK — tinted graphite, lifted accents (not pure black) ── */
+:root[data-theme='dark'] {
+  --chart-income: oklch(72% 0.13 258);
+  --chart-expense: oklch(75% 0.13 50);
+  --chart-net: oklch(82% 0.01 265);
+  --surface-canvas: oklch(15.5% 0.004 90);
+  --surface-panel: oklch(19.2% 0.004 90);
+  --surface-raised: oklch(22.5% 0.005 90);
+  --surface-sunken: oklch(13.5% 0.004 90);
+  --surface-border: oklch(28% 0.005 90);
+  --surface-border-strong: oklch(36% 0.006 90);
+  --surface-hover: oklch(100% 0 0 / 0.06);
+  --surface-tint: oklch(100% 0 0 / 0.035);
+  --surface-scrim: oklch(8% 0.02 265 / 0.62);
+
+  --text-primary: oklch(96.5% 0.003 90);
+  --text-secondary: oklch(72% 0.006 90);
+  --text-tertiary: oklch(62% 0.006 90);
+  --text-inverse: oklch(19% 0.03 265);
+
+  /* lifted accents: fixed lightness keeps contrast for any brand hue */
+  --brand-primary: color-mix(in oklab, var(--brand-primary-base) 38%, white);
+  --brand-primary-hover: color-mix(in oklab, var(--brand-primary-base) 30%, white);
+  --brand-secondary: color-mix(in oklab, var(--brand-secondary-base) 55%, white);
+  --brand-success: color-mix(in oklab, var(--brand-success-base) 62%, white);
+  --brand-warning: color-mix(in oklab, var(--brand-warning-base) 70%, white);
+  --brand-danger: color-mix(in oklab, var(--brand-danger-base) 52%, white);
+  --brand-info: color-mix(in oklab, var(--brand-info-base) 56%, white);
+
+  --brand-primary-soft: color-mix(in oklab, var(--brand-primary) 17%, var(--surface-panel));
+  --brand-primary-tint: color-mix(in oklab, var(--brand-primary) 24%, var(--surface-panel));
+  --accent: var(--brand-primary);
+  --accent-hover: var(--brand-primary-hover);
+  --accent-soft: var(--brand-primary-soft);
+  --accent-ink: var(--brand-primary);
+  --on-accent: oklch(19% 0.03 265);
+
+  --success-soft: color-mix(in oklab, var(--brand-success) 16%, var(--surface-panel));
+  --warning-soft: color-mix(in oklab, var(--brand-warning) 16%, var(--surface-panel));
+  --danger-soft: color-mix(in oklab, var(--brand-danger) 17%, var(--surface-panel));
+  --info-soft: color-mix(in oklab, var(--brand-info) 16%, var(--surface-panel));
+  --success-ink: var(--brand-success);
+  --warning-ink: var(--brand-warning);
+  --danger-ink: var(--brand-danger);
+  --info-ink: var(--brand-info);
+  --on-warning: oklch(20% 0.04 75);
+
+  --brand-focus-ring: 0 0 0 3px color-mix(in oklab, var(--brand-primary) 38%, transparent);
+
+  --shadow-xs: 0 1px 2px oklch(5% 0.02 265 / 0.4);
+  --shadow-sm: 0 1px 2px oklch(5% 0.02 265 / 0.4), 0 2px 8px -2px oklch(5% 0.02 265 / 0.4);
+  --shadow-md: 0 2px 4px oklch(5% 0.02 265 / 0.4), 0 8px 20px -6px oklch(5% 0.02 265 / 0.5);
+  --shadow-lg: 0 4px 8px oklch(5% 0.02 265 / 0.4), 0 16px 36px -10px oklch(5% 0.02 265 / 0.6);
+  --shadow-xl: 0 8px 16px oklch(5% 0.02 265 / 0.45), 0 28px 64px -16px oklch(5% 0.02 265 / 0.7);
+  --shadow-brand: 0 8px 24px -8px color-mix(in oklab, var(--brand-primary) 40%, transparent);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  color-scheme: light dark;
+  /* scroll-behavior intentionally not set globally; use per-call smooth scrolling. */
+}
+
+.font-arabic { font-family: var(--brand-font-arabic); }
+html[dir='rtl'] .font-arabic,
+html[dir='rtl'] body { font-family: var(--brand-font-arabic); }
+html[dir='ltr'] body { font-family: var(--brand-font-sans); }
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--surface-canvas);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  /* Fixed Cairo product scale, matching the reference's 14px body. */
+  font-size: 0.875rem;
+  line-height: 1.65;
+  text-rendering: optimizeLegibility;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Arabic letters must stay joined: never apply tracking to script text. */
+html[lang='ar'] body, html[lang='ar'] body * { letter-spacing: 0; }
+h1, h2, h3, .text-balance { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+/* Numbers & currency — tabular so columns of amounts align */
+.font-num, .tabular {
+  font-family: var(--brand-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.num-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.money-ar, .money-ltr { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+a { color: inherit; text-decoration: none; }
+input, button, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+::selection {
+  background: color-mix(in oklab, var(--brand-primary-base) 24%, transparent);
+  color: var(--text-primary);
+}
+
+/* Scrollbar — slim, neutral */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--surface-border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--text-tertiary) 70%, transparent);
+  background-clip: padding-box;
+}
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.custom-scrollbar { scrollbar-width: thin; }
+
+/* Focus — visible for keyboard only; never alters an element's shape */
+.focus-ring:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: var(--brand-focus-ring);
+}
+:focus { outline: none; }
+
+html[dir='rtl'] .rtl-flip { transform: scaleX(-1); }
+
+/* Reduced motion — keep state changes, drop movement */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Mobile / PWA
+═══════════════════════════════════════════════════════════════════════════ */
+
+html { -webkit-tap-highlight-color: transparent; }
+
+button, a, [role='button'], [data-press], nav, header { -webkit-touch-callout: none; }
+button, [role='button'], [data-press] {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* Inputs never trigger iOS zoom; buttons meet 44px touch target on phones */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px; }
+  .MuiIconButton-root, .MuiButton-root { min-height: 44px; }
+}
+
+@media all and (display-mode: standalone) {
+  html, body {
+    overscroll-behavior: none;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+  body {
+    overscroll-behavior-y: contain;
+    display: flex;
+    flex-direction: column;
+  }
+  #root {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+}
+
+.pwa-safe-top { padding-top: max(var(--sa-top), 0px); }
+.pwa-safe-bottom { padding-bottom: max(var(--sa-bottom), 0px); }
+
+/* Authenticated shell */
+.app-shell-root {
+  display: flex;
+  width: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  flex-direction: column;
+  background: var(--surface-canvas);
+}
+@media (min-width: 1024px) {
+  .app-shell-root {
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+  .app-shell-sidebar { height: 100%; max-height: 100%; min-height: 0; align-self: stretch; }
+  .app-shell-main {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Motion primitives (transform + opacity only)
+═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes brand-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes brand-scale-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes brand-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheet-down { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scrim-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes pop-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(6px) scale(0.98); } }
+
+.animate-fade-in { animation: brand-fade-in var(--dur-slow) var(--ease-out) both; }
+.animate-scale-in { animation: brand-scale-in var(--dur-slow) var(--ease-out) both; }
+.sheet-in { animation: sheet-up 320ms var(--ease-ios) both; }
+.sheet-out { animation: sheet-down 220ms var(--ease-in) both; }
+.scrim-in { animation: scrim-in var(--dur-base) var(--ease-out) both; }
+.scrim-out { animation: scrim-out 180ms var(--ease-in) both; }
+.pop-in { animation: pop-in var(--dur-base) var(--ease-out) both; }
+.pop-out { animation: pop-out 160ms var(--ease-in) both; }
+
+/* Staggered entrance for lists — set --i on each child */
+.stagger > * { animation: brand-fade-in var(--dur-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 28ms); }
+
+/* Calculator pad */
+@keyframes calc-sheet-up { from { opacity: 0.6; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes calc-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.calc-fade-in { animation: brand-fade-in 160ms var(--ease-out) both; }
+.calc-sheet-in { animation: calc-sheet-up 260ms var(--ease-ios) both; }
+.calc-shake { animation: calc-shake 220ms ease-in-out 1; }
+@media (min-width: 640px) { .calc-sheet-in { animation: brand-scale-in 180ms var(--ease-out) both; } }
+
+/* PWA install banner */
+@keyframes install-banner-up { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.install-banner-in { animation: install-banner-up 360ms var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .calc-fade-in, .calc-sheet-in, .calc-shake, .install-banner-in,
+  .sheet-in, .sheet-out, .scrim-in, .scrim-out, .pop-in, .pop-out, .stagger > * { animation: none; }
+}
+
+/* Skeleton — neutral shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--text-primary) 5%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: brand-shimmer 1.6s infinite linear;
+}
+
+/* Pressable — scale on press, transform only */
+.pressable {
+  transition: transform var(--dur-fast) var(--ease-out);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+.pressable:active { transform: scale(0.975); }
+
+.btn-primary-glow { box-shadow: var(--shadow-xs); transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.btn-primary-glow:hover { box-shadow: var(--shadow-brand); }
+.btn-primary-glow:active { transform: scale(0.985); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Legacy surface classes — restyled to the calm language so unmigrated
+   screens soften immediately. Remove once no TSX references them.
+═══════════════════════════════════════════════════════════════════════════ */
+
+.grain { position: relative; isolation: isolate; }
+.grain > *:not([aria-hidden]) { position: relative; z-index: 2; }
+.hero-bezel { padding: 0; border-radius: var(--radius-xl); border: 1px solid var(--surface-border); background: transparent; box-shadow: none; }
+.hero-bezel-inner { border-radius: var(--radius-xl); }
+
+.widget { border-radius: var(--radius-lg); border: var(--widget-border); background: var(--surface-panel); }
+.widget-tile {
+  border-radius: var(--radius-lg);
+  border: var(--widget-border);
+  background: var(--surface-panel);
+  transition: border-color var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.widget-tile:hover { border-color: var(--surface-border-strong); }
+.widget-tile:active { transform: scale(0.985); }
+.widget-accent-end { border-inline-end: 0; }
+.chip-sharp { border-radius: var(--radius-full, 9999px); border: 1px solid var(--surface-border); background: var(--surface-panel); }
+
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid oklch(100% 0 0 / 0.22);
+  background: oklch(100% 0 0 / 0.14);
+  color: oklch(100% 0 0 / 0.96);
+}
+.hero-bezel-inner .chip-sharp,
+.grain.text-white .chip-sharp {
+  border-color: oklch(100% 0 0 / 0.22) !important;
+  background: oklch(100% 0 0 / 0.14) !important;
+  color: oklch(100% 0 0 / 0.96) !important;
+}
+.hero-stat-strip { border-top: 1px solid oklch(100% 0 0 / 0.14); background: oklch(0% 0 0 / 0.18); }
+.hero-action-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 2.5rem; height: 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid oklch(100% 0 0 / 0.2);
+  background: oklch(100% 0 0 / 0.1);
+  color: #fff;
+  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-base) var(--ease-out);
+}
+.hero-action-btn:hover { background: oklch(100% 0 0 / 0.18); }
+.hero-action-btn:active { transform: scale(0.96); }
+
+/* Frosted — only for fixed chrome that scrolls content beneath */
+.frosted {
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  background-color: color-mix(in srgb, var(--surface-panel) 86%, transparent);
+}
+.frosted-strong {
+  backdrop-filter: saturate(160%) blur(20px);
+  -webkit-backdrop-filter: saturate(160%) blur(20px);
+  background-color: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+}
+
+/* Performance */
+.content-auto { content-visibility: auto; contain-intrinsic-size: auto 180px; }
+.gpu { transform: translateZ(0); backface-visibility: hidden; }
+
+/* Legacy MUI dialogs */
+.MuiDialog-root .MuiBackdrop-root {
+  background-color: var(--surface-scrim) !important;
+}
+
+@media print {
+  body { background: white !important; }
+  .no-print { display: none !important; }
+  @page { margin: 0; size: A4; }
+}

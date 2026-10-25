@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Storage rules. The only thing the app uploads is an expense attachment (receipt photo or PDF)
+// at expenses/{expenseId}/{file}. Everything else stays closed.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Same trust rule as Firestore: a signed-in user with a profile document in `users`.
+    function isRegisteredEmployee() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function isReceipt() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    match /expenses/{expenseId}/{fileName} {
+      allow read, delete: if isRegisteredEmployee();
+      allow create, update: if isRegisteredEmployee() && isReceipt();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

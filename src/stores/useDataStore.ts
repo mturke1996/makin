@@ -1,0 +1,564 @@
+import { create } from 'zustand';
+import {
+  clientsService,
+  invoicesService,
+  paymentsService,
+  expensesService,
+  standaloneDebtsService,
+  debtPartiesService,
+  expenseInvoicesService,
+  workersService,
+  userBalancesService,
+  lettersService,
+  projectPhasesService,
+  boqItemsService,
+  siteReportsService,
+  globalFundTransactionsService,
+  createExpenseInvoiceAtomic,
+  deleteExpenseInvoiceAtomic,
+  toConstraints,
+} from '../services/firebaseService';
+import { db } from '../config/firebase';
+import { deleteStorageFileByUrl } from '../services/storageService';
+import type {
+  Client,
+  Invoice,
+  Payment,
+  Expense,
+  StandaloneDebt,
+  DebtParty,
+  ExpenseInvoice,
+  Worker,
+  UserBalance,
+  Letter,
+  ProjectPhase,
+  BoqLineItem,
+  SiteReport,
+} from '../types';
+import toast from 'react-hot-toast';
+import { useNotificationStore } from './useNotificationStore';
+import { formatFirebaseError } from '../core/formatFirebaseError';
+import { writeAuditLog } from '../services/auditService';
+import {
+  deriveInvoiceStatus,
+  deriveDebtStatus,
+  sumInvoicePayments,
+} from '../core/finance/invoicePayments';
+import { addMoney, subtractMoney } from '../core/finance/money';
+import { EXPENSE_CLOSED_MESSAGE, isExpenseLocked } from '../core/finance/expenseLock';
+import { SOURCES, mergeById, planFor, sortRecords, type DataKey } from '../core/access/dataPlan';
+import type { Principal } from '../core/access/principal';
+
+// ─── localStorage cache (instant paint) ───────────────────────
+// The cache is only reused for the SAME person with the SAME permissions; anything else is dropped,
+// so one user's records can never appear on the screen of another.
+const CACHE_PREFIX = 'app-cache-';
+const CACHE_OWNER_KEY = 'app-cache-owner';
+type StoreKey = Exclude<DataKey, 'fundTransactions'>;
+const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports'];
+
+const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: any[], onError?: (e: any) => void) => () => void }> = {
+  clients: clientsService,
+  invoices: invoicesService,
+  payments: paymentsService,
+  expenses: expensesService,
+  expenseInvoices: expenseInvoicesService,
+  standaloneDebts: standaloneDebtsService,
+  debtParties: debtPartiesService,
+  workers: workersService,
+  userBalances: userBalancesService,
+  letters: lettersService,
+  projectPhases: projectPhasesService,
+  boqItems: boqItemsService,
+  siteReports: siteReportsService,
+};
+
+const cacheOwnerTag = (principal: Principal | null) => (principal ? `${principal.id}|${JSON.stringify(planFor(principal))}` : '');
+
+const loadCache = (key: string): any[] => {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + key);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+
+const dropCache = () => {
+  CACHE_KEYS.forEach((key) => {
+    clearTimeout(saveCacheTimers[key]);
+    try { localStorage.removeItem(CACHE_PREFIX + key); } catch {}
+  });
+  try { localStorage.removeItem(CACHE_OWNER_KEY); } catch {}
+};
+
+// Debounced save to avoid excessive writes
+const saveCacheTimers: Record<string, any> = {};
+const saveCache = (key: string, data: any[]) => {
+  clearTimeout(saveCacheTimers[key]);
+  saveCacheTimers[key] = setTimeout(() => {
+    try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch {}
+  }, 500);
+};
+
+// Helper: toast + in-app activity feed + clearer Firebase error text
+const handleAsync = async (operation: () => Promise<any>, successMessage: string) => {
+  try {
+    await operation();
+    toast.success(successMessage);
+    useNotificationStore.getState().push({ type: 'success', title: successMessage });
+    void writeAuditLog({ summary: successMessage });
+  } catch (error) {
+    console.error(error);
+    const msg = formatFirebaseError(error);
+    toast.error(msg);
+    useNotificationStore.getState().push({ type: 'error', title: msg });
+    throw error;
+  }
+};
+
+interface DataState {
+  clients: Client[];
+  invoices: Invoice[];
+  payments: Payment[];
+  expenses: Expense[];
+  expenseInvoices: ExpenseInvoice[];
+  standaloneDebts: StandaloneDebt[];
+  debtParties: DebtParty[];
+  workers: Worker[];
+  userBalances: UserBalance[];
+  letters: Letter[];
+  projectPhases: ProjectPhase[];
+  boqItems: BoqLineItem[];
+  siteReports: SiteReport[];
+  isLoading: boolean;
+  
+  // Initialization
+  /** Subscribes to exactly what this person may download (see core/access/dataPlan). Returns the unsubscribe. */
+  initialize: (principal: Principal | null) => () => void;
+  /** Forget everything in memory and in the localStorage cache (logout). */
+  reset: () => void;
+
+  // Actions
+  addClient: (client: Client) => Promise<void>;
+  updateClient: (id: string, data: Partial<Client>) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
+
+  addInvoice: (invoice: Invoice) => Promise<void>;
+  updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>;
+  deleteInvoice: (id: string) => Promise<void>;
+
+  addPayment: (payment: Payment) => Promise<void>;
+  updatePayment: (id: string, data: Partial<Payment>) => Promise<void>;
+  deletePayment: (id: string) => Promise<void>;
+  
+  addExpense: (expense: Expense) => Promise<void>;
+  updateExpense: (id: string, data: Partial<Expense>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  
+  addExpenseInvoice: (invoice: ExpenseInvoice) => Promise<void>;
+  updateExpenseInvoice: (id: string, data: Partial<ExpenseInvoice>) => Promise<void>;
+  deleteExpenseInvoice: (id: string) => Promise<void>;
+  createExpenseInvoiceBatch: (params: {
+    clientId: string;
+    expenseIds: string[];
+    invoiceNumber: string;
+    notes?: string;
+    createdBy: string;
+  }) => Promise<void>;
+
+  addStandaloneDebt: (debt: StandaloneDebt) => Promise<void>;
+  updateStandaloneDebt: (id: string, data: Partial<StandaloneDebt>) => Promise<void>;
+  payStandaloneDebt: (id: string, payAmount: number) => Promise<void>;
+  deleteStandaloneDebt: (id: string) => Promise<void>;
+
+  addDebtParty: (party: DebtParty) => Promise<void>;
+  updateDebtParty: (id: string, data: Partial<DebtParty>) => Promise<void>;
+  deleteDebtParty: (id: string) => Promise<void>;
+
+  addWorker: (worker: Worker) => Promise<void>;
+  updateWorker: (id: string, data: Partial<Worker>, expectedUpdatedAt?: string) => Promise<void>;
+  deleteWorker: (id: string) => Promise<void>;
+
+  addUserBalance: (balance: UserBalance) => Promise<void>;
+  updateUserBalance: (id: string, data: Partial<UserBalance>) => Promise<void>;
+  deleteUserBalance: (id: string) => Promise<void>;
+
+  addLetter: (letter: Letter) => Promise<void>;
+  updateLetter: (id: string, data: Partial<Letter>) => Promise<void>;
+  deleteLetter: (id: string) => Promise<void>;
+
+  addProjectPhase: (phase: ProjectPhase) => Promise<void>;
+  updateProjectPhase: (id: string, data: Partial<ProjectPhase>) => Promise<void>;
+  deleteProjectPhase: (id: string) => Promise<void>;
+
+  addBoqItem: (item: BoqLineItem) => Promise<void>;
+  updateBoqItem: (id: string, data: Partial<BoqLineItem>) => Promise<void>;
+  deleteBoqItem: (id: string) => Promise<void>;
+
+  addSiteReport: (report: SiteReport) => Promise<void>;
+  updateSiteReport: (id: string, data: Partial<SiteReport>) => Promise<void>;
+  deleteSiteReport: (id: string) => Promise<void>;
+}
+
+async function syncInvoiceStatusFromPayments(
+  invoiceId: string,
+  getState: () => DataState
+): Promise<void> {
+  if (!invoiceId) return;
+  const { invoices, payments } = getState();
+  const invoice = invoices.find((i) => i.id === invoiceId);
+  if (!invoice) return;
+
+  const paid = sumInvoicePayments(payments, invoiceId);
+  const nextStatus = deriveInvoiceStatus(invoice, paid);
+  if (nextStatus === invoice.status) return;
+
+  await invoicesService.update(invoiceId, {
+    status: nextStatus,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export const useDataStore = create<DataState>((set, get) => ({
+  // ─── Load cached data instantly on store creation ──────────
+  clients: [],
+  invoices: [],
+  payments: [],
+  expenses: [],
+  expenseInvoices: [],
+  standaloneDebts: [],
+  debtParties: [],
+  workers: [],
+  userBalances: [],
+  letters: [],
+  projectPhases: [],
+  boqItems: [],
+  siteReports: [],
+  isLoading: true,
+
+  reset: () => {
+    dropCache();
+    set({
+      clients: [], invoices: [], payments: [], expenses: [], expenseInvoices: [], standaloneDebts: [],
+      debtParties: [], workers: [], userBalances: [], letters: [], projectPhases: [], boqItems: [],
+      siteReports: [], isLoading: true,
+    });
+  },
+
+  initialize: (principal) => {
+    const plan = planFor(principal);
+    const planned = CACHE_KEYS.filter((key) => plan[key].length > 0);
+
+    // Start from the cache only when it was written for this same person and plan.
+    const tag = cacheOwnerTag(principal);
+    let cacheValid = false;
+    try { cacheValid = !!tag && localStorage.getItem(CACHE_OWNER_KEY) === tag; } catch {}
+    if (!cacheValid) {
+      dropCache();
+      try { if (tag) localStorage.setItem(CACHE_OWNER_KEY, tag); } catch {}
+    }
+    const initial: Partial<Record<StoreKey, any[]>> = {};
+    for (const key of CACHE_KEYS) initial[key] = plan[key].length > 0 && cacheValid ? loadCache(key) : [];
+    const hasCachedData = planned.some((key) => (initial[key] ?? []).length > 0);
+    set({ ...initial, isLoading: planned.length > 0 && !hasCachedData } as Partial<DataState>);
+
+    // Every query of every planned data set must report once before we stop showing "loading".
+    const pending = new Set<string>(planned.flatMap((key) => plan[key].map((_, i) => `${key}:${i}`)));
+    const settle = (id: string) => {
+      pending.delete(id);
+      if (pending.size === 0) set({ isLoading: false });
+    };
+
+    const unsubs: Array<() => void> = [];
+    for (const key of planned) {
+      const queries = plan[key];
+      const parts: any[][] = queries.map(() => []);
+      queries.forEach((spec, i) => {
+        const id = `${key}:${i}`;
+        unsubs.push(
+          SERVICES[key].subscribe(
+            (rows) => {
+              parts[i] = rows;
+              const merged = sortRecords(mergeById(parts), SOURCES[key].sort);
+              set({ [key]: merged } as Partial<DataState>);
+              saveCache(key, merged);
+              settle(id);
+            },
+            toConstraints(spec),
+            (error) => {
+              // Refused by the rules or offline: keep what we have and stop waiting on this query.
+              console.warn(`[data] ${key} subscription failed:`, error?.code || error?.message);
+              settle(id);
+            },
+          ),
+        );
+      });
+    }
+
+    // Timeout fallback: if data doesn't load in 8s, stop showing loading
+    const timeout = setTimeout(() => set({ isLoading: false }), 8000);
+    return () => {
+      clearTimeout(timeout);
+      unsubs.forEach((u) => u());
+    };
+  },
+
+  // Client Actions
+  addClient: async (client) => {
+    await handleAsync(() => clientsService.add(client), 'تم إضافة العميل بنجاح');
+  },
+  updateClient: async (id, data) => {
+    await handleAsync(() => clientsService.update(id, data), 'تم تحديث بيانات العميل');
+  },
+  deleteClient: async (id) => {
+    await handleAsync(async () => {
+      const state = get();
+
+      const relatedExpenses = state.expenses.filter((i) => i.clientId === id);
+      const relatedInvoices = state.invoices.filter((i) => i.clientId === id);
+      const relatedInvoiceIds = new Set(relatedInvoices.map((invoice) => invoice.id));
+      const relatedPayments = state.payments.filter((payment) => payment.clientId === id || relatedInvoiceIds.has(payment.invoiceId));
+      const relatedDebts = state.standaloneDebts.filter((i) => i.clientId === id);
+      const relatedWorkers = state.workers.filter((i) => i.clientId === id);
+      const relatedBalances = state.userBalances.filter((i) => i.clientId === id);
+      const relatedPhases = state.projectPhases.filter((i) => i.clientId === id);
+      const relatedBoq = state.boqItems.filter((i) => i.clientId === id);
+      const relatedSiteReports = state.siteReports.filter((i) => i.clientId === id);
+      const relatedLetters = state.letters.filter((i) => i.clientId === id);
+      const relatedExpenseInvoices = state.expenseInvoices.filter((i) => i.clientId === id);
+      const relatedDebtParties = state.debtParties.filter((i) => i.clientId === id);
+
+      await Promise.all([
+        ...relatedExpenses.map(async (item) => {
+          await deleteStorageFileByUrl(item.attachmentUrl);
+          await expensesService.delete(item.id);
+        }),
+        ...relatedPayments.map((item) => paymentsService.delete(item.id)),
+        ...relatedInvoices.map((item) => invoicesService.delete(item.id)),
+        ...relatedDebts.map((item) => standaloneDebtsService.delete(item.id)),
+        ...relatedWorkers.map((item) => workersService.delete(item.id)),
+        ...relatedBalances.map((item) => userBalancesService.delete(item.id)),
+        ...relatedPhases.map((item) => projectPhasesService.delete(item.id)),
+        ...relatedBoq.map((item) => boqItemsService.delete(item.id)),
+        ...relatedSiteReports.map((item) => siteReportsService.delete(item.id)),
+        ...relatedLetters.map((item) => lettersService.delete(item.id)),
+        ...relatedExpenseInvoices.map((item) => expenseInvoicesService.delete(item.id)),
+        ...relatedDebtParties.map((item) => debtPartiesService.delete(item.id)),
+      ]);
+
+      // Fund transactions linked to client (if any)
+      try {
+        const fundTxs = await globalFundTransactionsService.getAll();
+        const relatedFund = fundTxs.filter((t) => t.clientId === id);
+        await Promise.all(relatedFund.map((t) => globalFundTransactionsService.delete(t.id)));
+      } catch {
+        /* fund collection may be empty */
+      }
+
+      await clientsService.delete(id);
+    }, 'تم حذف العميل وجميع بياناته نهائياً من النظام');
+  },
+
+  // Invoice Actions
+  addInvoice: async (invoice) => {
+    await handleAsync(() => invoicesService.add(invoice), 'تم إنشاء الفاتورة بنجاح');
+  },
+  updateInvoice: async (id, data) => {
+    await handleAsync(() => invoicesService.update(id, data), 'تم تحديث الفاتورة');
+  },
+  deleteInvoice: async (id) => {
+    await handleAsync(async () => {
+      const relatedPayments = get().payments.filter((p) => p.invoiceId === id);
+      await Promise.all(relatedPayments.map((p) => paymentsService.delete(p.id)));
+      await invoicesService.delete(id);
+    }, 'تم حذف الفاتورة ومدفوعاتها نهائياً');
+  },
+
+  // Payment Actions
+  addPayment: async (payment) => {
+    await handleAsync(async () => {
+      await paymentsService.add(payment);
+      const { invoices, payments } = get();
+      const invoice = invoices.find((i) => i.id === payment.invoiceId);
+      if (!invoice) return;
+      const inStore = payments.some((p) => p.id === payment.id);
+      const paid = sumInvoicePayments(
+        inStore ? payments : [...payments, payment],
+        payment.invoiceId
+      );
+      const nextStatus = deriveInvoiceStatus(invoice, paid);
+      if (nextStatus !== invoice.status) {
+        await invoicesService.update(payment.invoiceId, {
+          status: nextStatus,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }, 'تم تسجيل الدفعة بنجاح');
+  },
+  updatePayment: async (id, data) => {
+    await handleAsync(async () => {
+      const prev = get().payments.find((p) => p.id === id);
+      await paymentsService.update(id, { ...data, updatedAt: new Date().toISOString() });
+      const ids = new Set([prev?.invoiceId, data.invoiceId].filter(Boolean) as string[]);
+      for (const invoiceId of ids) {
+        await syncInvoiceStatusFromPayments(invoiceId, get);
+      }
+    }, 'تم تحديث الدفعة');
+  },
+  deletePayment: async (id) => {
+    await handleAsync(async () => {
+      const prev = get().payments.find((p) => p.id === id);
+      await paymentsService.delete(id);
+      if (prev?.invoiceId) {
+        const remaining = get().payments.filter((p) => p.id !== id);
+        const invoice = get().invoices.find((i) => i.id === prev.invoiceId);
+        if (invoice) {
+          const paid = sumInvoicePayments(remaining, prev.invoiceId);
+          const nextStatus = deriveInvoiceStatus(invoice, paid);
+          if (nextStatus !== invoice.status) {
+            await invoicesService.update(prev.invoiceId, {
+              status: nextStatus,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }, 'تم حذف الدفعة');
+  },
+
+  // Expense Actions
+  addExpense: async (expense) => {
+    await handleAsync(() => expensesService.addConfirmedOnce(expense), 'تم تسجيل المصروف بنجاح');
+  },
+  updateExpense: async (id, data) => {
+    await handleAsync(async () => {
+      if (isExpenseLocked(get().expenses.find((e) => e.id === id))) throw new Error(EXPENSE_CLOSED_MESSAGE);
+      await expensesService.update(id, data);
+    }, 'تم تحديث المصروف');
+  },
+  deleteExpense: async (id) => {
+    await handleAsync(async () => {
+      const exp = get().expenses.find((e) => e.id === id);
+      if (isExpenseLocked(exp)) throw new Error(EXPENSE_CLOSED_MESSAGE);
+      await deleteStorageFileByUrl(exp?.attachmentUrl);
+      await expensesService.delete(id);
+    }, 'تم حذف المصروف نهائياً');
+  },
+
+  // Expense Invoice Actions
+  addExpenseInvoice: async (invoice) => {
+    await handleAsync(() => expenseInvoicesService.add(invoice), 'تم إنشاء فاتورة المصروفات');
+  },
+  updateExpenseInvoice: async (id, data) => {
+    await handleAsync(() => expenseInvoicesService.update(id, data), 'تم تحديث فاتورة المصروفات');
+  },
+  deleteExpenseInvoice: async (id) => {
+    await handleAsync(() => deleteExpenseInvoiceAtomic(db, id), 'تم حذف فاتورة المصروفات وإعادة فتح مصروفاتها');
+  },
+  createExpenseInvoiceBatch: async ({ clientId, expenseIds, invoiceNumber, notes, createdBy }) => {
+    await handleAsync(() => createExpenseInvoiceAtomic(db, {
+      id: crypto.randomUUID(), clientId, expenseIds, invoiceNumber, notes, createdBy,
+    }), 'تم إنشاء فاتورة المصروفات المجمعة');
+  },
+
+  // Standalone Debt Actions
+  addStandaloneDebt: async (debt) => {
+    await handleAsync(() => standaloneDebtsService.add(debt), 'تم تسجيل الدين بنجاح');
+  },
+  updateStandaloneDebt: async (id, data) => {
+    await handleAsync(() => standaloneDebtsService.update(id, data), 'تم تحديث الدين');
+  },
+  payStandaloneDebt: async (id, payAmount: number) => {
+    await handleAsync(async () => {
+      const debt = get().standaloneDebts.find((d) => d.id === id);
+      if (!debt) throw new Error('الدين غير موجود');
+      const paidAmount = Math.min(debt.amount, addMoney(debt.paidAmount, payAmount));
+      const remainingAmount = Math.max(0, subtractMoney(debt.amount, paidAmount));
+      const status = deriveDebtStatus(debt.amount, paidAmount, debt.dueDate);
+      await standaloneDebtsService.update(id, {
+        paidAmount,
+        remainingAmount,
+        status,
+        updatedAt: new Date().toISOString(),
+      });
+    }, 'تم تسجيل السداد');
+  },
+  deleteStandaloneDebt: async (id) => {
+    await handleAsync(() => standaloneDebtsService.delete(id), 'تم حذف الدين');
+  },
+
+  // Debt Party Actions
+  addDebtParty: async (party) => {
+    await handleAsync(() => debtPartiesService.add(party), 'تم إضافة الطرف بنجاح');
+  },
+  updateDebtParty: async (id, data) => {
+    await handleAsync(() => debtPartiesService.update(id, data), 'تم تحديث بيانات الطرف');
+  },
+  deleteDebtParty: async (id) => {
+    await handleAsync(() => debtPartiesService.delete(id), 'تم حذف الطرف');
+  },
+
+  // Worker Actions
+  addWorker: async (worker) => {
+    await handleAsync(() => workersService.add(worker), 'تم إضافة العامل بنجاح');
+  },
+  updateWorker: async (id, data, expectedUpdatedAt) => {
+    await handleAsync(() => expectedUpdatedAt !== undefined
+      ? workersService.updateIfUnchanged(id, data, expectedUpdatedAt)
+      : workersService.update(id, data), 'تم تحديث بيانات العامل');
+  },
+  deleteWorker: async (id) => {
+    await handleAsync(() => workersService.delete(id), 'تم حذف العامل');
+  },
+
+  // User Balance Actions
+  addUserBalance: async (balance) => {
+    await handleAsync(() => userBalancesService.add(balance), 'تم إضافة الرصيد للمستخدم بنجاح');
+  },
+  updateUserBalance: async (id, data) => {
+    await handleAsync(() => userBalancesService.update(id, data), 'تم تحديث الرصيد بنجاح');
+  },
+  deleteUserBalance: async (id) => {
+    await handleAsync(() => userBalancesService.delete(id), 'تم حذف الرصيد');
+  },
+
+  // Letter Actions
+  addLetter: async (letter) => {
+    await handleAsync(() => lettersService.add(letter), '');
+  },
+  updateLetter: async (id, data) => {
+    await handleAsync(() => lettersService.update(id, data), '');
+  },
+  deleteLetter: async (id) => {
+    await handleAsync(() => lettersService.delete(id), '');
+  },
+
+  addProjectPhase: async (phase) => {
+    await handleAsync(() => projectPhasesService.add(phase), 'تم إضافة المرحلة');
+  },
+  updateProjectPhase: async (id, data) => {
+    await handleAsync(() => projectPhasesService.update(id, data), 'تم تحديث المرحلة');
+  },
+  deleteProjectPhase: async (id) => {
+    await handleAsync(() => projectPhasesService.delete(id), 'تم حذف المرحلة');
+  },
+
+  addBoqItem: async (item) => {
+    await handleAsync(() => boqItemsService.add(item), 'تم إضافة البند');
+  },
+  updateBoqItem: async (id, data) => {
+    await handleAsync(() => boqItemsService.update(id, data), 'تم تحديث البند');
+  },
+  deleteBoqItem: async (id) => {
+    await handleAsync(() => boqItemsService.delete(id), 'تم حذف البند');
+  },
+
+  addSiteReport: async (report) => {
+    await handleAsync(() => siteReportsService.add(report), 'تم تسجيل تقرير الموقع');
+  },
+  updateSiteReport: async (id, data) => {
+    await handleAsync(() => siteReportsService.update(id, data), 'تم تحديث تقرير الموقع');
+  },
+  deleteSiteReport: async (id) => {
+    await handleAsync(() => siteReportsService.delete(id), 'تم حذف تقرير الموقع');
+  },
+}));

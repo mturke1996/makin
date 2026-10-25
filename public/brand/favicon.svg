@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="MAKIN">
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#1F2633"/>
+  <path d="M32 88 V40 L64 68 L96 40 V88" fill="none" stroke="#F4EFE6" stroke-width="11" stroke-linecap="square" stroke-linejoin="miter"/>
+  <rect x="28" y="98" width="72" height="8" rx="1" fill="#C9972B"/>
+</svg>
