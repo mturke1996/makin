@@ -133,6 +133,10 @@ export interface Payment {
   createdAt: string;
   updatedAt: string;
   createdBy?: string; // اسم المستخدم الذي سجل الدفعة
+  /** رقم إيصال الاستلام التسلسلي (RC-2026-0007): يُخصَّص عند أول إصدار ولا يتغير بعدها. */
+  receiptNumber?: string;
+  receiptIssuedAt?: string;
+  receiptIssuedBy?: string;
 }
 
 // Expense Types

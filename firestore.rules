@@ -96,8 +96,28 @@ service cloud.firestore {
 
     match /payments/{id} {
       allow read: if can('payments.view');
-      allow create, update: if can('payments.manage');
+      allow create: if can('payments.manage');
+      // The receipt number is allocated once and never changes (it is on paper the client holds).
+      allow update: if can('payments.manage')
+        && (resource.data.get('receiptNumber', null) == null
+          || request.resource.data.get('receiptNumber', null) == resource.data.receiptNumber);
       allow delete: if can('payments.delete');
+    }
+
+    // Receipt numbering: one counter per year (receipts-2026), only ever moved up by exactly one, in the same
+    // transaction that stamps the number on a payment. Nobody deletes a counter.
+    match /counters/{id} {
+      function isReceiptCounter() {
+        return id.matches('receipts-[0-9]{4}');
+      }
+      allow read: if can('payments.manage') && isReceiptCounter();
+      allow create: if can('payments.manage') && isReceiptCounter()
+        && request.resource.data.keys().hasOnly(['last', 'updatedAt'])
+        && request.resource.data.last == 1;
+      allow update: if can('payments.manage') && isReceiptCounter()
+        && request.resource.data.keys().hasOnly(['last', 'updatedAt'])
+        && request.resource.data.last == resource.data.last + 1;
+      allow delete: if false;
     }
 
     // ── expenses: owned records ──────────────────────────────────────────────

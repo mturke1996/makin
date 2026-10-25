@@ -56,6 +56,8 @@ import { useClientPdf } from './client-profile/useClientPdf';
 import { useClientProfileData } from './client-profile/useClientProfileData';
 import { useClientSaves, type ProfileSheetKey } from './client-profile/useClientSaves';
 import { QuickAddFab } from '../quick-expense/QuickAddFab';
+import { ReceiptPanel } from './money/ReceiptPanel';
+import { useReceipt } from './money/useReceipt';
 
 /** The form open over the page (and the record it edits, when it edits one). */
 type ActiveForm =
@@ -76,6 +78,7 @@ export const ClientProfilePage = () => {
   const [searchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const access = useAccess();
+  const receipt = useReceipt();
   const approveExpenses = useDataStore((s) => s.approveExpenses);
   const rejectExpense = useDataStore((s) => s.rejectExpense);
   const data = useClientProfileData(clientId);
@@ -625,6 +628,17 @@ export const ClientProfilePage = () => {
           onClose={dismissForm}
           onSubmit={(values) => saves.savePayment(activeForm.edit, values)}
           onDelete={may.deletePayments && activeForm.edit ? () => deletes.payment(activeForm.edit!, true) : undefined}
+          receiptPanel={
+            activeForm.edit && (
+              <ReceiptPanel
+                payment={receipt.live(activeForm.edit)}
+                busy={receipt.busyId === activeForm.edit.id}
+                canIssue={receipt.canIssue}
+                onDownload={() => void receipt.issue(activeForm.edit!, 'download')}
+                onShare={() => void receipt.issue(activeForm.edit!, 'share')}
+              />
+            )
+          }
         />
       )}
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AccountBalance, EditNote, PhoneAndroid, Payments as PaymentsIcon } from '../../../design-system/icons';
+import type { ReactNode } from 'react';
 import { Input, Select, Sheet, Textarea } from '../../../design-system/primitives';
 import { getInvoicePaymentSummary } from '../../../core/finance/invoicePayments';
 import { formatCurrencyDisplay, isPartialDecimalInput, parseDecimalInput } from '../../../core/utils-formatters';
@@ -43,6 +44,8 @@ interface Props {
   onSubmit: (data: PaymentFormData) => Promise<void>;
   /** Omitted when this user may not delete payments. */
   onDelete?: (payment: Payment) => void;
+  /** The receipt of the payment being edited (a saved payment only). */
+  receiptPanel?: ReactNode;
 }
 
 type FormState = {
@@ -63,7 +66,7 @@ const blank = (): FormState => ({
   notes: '',
 });
 
-export function PaymentFormSheet({ open, edit, clients, invoices, payments, onClose, onSubmit, onDelete }: Props) {
+export function PaymentFormSheet({ open, edit, clients, invoices, payments, onClose, onSubmit, onDelete, receiptPanel }: Props) {
   const [form, setForm] = useState<FormState>(blank);
   const [attempted, setAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -165,6 +168,7 @@ export function PaymentFormSheet({ open, edit, clients, invoices, payments, onCl
       }
     >
       <FormBody>
+        {edit && receiptPanel}
         <FormSection title="المبلغ">
           <Input
             label="مبلغ الدفعة"

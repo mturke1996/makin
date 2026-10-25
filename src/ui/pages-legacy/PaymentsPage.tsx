@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Add, Payments as PaymentsIcon, Search } from '../../design-system/icons';
+import { Add, Payments as PaymentsIcon, Receipt, Search } from '../../design-system/icons';
 import { useDataStore } from '../../stores/useDataStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { clearField } from '../../services/firebaseService';
@@ -22,6 +22,8 @@ import {
 import type { Payment } from '../../types';
 import { PAYMENT_METHOD_LABEL, PaymentFormSheet, type PaymentFormData, type PaymentMethod } from './money/PaymentFormSheet';
 import { ConfirmDeleteModal, FigureStripSkeleton, ListSkeleton, MoneyRow, StickyGroup } from './money/moneyUi';
+import { ReceiptPanel } from './money/ReceiptPanel';
+import { useReceipt } from './money/useReceipt';
 import { groupBy, isSameMonthAsToday, matchesQuery, monthKey, monthLabel, sumAmounts } from './money/moneyUtils';
 
 type MethodFilter = 'all' | PaymentMethod;
@@ -30,6 +32,7 @@ export const PaymentsPage = () => {
   const { payments, clients, invoices, isLoading, addPayment, updatePayment, deletePayment } = useDataStore();
   const { user } = useAuthStore();
   const access = useAccess();
+  const receipt = useReceipt();
   const canEdit = access.can('payments.manage');
   const canRemove = access.can('payments.delete');
   // A payment is recorded against a client (and optionally one of their invoices), so adding one needs the clients list.
@@ -282,6 +285,20 @@ export const PaymentsPage = () => {
                             trailing={<Amount amount={p.amount} tone="success" showSign className="text-md font-bold" />}
                             onOpen={canEdit ? () => openEdit(p) : undefined}
                             onDelete={canRemove ? () => setPendingDelete(p) : undefined}
+                            desktopActions={
+                              (p.receiptNumber || receipt.canIssue) && (
+                                <button
+                                  type="button"
+                                  onClick={() => void receipt.issue(p, 'download')}
+                                  disabled={receipt.busyId === p.id}
+                                  aria-label={`إيصال دفعة ${name}`}
+                                  title={p.receiptNumber ? `إيصال ${p.receiptNumber}` : 'إصدار إيصال'}
+                                  className="inline-flex h-11 w-11 items-center justify-center rounded-md text-fg-subtle transition-colors duration-fast ease-out hover:bg-surface-hover hover:text-fg focus:outline-none focus-visible:shadow-focus disabled:opacity-50"
+                                >
+                                  <Receipt sx={{ fontSize: 20 }} />
+                                </button>
+                              )
+                            }
                             editLabel={`تعديل دفعة ${name}`}
                             deleteLabel={`حذف دفعة ${name}`}
                           />
@@ -306,6 +323,17 @@ export const PaymentsPage = () => {
           onClose={closeSheet}
           onSubmit={handleSubmit}
           onDelete={canRemove ? (p) => setPendingDelete(p) : undefined}
+          receiptPanel={
+            sheet.edit && (
+              <ReceiptPanel
+                payment={receipt.live(sheet.edit)}
+                busy={receipt.busyId === sheet.edit.id}
+                canIssue={receipt.canIssue}
+                onDownload={() => void receipt.issue(sheet.edit!, 'download')}
+                onShare={() => void receipt.issue(sheet.edit!, 'share')}
+              />
+            )
+          }
         />
       )}
 

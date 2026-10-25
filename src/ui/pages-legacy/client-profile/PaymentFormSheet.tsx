@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Payment } from '../../../types';
@@ -18,9 +19,11 @@ interface PaymentFormSheetProps {
   onClose: () => void;
   onSubmit: (data: PaymentFormValues) => Promise<unknown>;
   onDelete?: () => void;
+  /** The receipt of the payment being edited (a saved payment only). */
+  receiptPanel?: ReactNode;
 }
 
-export function PaymentFormSheet({ edit, onClose, onSubmit, onDelete }: PaymentFormSheetProps) {
+export function PaymentFormSheet({ edit, onClose, onSubmit, onDelete, receiptPanel }: PaymentFormSheetProps) {
   const { control, handleSubmit } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
@@ -45,6 +48,7 @@ export function PaymentFormSheet({ edit, onClose, onSubmit, onDelete }: PaymentF
       onDelete={edit ? onDelete : undefined}
       deleteLabel="حذف الدفعة"
     >
+      {edit && receiptPanel}
       <FormSection title="المبلغ" description="قيمة الدفعة بالدينار">
         <Controller
           name="amount"
