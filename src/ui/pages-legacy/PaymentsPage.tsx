@@ -149,7 +149,7 @@ export const PaymentsPage = () => {
       });
     } else {
       const now = new Date().toISOString();
-      await addPayment({
+      const created: Payment = {
         id: crypto.randomUUID(),
         invoiceId: data.invoiceId,
         clientId: data.clientId,
@@ -160,7 +160,10 @@ export const PaymentsPage = () => {
         createdAt: now,
         updatedAt: now,
         createdBy: user?.displayName || 'المستخدم',
-      });
+      };
+      await addPayment(created);
+      // Every payment taken in leaves with its receipt: numbered, signed, opened as a PDF.
+      void receipt.issue(created, 'download');
     }
   };
 
@@ -328,6 +331,7 @@ export const PaymentsPage = () => {
                             meta={
                               <>
                                 <Badge>{PAYMENT_METHOD_LABEL[p.paymentMethod] || p.paymentMethod}</Badge>
+                                {p.receiptNumber && <Badge tone="success">إيصال {p.receiptNumber}</Badge>}
                                 {inv?.invoiceNumber && <span className="text-xs text-fg-muted">فاتورة {inv.invoiceNumber}</span>}
                               </>
                             }

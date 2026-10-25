@@ -1,6 +1,6 @@
 import { useDeferredValue, useMemo, useState, type ElementType } from 'react';
 import { Add, AccountBalance, CreditCard, PhoneAndroid, Payments, RequestQuote } from '../../../design-system/icons';
-import { Amount, Button, EmptyState, Segmented, Sheet } from '../../../design-system/primitives';
+import { Amount, Badge, Button, EmptyState, Segmented, Sheet } from '../../../design-system/primitives';
 import {
   EMPTY_PAYMENT_QUERY,
   filterPayments,
@@ -252,7 +252,12 @@ export function PaymentsSheet({
                             </bdi>
                           }
                           note={p.notes}
-                          meta={p.createdBy && <span className="text-xs text-fg-muted">بواسطة {p.createdBy}</span>}
+                          meta={
+                            <>
+                              {p.receiptNumber && <Badge tone="success">إيصال {p.receiptNumber}</Badge>}
+                              {p.createdBy && <span className="text-xs text-fg-muted">بواسطة {p.createdBy}</span>}
+                            </>
+                          }
                           trailing={<Amount amount={p.amount} tone="success" showSign className="text-md font-bold" />}
                           onOpen={onEdit ? () => onEdit(p) : undefined}
                           onDelete={onDelete ? () => onDelete(p) : undefined}

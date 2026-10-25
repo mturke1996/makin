@@ -16,7 +16,8 @@ import { getInvoicePaymentSummary } from '../../core/finance/invoicePayments';
 import {
   Amount, Badge, Button, EmptyState, Modal, PageHeader, PageShell, ProgressBar, Section, Skeleton,
 } from '../../design-system/primitives';
-import type { Client } from '../../types';
+import type { Client, Payment } from '../../types';
+import { useReceipt } from './money/useReceipt';
 import { InvoiceDocument } from './invoices/InvoiceDocument';
 import { InvoiceActionsSheet } from './invoices/InvoiceActionsSheet';
 import { PaymentSheet, type PaymentDraft } from './invoices/PaymentSheet';
@@ -52,6 +53,7 @@ export const InvoiceDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const access = useAccess();
+  const receipt = useReceipt();
   const canManage = access.can('invoices.manage');
   // Payments are shown, summed and recorded only by people who may read them: without them "what is
   // left" would just be the whole total.
@@ -113,7 +115,7 @@ export const InvoiceDetailsPage = () => {
   const handleRecordPayment = async (draft: PaymentDraft) => {
     if (!user) return;
     const now = new Date().toISOString();
-    await addPayment({
+    const created: Payment = {
       id: crypto.randomUUID(),
       invoiceId: invoice.id,
       clientId: invoice.clientId,
@@ -124,7 +126,10 @@ export const InvoiceDetailsPage = () => {
       createdAt: now,
       updatedAt: now,
       createdBy: user.displayName || user.email || 'المستخدم',
-    });
+    };
+    await addPayment(created);
+    // Every payment taken in leaves with its receipt: numbered, signed, opened as a PDF.
+    void receipt.issue(created, 'download');
   };
 
   const handleDownloadPdf = async () => {

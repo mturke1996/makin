@@ -25,7 +25,7 @@ export function ReceiptPanel({ payment, busy, canIssue, onDownload, onShare }: P
       {canAct && (
         <div className="mt-3 flex gap-2">
           <Button className="flex-1" loading={busy} leftIcon={<FileDownload sx={{ fontSize: 18 }} />} onClick={onDownload}>
-            {number ? 'تحميل الإيصال' : 'إصدار الإيصال'}
+            {number ? 'فتح الإيصال (PDF)' : 'إصدار الإيصال'}
           </Button>
           <Button variant="outline" disabled={busy} leftIcon={<IosShare sx={{ fontSize: 18 }} />} onClick={onShare}>
             مشاركة

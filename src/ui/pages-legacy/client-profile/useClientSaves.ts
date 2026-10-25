@@ -31,6 +31,7 @@ import type {
 } from './schemas';
 import type { SystemUser } from './types';
 import { buildProjectPatch } from './details/clientFields';
+import { useReceipt } from '../money/useReceipt';
 
 export type ProfileSheetKey =
   | 'expenses'
@@ -65,6 +66,7 @@ interface Options {
  */
 export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, milestoneCount }: Options) {
   const user = useAuthStore((s) => s.user);
+  const receipt = useReceipt();
   const { workers, updateClient, addPayment, updatePayment, addExpense, updateExpense, addStandaloneDebt, updateStandaloneDebt, addUserBalance, updateUserBalance, addProjectPhase, updateProjectPhase, addBoqItem, updateBoqItem, addPaymentMilestone, addPaymentMilestones, updatePaymentMilestone, addSiteReport, updateSiteReport } = useDataSlice('workers', 'updateClient', 'addPayment', 'updatePayment', 'addExpense', 'updateExpense', 'addStandaloneDebt', 'updateStandaloneDebt', 'addUserBalance', 'updateUserBalance', 'addProjectPhase', 'updateProjectPhase', 'addBoqItem', 'updateBoqItem', 'addPaymentMilestone', 'addPaymentMilestones', 'updatePaymentMilestone', 'addSiteReport', 'updateSiteReport');
 
   const author = user?.displayName || 'المستخدم';
@@ -88,7 +90,7 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
         await updatePayment(edit.id, { amount, paymentMethod, paymentDate: data.paymentDate, notes: data.notes });
       } else {
         const now = nowIso();
-        await addPayment({
+        const created: Payment = {
           id: crypto.randomUUID(),
           invoiceId: '',
           clientId: clientId!,
@@ -99,7 +101,10 @@ export function useClientSaves({ clientId, systemUsers, afterSave, phaseCount, m
           createdAt: now,
           updatedAt: now,
           createdBy: author,
-        });
+        };
+        await addPayment(created);
+        // Every payment taken in leaves with its receipt: numbered, signed, opened as a PDF.
+        void receipt.issue(created, 'download');
       }
     }, 'payments');
 
