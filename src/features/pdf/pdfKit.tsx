@@ -26,10 +26,10 @@ export const INK = {
   border: '#DAD6CB',
   hair: '#E9E6DE',
   zebra: '#FBFAF7',
-  /** Every other table row. */
-  stripe: '#FAF8F3',
-  /** A table's header row. */
-  head: '#EFEADC',
+  /** Every other table row (a cool tint to sit with the navy header). */
+  stripe: '#F3F5F9',
+  /** Hairlines and frame inside a table. */
+  tableLine: '#D5DAE3',
   panel: '#F6F3EC',
   white: '#FFFFFF',
   gold: '#C9972B',
@@ -362,14 +362,14 @@ export const PdfSummaryStrip = ({
   );
 };
 
-/** Section heading over a full-width hairline, marked with a short gold bar; an optional note sits on the far side. */
+/** Section heading over a full-width hairline, marked with a short navy bar; an optional note sits on the far side. */
 export const PdfSectionHeading = ({ s, children, hint }: { s: any; children: string; hint?: string }) => (
   <View style={{ marginTop: 18, marginBottom: 8 }} minPresenceAhead={PDF_PAGINATION.section + PDF_PAGINATION.minRowHeight}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 0.6, borderBottomColor: INK.border }}>
       <Text style={{ fontSize: 7.8, color: INK.faint }}>{hint ? ar(hint) : ''}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text style={s.sectionTitle}>{ar(children)}</Text>
-        <View style={{ width: 3.5, height: 13, backgroundColor: INK.gold, marginLeft: 7 }} />
+        <View style={{ width: 3.5, height: 13, backgroundColor: INK.text, marginLeft: 7 }} />
       </View>
     </View>
   </View>

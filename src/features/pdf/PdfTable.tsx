@@ -2,8 +2,7 @@
 /**
  * PdfTable — a clear, printable ledger table.
  *
- * - Header: bold ink words on a warm tint, between an ink rule above and a gold rule below, so it is unmistakable
- *   on paper and on screen without a dark block.
+ * - Header: white bold words on the brand navy, so it is unmistakable on paper and on screen.
  * - Rows: alternating tints, hairline separators and a light frame on both sides, so the eye can follow a row
  *   across the page. Amounts are set in even-width digits, right-aligned, with one number of
  *   decimals per column so the decimal points line up; the currency is named once, above the table.
@@ -44,7 +43,7 @@ const alignOf = (kind: PdfColKind = 'text') => (kind === 'num' || kind === 'date
 
 export function PdfTh({ flex, kind = 'text', children }: { flex: number; kind?: PdfColKind; children: string }) {
   return (
-    <Text style={{ flex, color: INK.text, fontSize: 8.4, fontWeight: 'bold', textAlign: alignOf(kind), lineHeight: 1.35, fontFamily: FF, paddingHorizontal: 5 }}>
+    <Text style={{ flex, color: INK.white, fontSize: 8.4, fontWeight: 'bold', textAlign: alignOf(kind), lineHeight: 1.35, fontFamily: FF, paddingHorizontal: 5 }}>
       {ar(children)}
     </Text>
   );
@@ -94,11 +93,7 @@ const headRow = {
   paddingVertical: 8,
   paddingHorizontal: 6,
   alignItems: 'center',
-  backgroundColor: INK.head,
-  borderTopWidth: 1,
-  borderTopColor: INK.text,
-  borderBottomWidth: 1.4,
-  borderBottomColor: INK.gold,
+  backgroundColor: INK.text,
 };
 
 /** A body row: tinted on every other line, ruled below, and framed on both sides so the table reads as one block. */
@@ -109,11 +104,11 @@ const bodyRow = (index: number, last: boolean) => ({
   alignItems: 'center',
   backgroundColor: index % 2 === 1 ? INK.stripe : INK.white,
   borderLeftWidth: 0.6,
-  borderLeftColor: INK.border,
+  borderLeftColor: INK.tableLine,
   borderRightWidth: 0.6,
-  borderRightColor: INK.border,
+  borderRightColor: INK.tableLine,
   borderBottomWidth: last ? 0.9 : 0.5,
-  borderBottomColor: last ? INK.muted : INK.hair,
+  borderBottomColor: last ? INK.text : INK.tableLine,
 });
 
 const numberOf = (val: any) => (typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, '')));
