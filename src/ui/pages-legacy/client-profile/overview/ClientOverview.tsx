@@ -123,7 +123,7 @@ export function ClientOverview({
   if (payments.length === 0 && expenses.length === 0 && debts.length === 0) {
     return (
       <div className={cn('space-y-6', className)}>
-        <AccountFigures summary={summary} workersDue={workerSummary?.remaining} onAction={onAction} unavailable={unavailableActions} />
+        <AccountFigures summary={summary} workersDue={workerSummary?.remaining} trend={trend} onAction={onAction} unavailable={unavailableActions} />
         <InsightsList insights={insights} onAction={onAction} unavailable={unavailableActions} limit={3} />
         {afterInsights}
         <EmptyState
@@ -154,7 +154,7 @@ export function ClientOverview({
   return (
     <div className={className}>
       <div className="space-y-4">
-        <AccountFigures summary={summary} workersDue={workerSummary?.remaining} onAction={onAction} unavailable={unavailableActions} />
+        <AccountFigures summary={summary} workersDue={workerSummary?.remaining} trend={trend} onAction={onAction} unavailable={unavailableActions} />
         <InsightsList insights={insights} onAction={onAction} unavailable={unavailableActions} limit={3} />
         {afterInsights}
         <details open className="group rounded-lg border border-border bg-surface-panel p-4">

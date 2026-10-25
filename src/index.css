@@ -148,10 +148,6 @@ html[dir='rtl'] { --dir-sign: -1; }
 .client-profile-hero .hero-action-btn { width: 2.75rem; height: 2.75rem; }
 .client-hero-action:hover { filter: brightness(1.12); }
 .client-hero-action-primary { border-color: var(--client-hero-fg); background: var(--client-hero-fg); color: var(--brand-primary-base); }
-.client-profile-finances { container-type: inline-size; }
-@container (min-width: 40rem) {
-  .client-profile-finance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
 
 /* ── DARK — tinted graphite, lifted accents (not pure black) ── */
 :root[data-theme='dark'] {

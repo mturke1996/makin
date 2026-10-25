@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { Amount, StatCard } from '../../../../design-system/primitives';
 import { cn } from '../../../../design-system/primitives/cn';
-import { DeltaBadge, Sparkline, type ChartTone } from '../../../../design-system/charts';
+import { KPI_CONTAINER, kpiGridClass } from '../../../../design-system/charts';
 import { subtractMoney } from '../../../../core/finance/money';
-import { percentOf, type OverviewTrend, type PeriodChange } from '../../../../core/finance/clientAnalytics';
+import { percentOf, type OverviewTrend } from '../../../../core/finance/clientAnalytics';
+import { badgeFor, monthSeries, thisMonth } from './kpiParts';
 
 /**
- * Matches Linda's customer summary: separate statistic cards, two columns on phones and four on desktop.
+ * The monthly view of the account: the same statistic cards as the board and the home page.
  */
 
 /** «+12 نقطة»: the change of a percentage is told in points, not as a percent of a percent. */
@@ -43,15 +44,6 @@ function Kpi({ label, figure, badge, hint, spark }: KpiProps) {
   );
 }
 
-/** A change of a thousand percent or more says nothing a person can use (the base was almost nothing): no badge then. */
-const badgeFor = (change: PeriodChange, favorable: 'up' | 'down') => (
-  <DeltaBadge pct={change.changePct !== null && Math.abs(change.changePct) >= 1000 ? null : change.changePct} favorable={favorable} />
-);
-
-function monthSeries(values: readonly number[], tone: ChartTone, label: string) {
-  return <Sparkline values={values} tone={tone} height={44} label={label} />;
-}
-
 interface OverviewKpisProps {
   /** The whole-account totals (the same figures as the account statement). */
   totalPaid: number;
@@ -60,7 +52,7 @@ interface OverviewKpisProps {
   className?: string;
 }
 
-/** Collected, spent, what is left of the two, and how much of the spending came back, each with its month and curve. */
+/** What is left of collected minus spent, and how much of the spending came back, each with its month and curve. */
 export function OverviewKpis({ totalPaid, totalExpenses, trend, className }: OverviewKpisProps) {
   const { flow } = trend;
   const months = flow.months.length;
@@ -69,29 +61,9 @@ export function OverviewKpis({ totalPaid, totalExpenses, trend, className }: Ove
   // The ratio curve starts where something was first spent; before that there is nothing to divide by.
   const ratioCurve = flow.ratio.filter((v): v is number => v !== null);
   const span = `آخر ${months} أشهر`;
-  const thisMonth = (value: number, tone?: 'auto') => (
-    <>
-      هذا الشهر <Amount amount={value} tone={tone} showSign={tone === 'auto'} className="font-medium text-fg-subtle" />
-    </>
-  );
-
   return (
-    <section aria-label="مؤشرات الحساب" className={className}>
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <Kpi
-          label="المحصّل"
-          figure={<Amount amount={totalPaid} />}
-          badge={badgeFor(trend.collected, 'up')}
-          hint={thisMonth(trend.collected.current)}
-          spark={monthSeries(flow.collected, 'income', `المحصّل الشهري خلال ${span}`)}
-        />
-        <Kpi
-          label="المصروفات"
-          figure={<Amount amount={totalExpenses} />}
-          badge={badgeFor(trend.expenses, 'down')}
-          hint={thisMonth(trend.expenses.current)}
-          spark={monthSeries(flow.expenses, 'expense', `المصروفات الشهرية خلال ${span}`)}
-        />
+    <section aria-label="مؤشرات الحساب" className={cn(KPI_CONTAINER, className)}>
+      <div className={kpiGridClass(2)}>
         <Kpi
           label="المحصّل ناقص المصروفات"
           figure={<Amount amount={net} tone="auto" showSign />}

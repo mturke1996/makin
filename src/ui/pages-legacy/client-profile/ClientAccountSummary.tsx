@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
-import { Amount, ProgressBar, Card, CardHeader, CardTitle, CardDescription } from '../../../design-system/primitives';
+import { Amount, Card, CardHeader, CardTitle, CardDescription } from '../../../design-system/primitives';
 import { cn } from '../../../design-system/primitives/cn';
 import { PROFIT_BASE_LABELS } from '../../../core/finance/clientProfitTotals';
-import { percentOf } from '../../../core/finance/clientAnalytics';
-import { fromMilli, subtractMoney, toMilli } from '../../../core/finance/money';
+import { fromMilli, toMilli } from '../../../core/finance/money';
 import { formatCurrencyDisplay } from '../../../core/utils-formatters';
 import type { ClientSummary } from './types';
 
@@ -25,15 +24,11 @@ export function StatementLine({ label, hint, children }: { label: string; hint?:
  * payments, every expense and debts; everybody else gets `ClientPersonalSummary`): what was collected, what was spent,
  * what is owed, the agreed percentage, and the balance that is left (or the deficit). Every figure is the exact
  * output of `computeClientAccount`, so the lines add up to the result. Under a deficit it also says how much
- * must be collected to close it, and how far collection has come against what the account owes.
+ * must be collected to close it.
  */
 export function ClientAccountSummary({ summary, className }: { summary: ClientSummary; className?: string }) {
   const deficit = summary.remaining < 0;
   const hasPercentage = summary.profitPercentage > 0;
-  // What the account owes in all (costs, debts and the agreed percentage): the balance is collected minus this.
-  const owed = subtractMoney(summary.totalPaid, summary.remaining);
-  const coverage = percentOf(summary.totalPaid, owed);
-  const covered = coverage !== null ? Math.min(100, Math.floor(coverage)) : null;
   const closing = toMilli(summary.requiredCollection) > 0;
   const both = toMilli(summary.clientDeficit) > 0 && toMilli(summary.agreedPercentageDeficit) > 0;
 
@@ -95,17 +90,6 @@ export function ClientAccountSummary({ summary, className }: { summary: ClientSu
           </dl>
         )}
 
-        {covered !== null && (
-          <div className="space-y-2 border-t border-border px-4 py-3.5">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="text-fg-subtle">ما غُطّي من التزامات الحساب</span>
-              <span className="font-semibold tabular-nums text-fg">
-                <bdi dir="ltr">{covered}%</bdi>
-              </span>
-            </div>
-            <ProgressBar value={covered} tone={covered >= 100 ? 'success' : covered >= 50 ? 'warning' : 'danger'} label="نسبة تغطية التزامات الحساب" />
-          </div>
-        )}
     </Card>
   );
 }

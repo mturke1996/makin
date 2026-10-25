@@ -5,3 +5,4 @@ export * from './FlowChart';
 export * from './DeltaBadge';
 export * from './KpiCard';
 export * from './StatGrid';
+export * from './kpiGrid';

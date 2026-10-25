@@ -1,13 +1,13 @@
 import { Skeleton } from '../../../../design-system/primitives';
+import { KPI_CONTAINER, kpiGridClass } from '../../../../design-system/charts';
 
-function KpiRowSkeleton() {
+function KpiRowSkeleton({ chart }: { chart?: boolean }) {
   return (
     <div className="flex min-h-[6.5rem] min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface-panel p-3.5">
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton height={13} width="38%" />
-        <Skeleton height={22} width="58%" />
-        <Skeleton height={13} width="46%" />
-      </div>
+      <Skeleton height={13} width="38%" />
+      <Skeleton height={26} width="58%" />
+      <Skeleton height={13} width="46%" />
+      {chart && <Skeleton height={44} className="mt-auto" />}
     </div>
   );
 }
@@ -28,13 +28,17 @@ function InsightRowSkeleton() {
 export function ClientOverviewSkeleton() {
   return (
     <div role="status" aria-label="جارٍ تحميل ملخص الحساب" className="space-y-6">
-      <div className="client-profile-finances rounded-lg border border-border bg-surface-panel">
-        <div className="space-y-2 border-b border-border p-4"><Skeleton height={16} width="30%" /><Skeleton height={12} width="65%" /></div>
-        <div className="client-profile-finance-grid grid grid-cols-2 gap-2.5 p-3 sm:p-4">
-          {[0, 1, 2, 3].map((i) => <KpiRowSkeleton key={i} />)}
-        </div>
-        <div className="client-profile-finance-grid grid grid-cols-2 gap-2.5 border-t border-border bg-surface-sunken p-3 sm:p-4">
-          {[0, 1].map((i) => <KpiRowSkeleton key={i} />)}
+      <div className="space-y-3">
+        <div className="space-y-2 px-1"><Skeleton height={20} width="30%" /><Skeleton height={12} width="55%" /></div>
+        <div className={KPI_CONTAINER}>
+          <div className="space-y-2.5">
+            <div className={kpiGridClass(3)}>
+              {[0, 1, 2].map((i) => <KpiRowSkeleton key={i} chart />)}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 [&>*:last-child]:col-span-2 [@container_(min-width:40rem)]:grid-cols-3 [@container_(min-width:40rem)]:[&>*:last-child]:col-span-1">
+              {[0, 1, 2].map((i) => <KpiRowSkeleton key={i} />)}
+            </div>
+          </div>
         </div>
       </div>
 
