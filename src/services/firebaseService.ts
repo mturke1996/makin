@@ -15,6 +15,7 @@ import {
   QueryConstraint,
   FirestoreError,
 } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { db } from '../config/firebase';
 import type { Client, Invoice, Payment, StandaloneDebt, Expense, ExpenseInvoice, DebtParty, Worker, UserBalance, GlobalFundTransaction, Letter, ProjectPhase, BoqLineItem, AuditLogEntry, SiteReport, PaymentMilestone, WorkerAttendance, Supplier } from '../types';
 import { addExpenseConfirmedOnce } from './expenseTransactions';
@@ -35,6 +36,32 @@ function stripUndefinedFields<T extends Record<string, unknown>>(obj: T): T {
     if (v !== undefined) out[k] = v;
   }
   return out as T;
+}
+
+/**
+ * How long a screen waits for the server to acknowledge a write. A Firestore write is applied on this device at
+ * once and queued durably; only its promise waits for the server, which on a weak connection can take many seconds
+ * (or until the phone is back online). After this window the person carries on, and the write finishes in the
+ * background. If the server later refuses it, the change disappears from the lists and the person is told.
+ */
+export const WRITE_ACK_WINDOW_MS = 2500;
+
+export function settleWithin(write: Promise<unknown>, what: string, ms = WRITE_ACK_WINDOW_MS): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let waiting = true;
+    const timer = setTimeout(() => { waiting = false; resolve(); }, ms);
+    write.then(
+      () => { clearTimeout(timer); if (waiting) resolve(); },
+      (error) => {
+        clearTimeout(timer);
+        if (waiting) reject(error);
+        else {
+          console.error(`[write] ${what} was refused after the screen moved on`, error);
+          toast.error('لم يُحفظ آخر تغيير: رفضه الخادم. حدّث الصفحة وراجع البيانات.');
+        }
+      },
+    );
+  });
 }
 
 // Generic CRUD operations
@@ -92,7 +119,7 @@ export class FirestoreService<T extends { id: string }> {
     const id = data.id || crypto.randomUUID();
     const docRef = doc(db, this.collectionName, id);
     const payload = stripUndefinedFields({ ...data, id }) as DocumentData;
-    await setDoc(docRef, payload);
+    await settleWithin(setDoc(docRef, payload), `${this.collectionName}/${id}`);
     return id;
   }
 
@@ -104,14 +131,14 @@ export class FirestoreService<T extends { id: string }> {
     const merged = stripUndefinedFields(data as Record<string, unknown>) as DocumentData;
     if (docSnap.exists()) {
       // Document found by its Firestore doc ID — update it directly
-      await updateDoc(docRef, merged);
+      await settleWithin(updateDoc(docRef, merged), `${this.collectionName}/${id}`);
     } else {
       // Fallback: the app's id might differ from the Firestore doc ID (legacy data)
       const q = query(collection(db, this.collectionName), where('id', '==', id));
       const querySnap = await getDocs(q);
       if (!querySnap.empty) {
         const realRef = doc(db, this.collectionName, querySnap.docs[0].id);
-        await updateDoc(realRef, merged);
+        await settleWithin(updateDoc(realRef, merged), `${this.collectionName}/${id}`);
       } else {
         throw new Error('السجل لم يعد موجوداً. حدّث الصفحة ثم حاول مجدداً.');
       }

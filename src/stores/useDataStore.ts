@@ -110,9 +110,13 @@ export const SNAPSHOT_BATCH_MS = 30;
 const saveCacheTimers: Record<string, any> = {};
 const saveCache = (key: string, data: any[]) => {
   clearTimeout(saveCacheTimers[key]);
+  // Serialising a whole collection is synchronous work: it waits for an idle moment instead of landing in the middle
+  // of a save or a scroll. A longer pause also merges the two snapshots every write produces into one.
   saveCacheTimers[key] = setTimeout(() => {
-    try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch {}
-  }, 500);
+    const write = () => { try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch {} };
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(write, { timeout: 4000 });
+    else write();
+  }, 1500);
 };
 
 /** The signed-in person as the approval rules see them. */

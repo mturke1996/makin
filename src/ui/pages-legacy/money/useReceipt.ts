@@ -3,13 +3,13 @@ import toast from 'react-hot-toast';
 import { useAccess } from '../../../core/access/useAccess';
 import { buildReceipt } from '../../../core/finance/receipt';
 import { db } from '../../../config/firebase';
-import { downloadPdf, sharePdf } from '../../../features/pdf/pdfService';
-import { withDocumentLanguage } from '../../../features/pdf/pdfI18n';
-import { ReceiptPDF } from '../../../features/pdf/ReceiptPDF';
 import { ensureReceiptNumber } from '../../../services/receiptNumber';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import type { Payment } from '../../../types';
+
+/** Resolves once the browser has painted and been idle for a moment. */
+const afterPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 400)));
 
 /**
  * Issues the receipt of a payment: allocates its number the first time (which needs `payments.manage`),
@@ -49,6 +49,14 @@ export function useReceipt() {
           fallbackReceiver: user?.displayName,
           origin: window.location.origin,
         });
+        // Laying out a PDF holds the main thread for a second or more on a phone. The sheet that took the payment
+        // is allowed to close and repaint first, and the PDF code (large) is fetched only now, not at start-up.
+        await afterPaint();
+        const [{ downloadPdf, sharePdf }, { withDocumentLanguage }, { ReceiptPDF }] = await Promise.all([
+          import('../../../features/pdf/pdfService'),
+          import('../../../features/pdf/pdfI18n'),
+          import('../../../features/pdf/ReceiptPDF'),
+        ]);
         const element = withDocumentLanguage(createElement(ReceiptPDF, { receipt }), client);
         const file = `إيصال-${number}`;
         if (action === 'download') await downloadPdf(element, file);

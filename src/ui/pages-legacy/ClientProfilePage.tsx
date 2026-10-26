@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowForward, ExpandMore, PostAdd, Payment as PaymentIcon, PersonOff, ReceiptLong } from '../../design-system/icons';
-import { Button, Card, CardHeader, CardTitle, CardDescription, ClientProfileHero, EmptyState, PageShell } from '../../design-system/primitives';
+import { Button, Card, CardHeader, CardTitle, CardDescription, ClientProfileHero, EmptyState, PageShell, WhileOpen } from '../../design-system/primitives';
 import { cn } from '../../design-system/primitives/cn';
 import { expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
 import { useDataStore } from '../../stores/useDataStore';
@@ -460,7 +460,7 @@ export const ClientProfilePage = () => {
 
       {/* Record sheets: each exists only for a permission this person holds, and offers only the actions they may take. */}
       {caps.expenseScope !== 'none' && (
-        <ExpensesSheet
+        <WhileOpen open={activeSheet === 'expenses'}><ExpensesSheet
           open={activeSheet === 'expenses'}
           loading={data.isLoading}
           onClose={closeSheet}
@@ -477,11 +477,11 @@ export const ClientProfilePage = () => {
           onDelete={(e) => deletes.expense(e)}
           onDownloadPdf={caps.showSummary ? () => pdf.download('expenses') : undefined}
           onSharePdf={caps.showSummary ? () => pdf.share('expenses') : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {caps.payments && (
-        <PaymentsSheet
+        <WhileOpen open={activeSheet === 'payments'}><PaymentsSheet
           open={activeSheet === 'payments'}
           loading={data.isLoading}
           onClose={closeSheet}
@@ -494,11 +494,11 @@ export const ClientProfilePage = () => {
           onDelete={may.deletePayments ? (p) => deletes.payment(p) : undefined}
           onDownloadPdf={caps.showSummary ? () => pdf.download('payments') : undefined}
           onSharePdf={caps.showSummary ? () => pdf.share('payments') : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {caps.payments && (
-        <ScheduleSheet
+        <WhileOpen open={activeSheet === 'schedule'}><ScheduleSheet
           open={activeSheet === 'schedule'}
           loading={data.isLoading}
           onClose={closeSheet}
@@ -523,11 +523,11 @@ export const ClientProfilePage = () => {
                 }
               : undefined
           }
-        />
+        /></WhileOpen>
       )}
 
       {caps.workers && (
-        <AttendanceSheet
+        <WhileOpen open={activeSheet === 'attendance'}><AttendanceSheet
           open={activeSheet === 'attendance'}
           loading={data.isLoading}
           onClose={closeSheet}
@@ -543,11 +543,11 @@ export const ClientProfilePage = () => {
             }
             void markAttendance(buildAttendance({ worker, day, status, by: user?.displayName || user?.email || 'المستخدم', previous })).catch(() => undefined);
           }}
-        />
+        /></WhileOpen>
       )}
 
       {caps.debts && (
-        <DebtsSheet
+        <WhileOpen open={activeSheet === 'debts'}><DebtsSheet
           open={activeSheet === 'debts'}
           loading={data.isLoading}
           onClose={closeSheet}
@@ -560,11 +560,11 @@ export const ClientProfilePage = () => {
           onDelete={may.deleteDebts ? (d) => deletes.debt(d) : undefined}
           onDownloadPdf={caps.showSummary ? () => pdf.download('debts') : undefined}
           onSharePdf={caps.showSummary ? () => pdf.share('debts') : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {caps.workers && (
-        <WorkersFlow
+        <WhileOpen open={activeSheet === 'workers'}><WorkersFlow
           open={activeSheet === 'workers'}
           initialWorkerId={searchParams.get('worker') ?? undefined}
           onClose={closeSheet}
@@ -578,11 +578,11 @@ export const ClientProfilePage = () => {
           onSharePdf={caps.showSummary ? () => pdf.share('workers') : undefined}
           onStatementPdf={caps.showSummary ? (entry, period) => pdf.workerStatement(entry, 'download', period) : undefined}
           onShareStatement={caps.showSummary ? (entry, period) => pdf.workerStatement(entry, 'share', period) : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {caps.custody && (
-        <BalancesSheet
+        <WhileOpen open={activeSheet === 'balances'}><BalancesSheet
           open={activeSheet === 'balances'}
           onClose={closeSheet}
           client={client}
@@ -591,12 +591,12 @@ export const ClientProfilePage = () => {
           onAdd={may.manageCustody ? (userId) => setActiveForm({ kind: 'balance', edit: null, userId }) : undefined}
           onEdit={may.manageCustody ? (b) => setActiveForm({ kind: 'balance', edit: b }) : undefined}
           onDelete={may.manageCustody ? (b) => deletes.balance(b) : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {caps.projects && (
         <>
-          <PhasesSheet
+          <WhileOpen open={activeSheet === 'phases'}><PhasesSheet
             open={activeSheet === 'phases'}
           loading={data.isLoading}
             onClose={closeSheet}
@@ -614,9 +614,9 @@ export const ClientProfilePage = () => {
                   }
                 : undefined
             }
-          />
+          /></WhileOpen>
 
-          <BoqSheet
+          <WhileOpen open={activeSheet === 'boq'}><BoqSheet
             open={activeSheet === 'boq'}
           loading={data.isLoading}
             onClose={closeSheet}
@@ -634,9 +634,9 @@ export const ClientProfilePage = () => {
                   }
                 : undefined
             }
-          />
+          /></WhileOpen>
 
-          <SiteReportsSheet
+          <WhileOpen open={activeSheet === 'siteReports'}><SiteReportsSheet
             open={activeSheet === 'siteReports'}
           loading={data.isLoading}
             onClose={closeSheet}
@@ -652,11 +652,11 @@ export const ClientProfilePage = () => {
                   }
                 : undefined
             }
-          />
+          /></WhileOpen>
         </>
       )}
 
-      <ClientActivitySheet
+      <WhileOpen open={activeSheet === 'activity'}><ClientActivitySheet
         open={activeSheet === 'activity'}
         onClose={closeSheet}
         client={client}
@@ -671,9 +671,9 @@ export const ClientProfilePage = () => {
         phases={clientPhases}
         loading={data.isLoading}
         onOpen={openFromFeed}
-      />
+      /></WhileOpen>
 
-      <ClientStatementSheet
+      <WhileOpen open={activeSheet === 'statement'}><ClientStatementSheet
         open={activeSheet === 'statement'}
         onClose={closeSheet}
         client={client}
@@ -683,10 +683,10 @@ export const ClientProfilePage = () => {
         debts={data.clientDebts}
         loading={data.isLoading}
         onOpen={openFromFeed}
-      />
+      /></WhileOpen>
 
       {caps.invoices && (
-        <ClientInvoicesSheet
+        <WhileOpen open={activeSheet === 'invoices'}><ClientInvoicesSheet
           open={activeSheet === 'invoices'}
           onClose={closeSheet}
           client={client}
@@ -696,11 +696,11 @@ export const ClientProfilePage = () => {
           loading={data.isLoading}
           onOpenInvoice={(id) => navigate(`/invoices/${id}`)}
           onCreate={may.manageInvoices ? () => navigate(`/invoices/new?clientId=${clientId}`) : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {caps.letters && (
-        <ClientLettersSheet
+        <WhileOpen open={activeSheet === 'letters'}><ClientLettersSheet
           open={activeSheet === 'letters'}
           onClose={closeSheet}
           client={client}
@@ -708,7 +708,7 @@ export const ClientProfilePage = () => {
           loading={data.isLoading}
           onOpenLetter={(l) => navigate(`/letters?open=${l.id}`)}
           onCreate={may.manageLetters ? () => navigate(`/letters?new=1&clientId=${clientId}`) : undefined}
-        />
+        /></WhileOpen>
       )}
 
       {/* Forms (open over the sheets) */}

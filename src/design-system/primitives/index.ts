@@ -24,3 +24,4 @@ export * from './FigureStrip';
 export * from './EmptyState';
 export * from './ProgressBar';
 export * from './Switch';
+export * from './WhileOpen';

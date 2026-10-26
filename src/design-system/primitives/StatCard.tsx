@@ -32,12 +32,16 @@ export function StatCard({ label, value, hint, badge, trend, onClick, className,
       element.style.fontSize = `${width > element.clientWidth ? Math.max(minimum, Math.floor(maximum * element.clientWidth / width)) : maximum}px`;
       element.dataset.wrapNumber = String(digits.some((digit) => digit.getBoundingClientRect().width > element.clientWidth));
     };
+    // `value` is a new element on every render, so it cannot be a dependency: the card measured itself (a forced
+    // layout) each time any screen re-rendered. It is measured once, when its size changes, and when its text changes.
     fit();
     const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(fit);
     observer?.observe(element);
+    const changes = typeof MutationObserver === 'undefined' ? undefined : new MutationObserver(fit);
+    changes?.observe(element, { childList: true, characterData: true, subtree: true });
     void document.fonts?.ready.then(fit);
-    return () => { alive = false; observer?.disconnect(); };
-  }, [value]);
+    return () => { alive = false; observer?.disconnect(); changes?.disconnect(); };
+  }, []);
   const Heading = definition ? 'dt' : 'div';
   const Body = definition ? 'dd' : 'div';
   const content = <>
