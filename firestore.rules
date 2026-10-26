@@ -120,6 +120,19 @@ service cloud.firestore {
       allow update, delete: if can('expenses.edit.all');
     }
 
+    // Expense categories added from inside the expense form: read and added by whoever records expenses. A category
+    // is never renamed or removed (expenses keep its id), and its id must say it is custom so no built-in id is shadowed.
+    match /expense_categories/{id} {
+      allow read: if can('expenses.create') || can('expenses.view.all');
+      allow create: if (can('expenses.create') || can('expenses.edit.all'))
+        && id.matches('custom_[A-Za-z0-9_-]{4,40}')
+        && request.resource.data.get('id', null) == id
+        && request.resource.data.get('label', null) is string
+        && request.resource.data.label.size() >= 2 && request.resource.data.label.size() <= 60
+        && request.resource.data.keys().hasOnly(['id', 'label', 'createdAt', 'createdBy']);
+      allow update, delete: if false;
+    }
+
     // Daily attendance of workers: one record per worker per day (the id says so). Seen by whoever sees workers,
     // marked by whoever manages them.
     match /worker_attendance/{id} {

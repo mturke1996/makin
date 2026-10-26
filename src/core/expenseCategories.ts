@@ -6,6 +6,7 @@ export const EXPENSE_CATEGORY_GROUPS = [
   { id: 'finishes', label: 'تشطيبات وأعمال خارجية' },
   { id: 'operations', label: 'عمال ومعدات وتشغيل' },
   { id: 'general', label: 'إدارة ومصروفات عامة' },
+  { id: 'custom', label: 'فئات أضافها الفريق' },
 ] as const;
 
 export const CONSTRUCTION_EXPENSE_CATEGORIES = [
@@ -71,11 +72,100 @@ export const ACTIVE_EXPENSE_CATEGORY_IDS = CONSTRUCTION_EXPENSE_CATEGORIES.map((
 export const LEGACY_EXPENSE_CATEGORY_LABELS: Record<string, string> = {
   government_fees: 'رسوم حكومية', office_supplies: 'قرطاسية ومكتبية', marketing: 'تسويق',
 };
+
+/** A category as the pickers see it, built in or added by the team. */
+export interface ExpenseCategoryDef {
+  id: string;
+  label: string;
+  shortLabel: string;
+  group: string;
+  keywords?: string;
+  defaultUnit?: string;
+}
+
+/** A category added from inside the expense form; it lives in the `expense_categories` collection. */
+export interface CustomExpenseCategory {
+  id: string;
+  label: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export const CUSTOM_CATEGORY_PREFIX = 'custom_';
+export const CUSTOM_CATEGORY_GROUP = 'custom';
+export const MAX_CATEGORY_LABEL = 60;
+
+/**
+ * `expenseCategories` is read all over the app as a plain id → label lookup (forms, filters, reports, PDFs). Custom
+ * categories are written into the same object, so every one of those places knows them without a change.
+ */
 export const expenseCategories: Record<string, string> = Object.fromEntries(CONSTRUCTION_EXPENSE_CATEGORIES.map((category) => [category.id, category.label]));
-export const getExpenseCategory = (id: string) => CONSTRUCTION_EXPENSE_CATEGORIES.find((category) => category.id === id);
+let custom: ExpenseCategoryDef[] = [];
+
+/** Replaces the custom categories with what the database holds now (called by the data store on every snapshot). */
+export function registerCustomCategories(list: readonly CustomExpenseCategory[]): void {
+  for (const old of custom) delete expenseCategories[old.id];
+  custom = list
+    .filter((c) => c && typeof c.id === 'string' && typeof c.label === 'string' && c.label.trim())
+    .map((c) => ({ id: c.id, label: c.label.trim(), shortLabel: c.label.trim(), group: CUSTOM_CATEGORY_GROUP, keywords: '' }));
+  for (const c of custom) expenseCategories[c.id] = c.label;
+}
+
+export const customExpenseCategories = (): readonly ExpenseCategoryDef[] => custom;
+/** Built in plus added by the team, in the order the pickers show them. */
+export const allExpenseCategories = (): readonly ExpenseCategoryDef[] => [...CONSTRUCTION_EXPENSE_CATEGORIES, ...custom];
+
+export const getExpenseCategory = (id: string): ExpenseCategoryDef | undefined => allExpenseCategories().find((category) => category.id === id);
 export const getExpenseCategoryLabel = (id: string): string => expenseCategories[id] || LEGACY_EXPENSE_CATEGORY_LABELS[id] || id;
 export const getExpenseCategoryShortLabel = (id: string): string => getExpenseCategory(id)?.shortLabel || getExpenseCategoryLabel(id);
-export const getExpenseCategoryDefaultUnit = (id: string): string => {
-  const category = getExpenseCategory(id);
-  return category && 'defaultUnit' in category ? category.defaultUnit : '';
-};
+export const getExpenseCategoryDefaultUnit = (id: string): string => getExpenseCategory(id)?.defaultUnit ?? '';
+
+/** Same name, whatever the spacing, the Arabic letter variants or the case. */
+export const normalizeCategoryLabel = (label: string): string =>
+  label
+    .normalize('NFKC')
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+/** The category that already has this name (built in, legacy or custom), if any. */
+export function findCategoryByLabel(label: string): { id: string; label: string } | undefined {
+  const wanted = normalizeCategoryLabel(label);
+  if (!wanted) return undefined;
+  for (const c of allExpenseCategories()) {
+    if (normalizeCategoryLabel(c.label) === wanted || normalizeCategoryLabel(c.shortLabel) === wanted) return { id: c.id, label: c.label };
+  }
+  for (const [id, text] of Object.entries(LEGACY_EXPENSE_CATEGORY_LABELS)) {
+    if (normalizeCategoryLabel(text) === wanted) return { id, label: text };
+  }
+  return undefined;
+}
+
+/** Why a name cannot be used, or null when it can. */
+export function categoryLabelProblem(label: string): string | null {
+  const text = label.trim().replace(/\s+/g, ' ');
+  if (text.length < 2) return 'اكتب اسم الفئة (حرفان على الأقل)';
+  if (text.length > MAX_CATEGORY_LABEL) return `اسم الفئة طويل، الحد الأقصى ${MAX_CATEGORY_LABEL} حرفاً`;
+  return null;
+}
+
+/**
+ * The id follows from the name, so two people adding the same category at the same moment write the same record
+ * instead of two. FNV-1a over the normalised name, twice with different seeds: 16 hex characters.
+ */
+export function customCategoryId(label: string): string {
+  const text = normalizeCategoryLabel(label);
+  const hash = (seed: number) => {
+    let h = seed >>> 0;
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16).padStart(8, '0');
+  };
+  return `${CUSTOM_CATEGORY_PREFIX}${hash(2166136261)}${hash(0x9747b28c)}`;
+}

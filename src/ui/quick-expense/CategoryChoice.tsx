@@ -7,10 +7,12 @@ import {
   Sheet,
 } from "../../design-system/primitives";
 import {
-  CONSTRUCTION_EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_GROUPS,
+  allExpenseCategories,
   getExpenseCategoryLabel,
 } from "../../core/expenseCategories";
+import { useDataStore } from "../../stores/useDataStore";
+import { NewCategoryForm } from "../expense-category/NewCategory";
 import { matchesQuery } from "./quickExpenseLogic";
 
 interface CategoryChoiceProps {
@@ -29,11 +31,13 @@ export function CategoryChoice({
 }: CategoryChoiceProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // The list changes when someone adds a category: this is what redraws it.
+  const added = useDataStore((s) => s.customCategories);
   const groups = useMemo(
     () =>
       EXPENSE_CATEGORY_GROUPS.map((group) => ({
         ...group,
-        categories: CONSTRUCTION_EXPENSE_CATEGORIES.filter(
+        categories: allExpenseCategories().filter(
           (category) =>
             category.group === group.id &&
             matchesQuery(
@@ -45,7 +49,8 @@ export function CategoryChoice({
             ),
         ),
       })).filter((group) => group.categories.length),
-    [query],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [query, added],
   );
   return (
     <div className="space-y-2">
@@ -63,7 +68,7 @@ export function CategoryChoice({
         >
           <span className="min-w-0 text-start">
             <span className="block break-words font-semibold">{getExpenseCategoryLabel(value)}</span>
-            <span className="mt-0.5 block text-xs font-normal text-fg-muted">كل الفئات ({CONSTRUCTION_EXPENSE_CATEGORIES.length})، بحث واختيار</span>
+            <span className="mt-0.5 block text-xs font-normal text-fg-muted">كل الفئات ({allExpenseCategories().length})، بحث واختيار</span>
           </span>
         </Button>
         <IconButton
@@ -102,8 +107,8 @@ export function CategoryChoice({
       >
         <div className="space-y-6 px-4 py-4 lg:px-6">
           {groups.length === 0 && (
-            <p className="py-10 text-center text-sm text-fg-subtle">
-              لا توجد فئة مطابقة. جرّب اسم المادة أو نوع العمل.
+            <p className="pt-6 text-center text-sm text-fg-subtle">
+              لا توجد فئة مطابقة. جرّب اسماً آخر، أو أضفها فئة جديدة أدناه.
             </p>
           )}
           {groups.map((group) => (
@@ -157,6 +162,17 @@ export function CategoryChoice({
               </div>
             </section>
           ))}
+          <section className="space-y-2" aria-label="فئة جديدة">
+            <h3 className="text-sm font-semibold text-fg-subtle">الفئة غير موجودة؟</h3>
+            <NewCategoryForm
+              key={query.trim() === "" ? "empty" : "typed"}
+              initialLabel={query.trim()}
+              onCreated={(id) => {
+                onChange(id);
+                setOpen(false);
+              }}
+            />
+          </section>
         </div>
       </Sheet>
     </div>

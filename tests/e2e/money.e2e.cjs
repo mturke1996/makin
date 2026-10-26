@@ -436,6 +436,28 @@ scenario('client page: add an expense and a payment from the page itself', async
   await ctx.close();
 });
 
+scenario('client page expense form: a new category is added under the select and saved with the expense', async ({ browser }) => {
+  const name = `مقاولات خاصة ${RUN}`;
+  const { ctx, page } = await open(browser, 'admin@makin.test');
+  await go(page, '/clients/c-villa');
+  await page.getByRole('button', { name: 'إضافة مصروف' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('وصف المصروف').fill(`مصروف فئة الملف ${RUN}`);
+  await dialog.getByLabel('المبلغ الإجمالي').fill('333');
+  await dialog.getByRole('button', { name: /أضف فئة جديدة/ }).click();
+  await dialog.getByLabel('اسم الفئة الجديدة').fill(name);
+  await dialog.getByRole('button', { name: 'إضافة الفئة واختيارها' }).click();
+  const cat = await until(async () => (await list('expense_categories')).find((c) => c.label === name));
+  check(cat, 'the category was not written to the database');
+  check(await until(async () => (await dialog.getByLabel('التصنيف').inputValue()) === cat.id, 6000), 'the select did not switch to the new category');
+  await dialog.getByRole('button', { name: 'حفظ المصروف' }).click();
+  const exp = await until(async () => (await list('expenses')).find((d) => d.description === `مصروف فئة الملف ${RUN}`));
+  check(exp && exp.category === cat.id, `saved with category ${exp && exp.category}`);
+  await remove('expenses', exp.id);
+  await remove('expense_categories', cat.id);
+  await ctx.close();
+});
+
 scenario('quick expense (the floating button) records an expense for the project', async ({ browser }) => {
   const { ctx, page } = await open(browser, 'admin@makin.test');
   await go(page, '/clients/c-villa');
@@ -450,6 +472,84 @@ scenario('quick expense (the floating button) records an expense for the project
   check(exp.approvalStatus === 'approved', `saved as ${exp.approvalStatus}`);
   await remove('expenses', exp.id);
   await ctx.close();
+});
+
+scenario('quick expense: a category that is not in the list is added from inside the picker, saved to the database and used', async ({ browser }) => {
+  const name = `ستائر عازلة ${RUN}`;
+  const { ctx, page, problems } = await open(browser, 'admin@makin.test', { width: 390, height: 844 });
+  await go(page, '/clients/c-villa');
+  await page.getByRole('button', { name: 'تسجيل مصروف سريع' }).first().click();
+  const dialog = page.getByRole('dialog').first();
+  await dialog.waitFor();
+  await dialog.locator('input[inputmode="decimal"]').first().fill('61');
+  await dialog.locator('[aria-label^="اختيار فئة المصروف"]').click();
+  const picker = page.getByRole('dialog', { name: 'فئات مصروفات البناء' });
+  await picker.getByLabel('بحث في فئات المصروفات').fill(name);
+  check((await picker.getByText('لا توجد فئة مطابقة').count()) === 1, 'no «nothing found» message');
+  await picker.getByRole('button', { name: 'إضافة الفئة واختيارها' }).click();
+  const cat = await until(async () => (await list('expense_categories')).find((c) => c.label === name));
+  check(cat, 'the category was not written to the database');
+  check(cat.id.startsWith('custom_') && cat.createdBy, `stored as ${JSON.stringify(cat)}`);
+  check(await until(async () => (await page.locator(`[aria-label="اختيار فئة المصروف: ${name}"]`).count()) === 1, 6000), 'the new category was not chosen in the form');
+  await dialog.getByRole('button', { name: /تسجيل المصروف/ }).click();
+  const exp = await until(async () => (await list('expenses')).find((d) => d.amount === 61 && d.clientId === 'c-villa' && !d.id.startsWith('t-')));
+  check(exp && exp.category === cat.id, `the expense was saved with category ${exp && exp.category}`);
+  // The same name typed again is the same category: nothing new in the database.
+  await page.getByRole('button', { name: 'مصروف آخر' }).first().click();
+  await dialog.locator('input[inputmode="decimal"]').first().fill('62');
+  await dialog.locator('[aria-label^="اختيار فئة المصروف"]').click();
+  await picker.getByLabel('بحث في فئات المصروفات').fill(name);
+  check((await picker.getByRole('button', { name }).count()) >= 1, 'the added category is not listed in the picker');
+  check((await list('expense_categories')).filter((c) => c.label === name).length === 1, 'a duplicate category was created');
+  check(problems.length === 0, `page errors: ${problems.join('; ')}`);
+  await remove('expenses', exp.id);
+  for (const d of await list('expenses')) if (d.amount === 62 && d.clientId === 'c-villa') await remove('expenses', d.id);
+  await remove('expense_categories', cat.id);
+  await ctx.close();
+});
+
+scenario('expense form: «add a category» under the select, then save; the list shows its name after a reload', async ({ browser }) => {
+  const name = `أعمال زخرفة ${RUN}`;
+  const { ctx, page } = await open(browser, 'admin@makin.test');
+  await go(page, '/expenses?new=1');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('وصف المصروف').fill(`مصروف بفئة جديدة ${RUN}`);
+  await dialog.getByLabel('المبلغ', { exact: true }).fill('412');
+  await dialog.getByRole('button', { name: /أضف فئة جديدة/ }).click();
+  await dialog.getByLabel('اسم الفئة الجديدة').fill(name);
+  await dialog.getByLabel('اسم الفئة الجديدة').press('Enter');
+  const cat = await until(async () => (await list('expense_categories')).find((c) => c.label === name));
+  check(cat, 'the category was not written to the database');
+  check(await until(async () => (await dialog.getByLabel('التصنيف').inputValue()) === cat.id, 6000), 'the select did not switch to the new category');
+  check((await page.getByRole('dialog').count()) === 1, 'Enter in the name field sent the expense form');
+  await dialog.getByRole('button', { name: 'حفظ المصروف' }).click();
+  const exp = await until(async () => (await list('expenses')).find((d) => d.description === `مصروف بفئة جديدة ${RUN}`));
+  check(exp && exp.category === cat.id, `saved with category ${exp && exp.category}`);
+  await go(page, '/expenses');
+  check(await until(async () => (await page.getByText(name).count()) > 0, 8000), 'the new category name is not shown in the list after a reload');
+  await remove('expenses', exp.id);
+  await remove('expense_categories', cat.id);
+  await ctx.close();
+});
+
+scenario('a site employee may add a category too (and sees one added by someone else)', async ({ browser }) => {
+  await account('worker@makin.test', 'سالم (موقع)', 'employee');
+  const name = `فئة من الموقع ${RUN}`;
+  const { ctx, page } = await open(browser, 'worker@makin.test');
+  await go(page, '/expenses?new=1');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: /أضف فئة جديدة/ }).click();
+  await dialog.getByLabel('اسم الفئة الجديدة').fill(name);
+  await dialog.getByRole('button', { name: 'إضافة الفئة واختيارها' }).click();
+  const cat = await until(async () => (await list('expense_categories')).find((c) => c.label === name));
+  check(cat, 'the employee could not add a category');
+  await ctx.close();
+  const admin = await open(browser, 'admin@makin.test');
+  await go(admin.page, '/expenses?new=1');
+  const options = await admin.page.getByRole('dialog').getByLabel('التصنيف').locator('option').allInnerTexts();
+  check(options.includes(name), 'the admin does not see the category the employee added');
+  await remove('expense_categories', cat.id);
+  await admin.ctx.close();
 });
 
 /* ── runner ─────────────────────────────────────────────────────────────────────────────────────────────── */

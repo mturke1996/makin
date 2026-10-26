@@ -17,6 +17,7 @@ import {
   paymentMilestonesService,
   workerAttendanceService,
   suppliersService,
+  customCategoriesService,
   globalFundTransactionsService,
   createExpenseInvoiceAtomic,
   deleteExpenseInvoiceAtomic,
@@ -57,11 +58,12 @@ import { EXPENSE_CLOSED_MESSAGE, isExpenseLocked } from '../core/finance/expense
 import { approvalDecision, approvalFieldsForNew, approvalPatchOnEdit, type ApprovalActor } from '../core/finance/expenseApproval';
 import { buildPrincipal, can } from '../core/access/principal';
 import { useAuthStore } from './useAuthStore';
+import { categoryLabelProblem, customCategoryId, findCategoryByLabel, registerCustomCategories, type CustomExpenseCategory } from '../core/expenseCategories';
 import { SOURCES, mergeById, planFor, sortRecords, type DataKey } from '../core/access/dataPlan';
 import type { Principal } from '../core/access/principal';
 
 type StoreKey = Exclude<DataKey, 'fundTransactions'>;
-const STORE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance', 'suppliers'];
+const STORE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance', 'suppliers', 'customCategories'];
 
 const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: any[], onError?: (e: any) => void) => () => void }> = {
   clients: clientsService,
@@ -80,6 +82,7 @@ const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: an
   paymentMilestones: paymentMilestonesService,
   workerAttendance: workerAttendanceService,
   suppliers: suppliersService,
+  customCategories: customCategoriesService,
 };
 
 /** How long snapshots are gathered before the store is set once for all of them. */
@@ -136,6 +139,8 @@ interface DataState {
   paymentMilestones: PaymentMilestone[];
   workerAttendance: WorkerAttendance[];
   suppliers: Supplier[];
+  /** Expense categories added by the team (also registered in core/expenseCategories for every label lookup). */
+  customCategories: CustomExpenseCategory[];
   isLoading: boolean;
 
   // Initialization
@@ -219,6 +224,12 @@ interface DataState {
   updateSupplier: (id: string, data: Partial<Supplier>) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
 
+  /**
+   * Adds an expense category to the database from inside the expense form and returns its id. A name that already
+   * exists (built in, legacy or added before) gives that category back and writes nothing.
+   */
+  addCustomCategory: (label: string) => Promise<string>;
+
   addSiteReport: (report: SiteReport) => Promise<void>;
   updateSiteReport: (id: string, data: Partial<SiteReport>) => Promise<void>;
   deleteSiteReport: (id: string) => Promise<void>;
@@ -260,13 +271,15 @@ export const useDataStore = create<DataState>((set, get) => ({
   paymentMilestones: [],
   workerAttendance: [],
   suppliers: [],
+  customCategories: [],
   isLoading: true,
 
   reset: () => {
+    registerCustomCategories([]);
     set({
       clients: [], invoices: [], payments: [], expenses: [], expenseInvoices: [], standaloneDebts: [],
       debtParties: [], workers: [], userBalances: [], letters: [], projectPhases: [], boqItems: [],
-      siteReports: [], paymentMilestones: [], workerAttendance: [], suppliers: [], isLoading: true,
+      siteReports: [], paymentMilestones: [], workerAttendance: [], suppliers: [], customCategories: [], isLoading: true,
     });
   },
 
@@ -312,6 +325,11 @@ export const useDataStore = create<DataState>((set, get) => ({
             (rows) => {
               parts[i] = rows;
               const merged = sortRecords(mergeById(parts), SOURCES[key].sort);
+              if (key === 'customCategories') {
+                // The label lookup is filled before anything is drawn from it; rows already on screen are redrawn.
+                registerCustomCategories(merged);
+                if (get().expenses.length > 0) queue({ expenses: [...get().expenses] });
+              }
               queue({ [key]: merged } as Partial<DataState>);
               settle(id);
             },
@@ -671,6 +689,39 @@ export const useDataStore = create<DataState>((set, get) => ({
       toast.error(formatFirebaseError(error));
       throw error;
     }
+  },
+
+  addCustomCategory: async (rawLabel) => {
+    const problem = categoryLabelProblem(rawLabel);
+    if (problem) {
+      toast.error(problem);
+      throw new Error(problem);
+    }
+    const label = rawLabel.trim().replace(/\s+/g, ' ');
+    const existing = findCategoryByLabel(label);
+    if (existing) {
+      toast.success(`الفئة «${existing.label}» موجودة، تم اختيارها`);
+      return existing.id;
+    }
+    const user = useAuthStore.getState().user;
+    const id = customCategoryId(label);
+    const record: CustomExpenseCategory = { id, label, createdAt: new Date().toISOString(), createdBy: user?.id };
+    try {
+      await customCategoriesService.add(record);
+      toast.success(`تمت إضافة الفئة «${label}»`);
+      void writeAuditLog({ summary: `إضافة فئة مصروفات: ${label}` });
+    } catch (error) {
+      // Someone added the same name a moment ago (the id follows from the name): the category is there, use it.
+      const there = await customCategoriesService.getById(id).catch(() => null);
+      if (!there) {
+        toast.error(formatFirebaseError(error));
+        throw error;
+      }
+    }
+    // Shown and usable at once, before the snapshot of the database comes back.
+    registerCustomCategories([...get().customCategories.filter((c) => c.id !== id), record]);
+    set({ customCategories: [...get().customCategories.filter((c) => c.id !== id), record] });
+    return id;
   },
 
   addSiteReport: async (report) => {
