@@ -1,4 +1,5 @@
 import { doc, runTransaction, type Firestore } from 'firebase/firestore';
+import { SLOW_NETWORK_MESSAGE, boundOnline } from './writeAck';
 import { formatReceiptNumber, receiptCounterId } from '../core/finance/receipt';
 
 export interface ReceiptIssuer {
@@ -33,7 +34,7 @@ export async function ensureReceiptNumber(
 
 function allocate(db: Firestore, paymentId: string, issuer: ReceiptIssuer, now: Date) {
   const paymentRef = doc(db, 'payments', paymentId);
-  return runTransaction(db, async (tx) => {
+  return boundOnline(runTransaction(db, async (tx) => {
     const payment = await tx.get(paymentRef);
     if (!payment.exists()) throw new Error('الدفعة غير موجودة');
     const existing = payment.data().receiptNumber;
@@ -49,5 +50,5 @@ function allocate(db: Firestore, paymentId: string, issuer: ReceiptIssuer, now: 
     tx.set(counterRef, { last: next, updatedAt: stamp });
     tx.update(paymentRef, { receiptNumber, receiptIssuedAt: stamp, receiptIssuedBy: issuer.name });
     return { receiptNumber, issued: true };
-  });
+  }), 15000, SLOW_NETWORK_MESSAGE);
 }

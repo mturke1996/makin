@@ -23,6 +23,7 @@ import {
   toConstraints,
 } from '../services/firebaseService';
 import { db } from '../config/firebase';
+import { SLOW_NETWORK_MESSAGE, boundOnline, queuedWrites } from '../services/writeAck';
 import { deleteStorageFileByUrl } from '../services/storageService';
 import type {
   Client,
@@ -139,10 +140,13 @@ const withoutApproval = (data: Partial<Expense>): Partial<Expense> => {
 
 // Helper: toast + in-app activity feed + clearer Firebase error text
 const handleAsync = async (operation: () => Promise<any>, successMessage: string) => {
+  const queuedBefore = queuedWrites();
   try {
     await operation();
-    toast.success(successMessage);
-    useNotificationStore.getState().push({ type: 'success', title: successMessage });
+    // The server had not answered when the change was let go: it is saved on this device and goes up by itself.
+    const message = queuedWrites() > queuedBefore ? `${successMessage}، وسيُرفع تلقائياً عند توفر اتصال جيد` : successMessage;
+    toast.success(message, { duration: queuedWrites() > queuedBefore ? 5000 : undefined });
+    useNotificationStore.getState().push({ type: 'success', title: message });
     void writeAuditLog({ summary: successMessage });
   } catch (error) {
     console.error(error);
@@ -411,7 +415,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       await Promise.all([
         ...relatedExpenses.map(async (item) => {
-          await deleteStorageFileByUrl(item.attachmentUrl);
+          void deleteStorageFileByUrl(item.attachmentUrl);
           await expensesService.delete(item.id);
         }),
         ...relatedPayments.map((item) => paymentsService.delete(item.id)),
@@ -431,7 +435,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       // Fund transactions linked to client (if any)
       try {
-        const fundTxs = await globalFundTransactionsService.getAll();
+        const fundTxs = await boundOnline(globalFundTransactionsService.getAll(), 5000, SLOW_NETWORK_MESSAGE);
         const relatedFund = fundTxs.filter((t) => t.clientId === id);
         await Promise.all(relatedFund.map((t) => globalFundTransactionsService.delete(t.id)));
       } catch {
@@ -546,7 +550,8 @@ export const useDataStore = create<DataState>((set, get) => ({
     await handleAsync(async () => {
       const exp = get().expenses.find((e) => e.id === id);
       if (isExpenseLocked(exp)) throw new Error(EXPENSE_CLOSED_MESSAGE);
-      await deleteStorageFileByUrl(exp?.attachmentUrl);
+      // An old attachment is removed in the background: it must not hold the delete up (and it never fails the delete).
+      void deleteStorageFileByUrl(exp?.attachmentUrl);
       await expensesService.delete(id);
     }, 'تم حذف المصروف نهائياً');
   },
@@ -559,12 +564,12 @@ export const useDataStore = create<DataState>((set, get) => ({
     await handleAsync(() => expenseInvoicesService.update(id, data), 'تم تحديث فاتورة المصروفات');
   },
   deleteExpenseInvoice: async (id) => {
-    await handleAsync(() => deleteExpenseInvoiceAtomic(db, id), 'تم حذف فاتورة المصروفات وإعادة فتح مصروفاتها');
+    await handleAsync(() => boundOnline(deleteExpenseInvoiceAtomic(db, id), 15000, SLOW_NETWORK_MESSAGE), 'تم حذف فاتورة المصروفات وإعادة فتح مصروفاتها');
   },
   createExpenseInvoiceBatch: async ({ clientId, expenseIds, invoiceNumber, notes, createdBy }) => {
-    await handleAsync(() => createExpenseInvoiceAtomic(db, {
+    await handleAsync(() => boundOnline(createExpenseInvoiceAtomic(db, {
       id: crypto.randomUUID(), clientId, expenseIds, invoiceNumber, notes, createdBy,
-    }), 'تم إنشاء فاتورة المصروفات المجمعة');
+    }), 15000, SLOW_NETWORK_MESSAGE), 'تم إنشاء فاتورة المصروفات المجمعة');
   },
 
   // Standalone Debt Actions

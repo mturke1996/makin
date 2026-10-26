@@ -1,4 +1,5 @@
 import { doc, runTransaction, type Firestore } from "firebase/firestore";
+import { SLOW_NETWORK_MESSAGE, boundOnline } from "./writeAck";
 import type { ProjectPhase } from "../types";
 
 /** Retry-safe atomic creation: existing stage records are never overwritten. */
@@ -18,7 +19,7 @@ export async function applyProjectTemplate(
     );
   }
   if (!phases.length) return 0;
-  return runTransaction(db, async (transaction) => {
+  return boundOnline(runTransaction(db, async (transaction) => {
     const client = await transaction.get(doc(db, "clients", clientId));
     if (!client.exists())
       throw new Error("المشروع لم يعد موجودًا. حدّث الصفحة.");
@@ -33,5 +34,5 @@ export async function applyProjectTemplate(
       count++;
     });
     return count;
-  });
+  }), 15000, SLOW_NETWORK_MESSAGE);
 }
