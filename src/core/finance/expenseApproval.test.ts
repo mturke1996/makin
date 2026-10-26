@@ -10,6 +10,7 @@ import {
   expensePhrase,
   matchesApprovalFilter,
   type ApprovalActor,
+  APPROVAL_NOT_ALLOWED,
 } from './expenseApproval';
 
 const approver: ApprovalActor = { id: 'u-acc', name: 'المحاسب', canApprove: true };
@@ -51,7 +52,7 @@ describe('approval decisions', () => {
   });
 
   it('lets only an approver decide', () => {
-    expect(() => approvalDecision('approved', field, NOW)).toThrow('not-allowed');
+    expect(() => approvalDecision('approved', field, NOW)).toThrow(APPROVAL_NOT_ALLOWED);
   });
 });
 

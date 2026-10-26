@@ -50,6 +50,8 @@ export function approvalPatchOnEdit(existing: Pick<Expense, 'approvalStatus'>, a
   return { approvalStatus: 'pending', reviewedBy: cleared, reviewedByName: cleared, reviewedAt: cleared, rejectionReason: cleared };
 }
 
+export const APPROVAL_NOT_ALLOWED = 'اعتماد المصروفات ورفضها لمن يملك صلاحية تعديل كل المصروفات فقط.';
+
 export const REJECTION_REASON_REQUIRED = 'اكتب سبب الرفض ليعرف مُسجّل المصروف ما يصحّحه.';
 
 /** The fields of an approver's decision. A rejection must say why. */
@@ -59,7 +61,7 @@ export function approvalDecision(
   nowIso: string,
   reason?: string,
 ): Partial<Expense> {
-  if (!actor.canApprove) throw new Error('not-allowed');
+  if (!actor.canApprove) throw new Error(APPROVAL_NOT_ALLOWED);
   const base = { approvalStatus: decision, reviewedBy: actor.id, reviewedByName: actor.name, reviewedAt: nowIso };
   if (decision === 'approved') return { ...base, rejectionReason: cleared };
   const why = (reason ?? '').trim();

@@ -6,6 +6,7 @@ import {
   getDocFromCache,
   getDocFromServer,
   deleteDoc,
+  writeBatch,
   setDoc,
   updateDoc,
   runTransaction,
@@ -24,6 +25,8 @@ import { SLOW_NETWORK_MESSAGE, ackOrQueue, boundOnline } from './writeAck';
 
 /** How long a record lookup may take before the write goes ahead on the strength of what this device already holds. */
 const LOOKUP_WAIT_MS = 4000;
+/** A Firestore batch holds at most 500 writes. */
+const BATCH_LIMIT = 450;
 
 export { toConstraints } from '../core/access/constraints';
 export { createExpenseInvoiceAtomic, deleteExpenseInvoiceAtomic } from './expenseInvoiceTransactions';
@@ -132,6 +135,21 @@ export class FirestoreService<T extends { id: string }> {
   async update(id: string, data: Partial<T>): Promise<void> {
     const merged = stripUndefinedFields(data as Record<string, unknown>) as DocumentData;
     await ackOrQueue(updateDoc(await this.resolveRef(id), merged));
+  }
+
+  /**
+   * The same change on several records at once (approving a pile of expenses): ONE atomic batch, one round trip,
+   * all or none, instead of one waiting write after another.
+   */
+  async updateMany(ids: string[], data: Partial<T>): Promise<void> {
+    if (ids.length === 0) return;
+    const merged = stripUndefinedFields(data as Record<string, unknown>) as DocumentData;
+    const refs = await Promise.all(ids.map((id) => this.resolveRef(id)));
+    for (let from = 0; from < refs.length; from += BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      for (const ref of refs.slice(from, from + BATCH_LIMIT)) batch.update(ref, merged);
+      await ackOrQueue(batch.commit());
+    }
   }
 
   // Delete document: the same way. Deleting what is already gone is not an error the person can use.

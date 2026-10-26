@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Add, Check, HourglassEmpty, CancelOutlined, Receipt, Search, TrendingDown } from '../../design-system/icons';
 import { useDataSlice } from '../../stores/useDataStore';
 import { boundOnline } from '../../services/writeAck';
+import { deny } from '../feedback/deny';
 import toast from 'react-hot-toast';
 import { EXPENSE_CLOSED_MESSAGE, expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
 import { approvalCounts, expensePhrase, isAwaitingApproval, matchesApprovalFilter, type ApprovalFilter } from '../../core/finance/expenseApproval';
@@ -166,7 +167,7 @@ export const ExpensesPage = () => {
   const handleSubmit = async (data: ExpenseFormData) => {
     const editing = sheet.edit;
     // The form already offers no way to get here without the right; this keeps a stale screen from writing.
-    if (editing ? !access.canEditExpense(editing) : !canCreate) throw new Error('not-allowed');
+    if (editing ? !access.canEditExpense(editing) : !canCreate) deny();
     if (!editing && !user?.id) {
       toast.error('تعذّر تحديد حسابك، أعد تسجيل الدخول ثم حاول مجدداً');
       throw new Error('no-user');
@@ -247,9 +248,28 @@ export const ExpensesPage = () => {
   };
 
   const waitingToApprove = useMemo(() => filtered.filter((e) => isAwaitingApproval(e) && !isExpenseLocked(e)), [filtered]);
+  // Who is being approved right now: their button waits and says so, and a second press cannot repeat it.
+  const [approving, setApproving] = useState<ReadonlySet<string>>(() => new Set());
+  const approveOne = async (id: string) => {
+    if (approving.has(id)) return;
+    setApproving((s) => new Set(s).add(id));
+    try {
+      await approveExpenses([id]);
+    } catch {
+      /* the store already told the person why */
+    } finally {
+      setApproving((s) => {
+        const next = new Set(s);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
   const approveAllShown = async () => {
     try {
       await approveExpenses(waitingToApprove.map((e) => e.id));
+    } catch {
+      /* the store already told the person why */
     } finally {
       setConfirmAll(false);
     }
@@ -485,7 +505,8 @@ export const ExpensesPage = () => {
                           canEdit={access.canEditExpense(exp)}
                           onOpen={() => openExpense(exp)}
                           onDelete={access.canDeleteExpense(exp) ? () => askDelete(exp) : undefined}
-                          onApprove={canApprove && !isExpenseLocked(exp) ? () => void approveExpenses([exp.id]) : undefined}
+                          onApprove={canApprove && !isExpenseLocked(exp) ? () => void approveOne(exp.id) : undefined}
+                          approving={approving.has(exp.id)}
                         />
                       ))}
                     </StickyGroup>

@@ -106,7 +106,7 @@ export function HomePage() {
         },
         t,
       }),
-    [invoices, payments, clients, standaloneDebts, listable, projectPhases, paymentMilestones, user?.id, myFundStats, gates, t]
+    [invoices, payments, clients, standaloneDebts, listable, expenses.length, projectPhases, paymentMilestones, user?.id, myFundStats, gates, t]
   );
 
   const firstName = user?.displayName?.trim().split(/\s+/)[0] || '';

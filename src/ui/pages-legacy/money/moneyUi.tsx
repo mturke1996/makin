@@ -59,6 +59,8 @@ interface MoneyRowProps {
   onDelete?: () => void;
   /** Extra desktop-only actions rendered before edit/delete (e.g. attachment link). */
   desktopActions?: ReactNode;
+  /** A full-width action under the row on phones (where the desktop actions are not shown), e.g. «اعتماد». */
+  phoneAction?: ReactNode;
   editLabel?: string;
   deleteLabel?: string;
   /** The desktop button that opens the row. A pencil by default; pass an eye for a row that opens read-only. */
@@ -66,7 +68,7 @@ interface MoneyRowProps {
 }
 
 export function MoneyRow({
-  leading, title, subtitle, note, meta, trailing, onOpen, onDelete, desktopActions,
+  leading, title, subtitle, note, meta, trailing, onOpen, onDelete, desktopActions, phoneAction,
   editLabel = 'تعديل', deleteLabel = 'حذف', openIcon,
 }: MoneyRowProps) {
   const body = (
@@ -82,7 +84,7 @@ export function MoneyRow({
     </>
   );
   const bodyClass = 'flex min-h-[4.5rem] min-w-0 flex-1 items-center gap-3 px-4 py-3.5 text-start';
-  return (
+  const row = (
     <div className="flex items-stretch transition-colors duration-fast ease-out hover:bg-surface-hover">
       {onOpen ? (
         <button
@@ -108,6 +110,13 @@ export function MoneyRow({
           </IconButton>
         )}
       </div>
+    </div>
+  );
+  if (!phoneAction) return row;
+  return (
+    <div>
+      {row}
+      <div className="px-4 pb-3 sm:hidden">{phoneAction}</div>
     </div>
   );
 }

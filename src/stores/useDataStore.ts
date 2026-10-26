@@ -529,22 +529,38 @@ export const useDataStore = create<DataState>((set, get) => ({
     }, 'تم تحديث المصروف');
   },
   approveExpenses: async (ids) => {
-    const targets = get().expenses.filter((e) => ids.includes(e.id) && !isExpenseLocked(e));
-    if (targets.length === 0) return;
+    const wanted = get().expenses.filter((e) => ids.includes(e.id));
+    const targets = wanted.filter((e) => !isExpenseLocked(e));
+    // Never a silent no-op: a press that cannot do anything says why.
+    if (targets.length === 0) {
+      const reason = wanted.length === 0 ? 'لم يُعثر على المصروف. حدّث الصفحة ثم حاول مجدداً.' : EXPENSE_CLOSED_MESSAGE;
+      toast.error(reason);
+      throw new Error(reason);
+    }
     const message = targets.length === 1 ? `تم اعتماد المصروف «${targets[0].description}»` : `تم اعتماد ${targets.length} مصروفاً`;
     await handleAsync(async () => {
       const now = new Date().toISOString();
       const decision = approvalDecision('approved', approvalActor(), now);
-      for (const e of targets) await expensesService.update(e.id, { ...decision, updatedAt: now });
+      await expensesService.updateMany(targets.map((e) => e.id), { ...decision, updatedAt: now });
     }, message);
   },
   rejectExpense: async (id, reason) => {
     const target = get().expenses.find((e) => e.id === id);
-    if (!target) throw new Error('المصروف غير موجود');
-    if (isExpenseLocked(target)) throw new Error(EXPENSE_CLOSED_MESSAGE);
+    // Every refusal says why (a press that does nothing is the worst answer), then the caller keeps its form open.
+    const refuse = (message: string): never => {
+      toast.error(message);
+      throw new Error(message);
+    };
+    if (!target) refuse('لم يُعثر على المصروف. حدّث الصفحة ثم حاول مجدداً.');
+    if (isExpenseLocked(target)) refuse(EXPENSE_CLOSED_MESSAGE);
     const now = new Date().toISOString();
-    const decision = approvalDecision('rejected', approvalActor(), now, reason);
-    await handleAsync(() => expensesService.update(id, { ...decision, updatedAt: now }), `تم رفض المصروف «${target.description}»`);
+    let decision: Partial<Expense>;
+    try {
+      decision = approvalDecision('rejected', approvalActor(), now, reason);
+    } catch (error) {
+      return refuse(error instanceof Error ? error.message : 'تعذّر رفض المصروف');
+    }
+    await handleAsync(() => expensesService.update(id, { ...decision, updatedAt: now }), `تم رفض المصروف «${target!.description}»`);
   },
   deleteExpense: async (id) => {
     await handleAsync(async () => {

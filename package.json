@@ -15,6 +15,7 @@
     "emulators": "npx -y firebase-tools@15.15.0 emulators:start --only auth,firestore,storage --project demo-makin",
     "seed:emulators": "node scripts/dev/seed-emulators.mjs",
     "dev:emulators": "vite --mode emulators",
+    "test:e2e": "node tests/e2e/money.e2e.cjs",
     "test:rules": "npx -y firebase-tools@15.15.0 emulators:exec --only firestore,storage --project demo-saas-rules \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {

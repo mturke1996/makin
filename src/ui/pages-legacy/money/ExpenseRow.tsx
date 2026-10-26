@@ -1,6 +1,6 @@
 import { AttachFile, Check, PersonOutline, Shield, VisibilityOutlined } from '../../../design-system/icons';
 import { isAwaitingApproval } from '../../../core/finance/expenseApproval';
-import { Amount, Avatar, Badge } from '../../../design-system/primitives';
+import { Amount, Avatar, Badge, Button } from '../../../design-system/primitives';
 import {
   expenseHasQuantityLine,
   formatCurrencyDisplay,
@@ -29,9 +29,11 @@ interface Props {
   onDelete?: () => void;
   /** Given to someone who may approve: a waiting expense then offers a one-press approval on wide screens. */
   onApprove?: () => void;
+  /** The approval is on its way: the buttons wait and say so, so a second press cannot repeat it. */
+  approving?: boolean;
 }
 
-export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, canEdit, onOpen, onDelete, onApprove }: Props) {
+export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, canEdit, onOpen, onDelete, onApprove, approving = false }: Props) {
   const author = e.createdBy || (authorRole === 'employee' ? 'موظف' : 'الإدارة');
   const hasQty = expenseHasQuantityLine({ quantity: e.quantity, unitPrice: e.unitPrice });
 
@@ -85,17 +87,34 @@ export function ExpenseRow({ expense: e, clientName, showAuthor, authorRole, can
       openIcon={canEdit ? undefined : <VisibilityOutlined sx={{ fontSize: 20 }} />}
       editLabel={canEdit ? `تعديل مصروف ${e.description}` : `عرض مصروف ${e.description}`}
       deleteLabel={`حذف مصروف ${e.description}`}
+      phoneAction={
+        onApprove && isAwaitingApproval(e) ? (
+          <Button
+            size="sm"
+            variant="outline"
+            block
+            loading={approving}
+            leftIcon={<Check sx={{ fontSize: 18 }} />}
+            onClick={onApprove}
+            aria-label={`اعتماد مصروف ${e.description}`}
+          >
+            اعتماد
+          </Button>
+        ) : undefined
+      }
       desktopActions={
         <>
           {onApprove && isAwaitingApproval(e) && (
             <button
               type="button"
               onClick={onApprove}
+              disabled={approving}
+              aria-busy={approving || undefined}
               aria-label={`اعتماد مصروف ${e.description}`}
               title="اعتماد"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-success-ink transition-colors duration-fast ease-out hover:bg-success-soft focus:outline-none focus-visible:shadow-focus"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-success-ink transition-colors duration-fast ease-out hover:bg-success-soft focus:outline-none focus-visible:shadow-focus disabled:opacity-50"
             >
-              <Check sx={{ fontSize: 20 }} />
+              {approving ? <span aria-hidden className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-e-transparent" /> : <Check sx={{ fontSize: 20 }} />}
             </button>
           )}
           {e.attachmentUrl && (

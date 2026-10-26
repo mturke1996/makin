@@ -21,6 +21,7 @@ import { ExpenseInvoiceDetailSheet } from './money/ExpenseInvoiceDetailSheet';
 import { ExpenseInvoiceSheet, type ExpenseInvoiceInput } from './money/ExpenseInvoiceSheet';
 import { ConfirmDeleteModal, FigureStripSkeleton, ListSkeleton, MoneyRow } from './money/moneyUi';
 import { sumAmounts } from './money/moneyUtils';
+import { deny } from '../feedback/deny';
 
 const STATUS: Record<ExpenseInvoice['status'], { label: string; tone: 'success' | 'info' | 'neutral' }> = {
   saved: { label: 'محفوظة', tone: 'success' },
@@ -57,7 +58,7 @@ export function ExpenseInvoicesPage() {
   const bundled = rows.reduce((n, r) => n + r.count, 0);
 
   const handleCreate = async (input: ExpenseInvoiceInput) => {
-    if (!canManage) throw new Error('not-allowed');
+    if (!canManage) deny();
     await createExpenseInvoiceBatch({ ...input, createdBy: user?.displayName || 'المستخدم' });
   };
 

@@ -129,3 +129,10 @@ Sign in with `admin@makin.test` / `Makin#1234`. All data is invented and lives o
 - Icons: Phosphor, one Regular weight (`src/design-system/icons.tsx`, same names the screens already used).
 - Palette follows Linda Shop (deep ink `#1F2633`, gold `#C9972B`, warm neutrals), Cairo font.
 - Regenerate icons: `node scripts/generate-brand-assets.cjs`. Regenerate PDFs: `PHOSPHOR_DIR=<@phosphor-icons/core>/assets/regular node scripts/generate-brand-pdfs.cjs`.
+
+### Tests
+
+- `npm test`: unit and screen tests (fast, no network).
+- `npm run test:rules`: the Firestore and Storage rules against the emulator.
+- `npm run test:e2e`: the money screens in a real browser against the real rules (approve, reject, add, delete, offline).
+  Start `npm run emulators`, run `npm run seed:emulators` once, then `npm run dev:emulators`, and run it in another terminal.

@@ -20,6 +20,7 @@ import { WorkerProfileSheet } from './WorkerProfileSheet';
 import { WorkersSheet } from './WorkersSheet';
 import { formatDay } from './format';
 import type { WorkerEntry, WorkerFormValues, WorkerPaymentValues } from './types';
+import { deny } from '../../../feedback/deny';
 
 /**
  * حالة نافذة عابرة: تبقى قيمتها بعد الإغلاق ليكتمل أنيميشن الخروج، ويتغيّر `session`
@@ -124,7 +125,7 @@ export function WorkersFlow({
   const openWorkerForm = (edit: Worker | null, itemize = false) => form.show({ edit, itemize, operationId: crypto.randomUUID(), createdAt: new Date().toISOString() });
 
   const saveWorker = async (values: WorkerFormValues) => {
-    if (!canManage) throw new Error('not-allowed');
+    if (!canManage) deny();
     const now = new Date().toISOString();
     const edit = form.value?.edit ?? null;
     const fields = {
@@ -174,7 +175,7 @@ export function WorkersFlow({
     if (!target || !worker) return;
     const edit = target.edit?.expense ?? null;
     // لا يعرض الواجهة طريقاً إلى هنا دون الصلاحية؛ هذا يمنع شاشة قديمة من الكتابة.
-    if (edit ? !access.canEditExpense(edit) : !canManage || !user?.id) throw new Error('not-allowed');
+    if (edit ? !access.canEditExpense(edit) : !canManage || !user?.id) deny();
     const now = new Date().toISOString();
     if (edit) {
       // المالك (userId, createdBy) يُحدَّد عند الإنشاء فقط: القواعد ترفض تغيير المالك.
@@ -215,7 +216,7 @@ export function WorkersFlow({
 
   /** The supervisor approves how much of the work is done; it is what payments are measured against. */
   const saveProgress = async (percent: number) => {
-    if (!canManage || !selected) throw new Error('not-allowed');
+    if (!canManage || !selected) deny();
     const now = new Date().toISOString();
     await updateWorker(
       selected.worker.id,
