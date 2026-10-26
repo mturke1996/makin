@@ -12,7 +12,7 @@ vi.mock('../services/firebaseService', () => {
     clientsService: service(), invoicesService: service({ update: h.updateInvoice }), paymentsService: service({ delete: h.deletePayment, add: h.addPayment }),
     expensesService: service({ update: h.updateExpense, updateMany: h.updateManyExpenses }), standaloneDebtsService: service(), debtPartiesService: service(), expenseInvoicesService: service(),
     workersService: service(), userBalancesService: service(), lettersService: service(), projectPhasesService: service(),
-    boqItemsService: service(), siteReportsService: service(), paymentMilestonesService: service(), workerAttendanceService: service(), suppliersService: service(), globalFundTransactionsService: service(),
+    boqItemsService: service(), siteReportsService: service(), paymentMilestonesService: service(), workerAttendanceService: service(), suppliersService: service(), customCategoriesService: service(), globalFundTransactionsService: service(),
     createExpenseInvoiceAtomic: vi.fn(), deleteExpenseInvoiceAtomic: vi.fn(), toConstraints: () => [],
   };
 });

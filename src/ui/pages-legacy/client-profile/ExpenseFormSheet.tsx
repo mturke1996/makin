@@ -26,6 +26,7 @@ import { ExpenseReviewPanel } from '../money/ExpenseReviewPanel';
 import { PriceHint } from '../money/PriceHint';
 import { SupplierField } from '../money/SupplierField';
 import { useSupplierPicker } from '../money/useSupplierPicker';
+import { NewCategoryLink } from '../../expense-category/NewCategory';
 import { isoDay } from './ledgerUtils';
 import { expenseSchema, type ExpenseFormValues } from './schemas';
 import type { FundStats, UserBalanceInfo } from './types';
@@ -245,6 +246,7 @@ export function ExpenseFormSheet({
             />
           )}
         </div>
+        {!readOnlyNotice && <NewCategoryLink onCreated={(id) => setValue('category', id, { shouldDirty: true, shouldValidate: true })} />}
         {clientPhases.length > 0 && (
           <Controller
             name="phaseId"

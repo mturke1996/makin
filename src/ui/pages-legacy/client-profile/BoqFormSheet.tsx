@@ -3,7 +3,7 @@ import { Input } from '../../../design-system/primitives';
 import { BOQ_UNITS, type BoqLineItem, type ProjectPhase } from '../../../types';
 import { BOQ_UNIT_LABELS } from '../../../features/export/excelExport';
 import { computeBoqLineTotal } from '../../../core/finance/projectBudget';
-import { CONSTRUCTION_EXPENSE_CATEGORIES, EXPENSE_CATEGORY_GROUPS } from '../../../core/expenseCategories';
+import { allExpenseCategories, EXPENSE_CATEGORY_GROUPS } from '../../../core/expenseCategories';
 import {
   FormSheetShell,
   FormSection,
@@ -64,7 +64,7 @@ export function BoqFormSheet({ edit, phases, onClose, onSubmit }: BoqFormSheetPr
                 <option value="">بدون تصنيف</option>
                 {EXPENSE_CATEGORY_GROUPS.map((group) => (
                   <optgroup key={group.id} label={group.label}>
-                    {CONSTRUCTION_EXPENSE_CATEGORIES.filter((c) => c.group === group.id).map((c) => (
+                    {allExpenseCategories().filter((c) => c.group === group.id).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.label}
                       </option>

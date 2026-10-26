@@ -18,6 +18,7 @@ import {
   FirestoreError,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import type { CustomExpenseCategory } from '../core/expenseCategories';
 import type { Client, Invoice, Payment, StandaloneDebt, Expense, ExpenseInvoice, DebtParty, Worker, UserBalance, GlobalFundTransaction, Letter, ProjectPhase, BoqLineItem, AuditLogEntry, SiteReport, PaymentMilestone, WorkerAttendance, Supplier } from '../types';
 import { SLOW_NETWORK_MESSAGE, boundOnline, confirmWrite } from './writeAck';
 
@@ -181,6 +182,7 @@ export const projectPhasesService = new FirestoreService<ProjectPhase>('project_
 export const boqItemsService = new FirestoreService<BoqLineItem>('boq_items');
 export const paymentMilestonesService = new FirestoreService<PaymentMilestone>('payment_milestones');
 export const suppliersService = new FirestoreService<Supplier>('suppliers');
+export const customCategoriesService = new FirestoreService<CustomExpenseCategory>('expense_categories');
 export const workerAttendanceService = new FirestoreService<WorkerAttendance>('worker_attendance');
 export const auditLogsService = new FirestoreService<AuditLogEntry>('audit_logs');
 export const siteReportsService = new FirestoreService<SiteReport>('site_reports');

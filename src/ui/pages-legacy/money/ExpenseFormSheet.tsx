@@ -27,6 +27,7 @@ import { PriceHint } from './PriceHint';
 import { SupplierField } from './SupplierField';
 import { useSupplierPicker } from './useSupplierPicker';
 import { isoDay } from './moneyUtils';
+import { NewCategoryLink } from '../../expense-category/NewCategory';
 
 export interface ExpenseFormData {
   description: string;
@@ -274,6 +275,7 @@ export function ExpenseFormSheet({ open, edit, clients, phases = [], userId, fun
                 onChange={(e) => set('date', e.target.value)}
               />
             </div>
+            {!readOnlyNotice && <NewCategoryLink onCreated={(id) => set('category', id)} />}
           </FormSection>
 
           {(!readOnlyNotice || form.qtyOpen) && (

@@ -134,5 +134,5 @@ Sign in with `admin@makin.test` / `Makin#1234`. All data is invented and lives o
 
 - `npm test`: unit and screen tests (fast, no network).
 - `npm run test:rules`: the Firestore and Storage rules against the emulator.
-- `npm run test:e2e`: the money screens in a real browser against the real rules (approve, reject, add, delete, several entries in a row, offline refusal, slow network).
+- `npm run test:e2e`: the money screens in a real browser against the real rules (approve, reject, add, delete, several entries in a row, offline refusal, slow network, adding a new expense category).
   Start `npm run emulators`, run `npm run seed:emulators` once, then `npm run dev:emulators`, and run it in another terminal.

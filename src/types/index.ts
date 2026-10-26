@@ -183,7 +183,8 @@ export interface Payment {
 import { ACTIVE_EXPENSE_CATEGORY_IDS } from '../core/expenseCategories';
 export const EXPENSE_CATEGORIES = [...ACTIVE_EXPENSE_CATEGORY_IDS, 'marketing', 'government_fees', 'office_supplies'] as const;
 
-export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+/** A built-in id, a legacy one, or `custom_…` for a category the team added (see core/expenseCategories). */
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number] | (string & {});
 
 export interface Expense {
   id: string;

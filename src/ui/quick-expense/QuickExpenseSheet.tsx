@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Input, Sheet, Amount } from '../../design-system/primitives';
 import {
-  ACTIVE_EXPENSE_CATEGORY_IDS,
+  expenseCategories,
   getExpenseCategoryDefaultUnit,
   getExpenseCategoryLabel,
 } from '../../core/expenseCategories';
@@ -60,9 +60,7 @@ export default function QuickExpenseSheet({
         clientId: initialClientId ?? '',
         category:
           prefs.category &&
-          ACTIVE_EXPENSE_CATEGORY_IDS.includes(
-            prefs.category as (typeof ACTIVE_EXPENSE_CATEGORY_IDS)[number],
-          )
+          expenseCategories[prefs.category]
             ? prefs.category
             : DEFAULT_CATEGORY,
         mode: 'amount',

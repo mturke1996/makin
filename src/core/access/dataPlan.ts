@@ -28,6 +28,7 @@ export type DataKey =
   | 'paymentMilestones'
   | 'workerAttendance'
   | 'suppliers'
+  | 'customCategories'
   | 'fundTransactions';
 
 export interface WhereSpec {
@@ -61,6 +62,7 @@ export const SOURCES: Record<DataKey, SourceDef> = {
   paymentMilestones: { collection: 'payment_milestones', sort: { field: 'order', dir: 'asc' } },
   workerAttendance: { collection: 'worker_attendance', sort: { field: 'date', dir: 'desc' } },
   suppliers: { collection: 'suppliers', sort: { field: 'name', dir: 'asc' } },
+  customCategories: { collection: 'expense_categories', sort: { field: 'createdAt', dir: 'asc' } },
   fundTransactions: { collection: 'global_fund_transactions', sort: { field: 'createdAt', dir: 'desc' } },
 };
 
@@ -109,7 +111,9 @@ export function queriesFor(p: Principal | null | undefined, key: DataKey): Query
     case 'workerAttendance':
       return whole(can(p, 'workers.view'));
     // Whoever records expenses picks the supplier, so they read the directory; the statements need every expense.
+    // The team's own expense categories are needed wherever an expense is picked or read.
     case 'suppliers':
+    case 'customCategories':
       return whole(can(p, 'expenses.create') || can(p, 'expenses.view.all'));
     case 'projectPhases':
     case 'boqItems':
