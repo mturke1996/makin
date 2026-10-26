@@ -1,7 +1,8 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Add, Check, HourglassEmpty, CancelOutlined, Receipt, Search, TrendingDown } from '../../design-system/icons';
 import { useDataSlice } from '../../stores/useDataStore';
+import { boundOnline } from '../../services/writeAck';
 import toast from 'react-hot-toast';
 import { EXPENSE_CLOSED_MESSAGE, expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
 import { approvalCounts, expensePhrase, isAwaitingApproval, matchesApprovalFilter, type ApprovalFilter } from '../../core/finance/expenseApproval';
@@ -48,6 +49,9 @@ import { useVisibleCount } from './client-profile/activity/useVisibleCount';
  * totals) their own expenses and the page says so ("مصروفاتي"); someone with `expenses.view.all`
  * sees everyone's, with who recorded each one taken from the users directory.
  */
+/** A new expense needs the server's confirmation (it is recorded once or not at all); the form waits this long for it. */
+const NEW_EXPENSE_WAIT_MS = 15000;
+
 export const ExpensesPage = () => {
   const navigate = useNavigate();
   const access = useAccess();
@@ -144,7 +148,10 @@ export const ExpensesPage = () => {
   const months = trend.flow.months.length;
   const entries = (n: number) => (n === 1 ? 'سجل واحد' : n === 2 ? 'سجلان' : n >= 3 && n <= 10 ? `${n} سجلات` : `${n} سجلاً`);
 
-  const openAdd = () => setSheet({ open: true, edit: null });
+  // One new expense keeps ONE operation (id and time) for as long as its form is open: pressing «save» again after a slow
+  // answer repeats the same operation (the server refuses to record it twice) instead of adding a second expense.
+  const operation = useRef<{ id: string; createdAt: string } | undefined>(undefined);
+  const openAdd = () => { operation.current = undefined; setSheet({ open: true, edit: null }); };
   // Every row opens: an expense the person may not change (closed, or not theirs) opens read-only with the reason.
   const openExpense = (e: Expense) => setSheet({ open: true, edit: e });
   const askDelete = (e: Expense) => {
@@ -154,7 +161,7 @@ export const ExpensesPage = () => {
     }
     setPendingDelete(e);
   };
-  const closeSheet = () => setSheet((s) => ({ ...s, open: false }));
+  const closeSheet = () => { operation.current = undefined; setSheet((s) => ({ ...s, open: false })); };
 
   const handleSubmit = async (data: ExpenseFormData) => {
     const editing = sheet.edit;
@@ -164,7 +171,9 @@ export const ExpensesPage = () => {
       toast.error('تعذّر تحديد حسابك، أعد تسجيل الدخول ثم حاول مجدداً');
       throw new Error('no-user');
     }
-    const expenseId = editing?.id || crypto.randomUUID();
+    // The id AND the creation time belong to the operation: a repeat must carry exactly what the first one did.
+    if (!editing) operation.current ??= { id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    const expenseId = editing?.id || operation.current!.id;
     // quantity x price is optional; zeros clear a line that existed before
     const qtyFields =
       data.quantity != null
@@ -189,14 +198,25 @@ export const ExpensesPage = () => {
       // The owner (`userId`) is set once, at creation: the rules refuse a change of owner.
       await updateExpense(editing.id, payload);
     } else {
-      await addExpense({
-        id: expenseId,
-        ...payload,
-        isClosed: false,
-        createdAt: new Date().toISOString(),
-        userId: user!.id,
-        createdBy: user?.displayName || 'غير معروف',
-      });
+      try {
+        await boundOnline(
+          addExpense({
+            id: expenseId,
+            ...payload,
+            isClosed: false,
+            createdAt: operation.current!.createdAt,
+            userId: user!.id,
+            createdBy: user?.displayName || 'غير معروف',
+          }),
+          NEW_EXPENSE_WAIT_MS,
+          'تأخر تأكيد الحفظ بسبب بطء الاتصال. اضغط «حفظ» مجدداً: لن يُسجَّل المصروف مرتين.',
+        );
+        operation.current = undefined;
+      } catch (error) {
+        // The store already told the person about its own refusals; the slow-answer message is ours to show.
+        if ((error as { code?: string })?.code === 'deadline-exceeded') toast.error((error as Error).message);
+        throw error;
+      }
     }
   };
 
