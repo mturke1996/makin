@@ -12,7 +12,7 @@ vi.mock('../../../services/storageService', () => ({ deleteStorageFileByUrl: vi.
 vi.mock('../../../services/firebaseService', () => {
   const service = (extra: Record<string, unknown> = {}) => ({ subscribe: () => () => undefined, add: vi.fn(), update: vi.fn(), delete: vi.fn(), ...extra });
   return {
-    clientsService: service(), invoicesService: service(), paymentsService: service(), expensesService: service({ update: h.update, updateMany: h.updateMany, delete: h.remove, addConfirmedOnce: vi.fn() }),
+    clientsService: service(), invoicesService: service(), paymentsService: service(), expensesService: service({ update: h.update, updateMany: h.updateMany, delete: h.remove, add: vi.fn() }),
     standaloneDebtsService: service(), debtPartiesService: service(), expenseInvoicesService: service(), workersService: service(), userBalancesService: service(),
     lettersService: service(), projectPhasesService: service(), boqItemsService: service(), siteReportsService: service(), paymentMilestonesService: service(),
     workerAttendanceService: service(), suppliersService: service(), globalFundTransactionsService: service(),
@@ -71,7 +71,7 @@ describe('approving an expense', () => {
     expect(ids).toEqual(['1']);
     expect(patch).toMatchObject(approvedPatch);
     expect(typeof patch.reviewedAt).toBe('string');
-    expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('تم اعتماد المصروف «بند 1»'), expect.anything());
+    expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('تم اعتماد المصروف «بند 1»'));
     expect(h.toast.error).not.toHaveBeenCalled();
   });
 
@@ -179,7 +179,7 @@ describe('deleting an expense', () => {
     await act(async () => [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'حذف المصروف')!.click());
     await flush();
     expect(h.remove).toHaveBeenCalledWith('1');
-    expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('تم حذف المصروف'), expect.anything());
+    expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('تم حذف المصروف'));
   });
 
   it('keeps it and says why when the server refuses', async () => {

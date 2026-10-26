@@ -1,6 +1,5 @@
 import type { Expense, ProjectPhase } from '../../types';
-import type { QuickDraft } from './quickDraft';
-import { localISODate } from './quickExpenseLogic';
+import { localISODate, type QuickForm } from './quickExpenseLogic';
 import { sumMoney, subtractMoney } from '../../core/finance/money';
 
 /** Copy business inputs only; the owner, operation ID, date and paper invoice are reviewed anew. */
@@ -9,7 +8,7 @@ export function repeatExpenseDraft(
   phases: readonly ProjectPhase[],
   canUsePhases: boolean,
   now = new Date(),
-): Partial<QuickDraft> {
+): Partial<QuickForm> {
   const hasQuantity = expense.quantity > 0 && expense.unitPrice > 0;
   return {
     clientId: expense.clientId,

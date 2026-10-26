@@ -4,7 +4,6 @@ import {
   getDocs,
   getDoc,
   getDocFromCache,
-  getDocFromServer,
   deleteDoc,
   writeBatch,
   setDoc,
@@ -20,8 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { Client, Invoice, Payment, StandaloneDebt, Expense, ExpenseInvoice, DebtParty, Worker, UserBalance, GlobalFundTransaction, Letter, ProjectPhase, BoqLineItem, AuditLogEntry, SiteReport, PaymentMilestone, WorkerAttendance, Supplier } from '../types';
-import { addExpenseConfirmedOnce } from './expenseTransactions';
-import { SLOW_NETWORK_MESSAGE, ackOrQueue, boundOnline } from './writeAck';
+import { SLOW_NETWORK_MESSAGE, boundOnline, confirmWrite } from './writeAck';
 
 /** How long a record lookup may take before the write goes ahead on the strength of what this device already holds. */
 const LOOKUP_WAIT_MS = 4000;
@@ -90,19 +88,13 @@ export class FirestoreService<T extends { id: string }> {
     return null;
   }
 
-  /** Only a server response can settle an expense whose earlier write timed out. */
-  async getConfirmedById(id: string): Promise<T | null> {
-    const snapshot = await getDocFromServer(doc(db, this.collectionName, id));
-    return snapshot.exists() ? { ...snapshot.data(), id: snapshot.id } as T : null;
-  }
-
-  // Add document — uses setDoc with the provided id so Firestore doc ID matches app ID.
-  // The change is on this device at once; the screen waits for the server only briefly (see writeAck).
+  // Add document — uses setDoc with the provided id so Firestore doc ID matches app ID (a retry rewrites the same record).
+  // The screen shows the change at once; the button waits for the server's answer, within limits (see writeAck).
   async add(data: any): Promise<string> {
     const id = data.id || crypto.randomUUID();
     const docRef = doc(db, this.collectionName, id);
     const payload = stripUndefinedFields({ ...data, id }) as DocumentData;
-    await ackOrQueue(setDoc(docRef, payload));
+    await confirmWrite(() => setDoc(docRef, payload));
     return id;
   }
 
@@ -131,10 +123,10 @@ export class FirestoreService<T extends { id: string }> {
     return doc(db, this.collectionName, found.docs[0].id);
   }
 
-  // Update document: found without waiting for the network, written to this device at once.
+  // Update document: found without waiting for the network, shown at once, confirmed by the server.
   async update(id: string, data: Partial<T>): Promise<void> {
     const merged = stripUndefinedFields(data as Record<string, unknown>) as DocumentData;
-    await ackOrQueue(updateDoc(await this.resolveRef(id), merged));
+    await confirmWrite(async () => updateDoc(await this.resolveRef(id), merged));
   }
 
   /**
@@ -144,17 +136,19 @@ export class FirestoreService<T extends { id: string }> {
   async updateMany(ids: string[], data: Partial<T>): Promise<void> {
     if (ids.length === 0) return;
     const merged = stripUndefinedFields(data as Record<string, unknown>) as DocumentData;
-    const refs = await Promise.all(ids.map((id) => this.resolveRef(id)));
-    for (let from = 0; from < refs.length; from += BATCH_LIMIT) {
-      const batch = writeBatch(db);
-      for (const ref of refs.slice(from, from + BATCH_LIMIT)) batch.update(ref, merged);
-      await ackOrQueue(batch.commit());
-    }
+    await confirmWrite(async () => {
+      const refs = await Promise.all(ids.map((id) => this.resolveRef(id)));
+      for (let from = 0; from < refs.length; from += BATCH_LIMIT) {
+        const batch = writeBatch(db);
+        for (const ref of refs.slice(from, from + BATCH_LIMIT)) batch.update(ref, merged);
+        await batch.commit();
+      }
+    });
   }
 
   // Delete document: the same way. Deleting what is already gone is not an error the person can use.
   async delete(id: string): Promise<void> {
-    await ackOrQueue(deleteDoc(await this.resolveRef(id)));
+    await confirmWrite(async () => deleteDoc(await this.resolveRef(id)));
   }
 
   /** Used by agreement editors: a stale form must never overwrite a colleague's history. */
@@ -175,11 +169,7 @@ export class FirestoreService<T extends { id: string }> {
 export const clientsService = new FirestoreService<Client>('clients');
 export const invoicesService = new FirestoreService<Invoice>('invoices');
 export const paymentsService = new FirestoreService<Payment>('payments');
-class ExpensesFirestoreService extends FirestoreService<Expense> {
-  constructor() { super('expenses'); }
-  addConfirmedOnce(expense: Expense): Promise<string> { return addExpenseConfirmedOnce(db, expense); }
-}
-export const expensesService = new ExpensesFirestoreService();
+export const expensesService = new FirestoreService<Expense>('expenses');
 export const standaloneDebtsService = new FirestoreService<StandaloneDebt>('standalone_debts');
 export const debtPartiesService = new FirestoreService<DebtParty>('debt_parties');
 export const expenseInvoicesService = new FirestoreService<ExpenseInvoice>('expense_invoices');

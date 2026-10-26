@@ -19,42 +19,47 @@ vi.mock('../services/firebaseService', () => {
 
 import { useDataStore } from './useDataStore';
 import { useAuthStore } from './useAuthStore';
-import { ackOrQueue, setLateFailureReporter } from '../services/writeAck';
+import { confirmWrite } from '../services/writeAck';
 
 beforeEach(() => {
   vi.useFakeTimers();
   Object.values(h.toast).forEach((f) => f.mockReset());
   h.deletePayment.mockReset(); h.addPayment.mockReset(); h.updateInvoice.mockReset();
-  setLateFailureReporter(vi.fn());
+  vi.stubGlobal('navigator', { onLine: true });
   useDataStore.setState({ payments: [{ id: 'p1', invoiceId: '', clientId: 'c1', amount: 5 } as never], invoices: [] });
 });
-afterEach(() => { vi.useRealTimers(); setLateFailureReporter(null); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('what a save says', () => {
   it('says plainly that it is done when the server answered', async () => {
     h.deletePayment.mockResolvedValue(undefined);
     await useDataStore.getState().deletePayment('p1');
-    expect(h.toast.success).toHaveBeenCalledWith('تم حذف الدفعة', { duration: undefined });
+    expect(h.toast.success).toHaveBeenCalledWith('تم حذف الدفعة');
   });
 
-  it('says that it is saved on the device and will go up by itself when the server was silent', async () => {
-    h.deletePayment.mockImplementation(() => ackOrQueue(new Promise(() => undefined)));
-    const done = useDataStore.getState().deletePayment('p1');
-    await vi.advanceTimersByTimeAsync(7000);
-    await done;
-    expect(h.toast.success).toHaveBeenCalledOnce();
-    expect(h.toast.success.mock.calls[0][0]).toContain('تم حذف الدفعة');
-    expect(h.toast.success.mock.calls[0][0]).toContain('سيُرفع تلقائياً');
-    expect(h.toast.error).not.toHaveBeenCalled();
+  it('a button never waits for ever: with a silent server the action ends in a clear error', async () => {
+    h.addPayment.mockImplementation(() => confirmWrite(() => new Promise(() => undefined)));
+    const done = useDataStore.getState().addPayment({ id: 'p9', invoiceId: '', clientId: 'c1', amount: 1 } as never);
+    const assertion = expect(done).rejects.toMatchObject({ code: 'slow-network' });
+    await vi.advanceTimersByTimeAsync(11000);
+    await assertion;
+    expect(h.toast.error).toHaveBeenCalledOnce();
+    expect(h.toast.success).not.toHaveBeenCalled();
   });
 
-  it('a button never waits for ever: the action settles even if the server never answers', async () => {
-    h.addPayment.mockImplementation(() => ackOrQueue(new Promise(() => undefined)));
-    let settled = false;
-    const done = useDataStore.getState().addPayment({ id: 'p9', invoiceId: '', clientId: 'c1', amount: 1 } as never).then(() => { settled = true; });
-    await vi.advanceTimersByTimeAsync(10000);
-    await done;
-    expect(settled).toBe(true);
+  it('offline: nothing is written, and the person is told so at once', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    h.addPayment.mockImplementation(() => confirmWrite(() => Promise.resolve()));
+    await expect(useDataStore.getState().addPayment({ id: 'p8', invoiceId: '', clientId: 'c1', amount: 1 } as never)).rejects.toMatchObject({ code: 'offline' });
+    expect(h.toast.error).toHaveBeenCalledWith(expect.stringContaining('لا يوجد اتصال'));
+  });
+
+  it('two entries in a row both go through', async () => {
+    h.addPayment.mockResolvedValue(undefined);
+    await useDataStore.getState().addPayment({ id: 'p10', invoiceId: '', clientId: 'c1', amount: 1 } as never);
+    await useDataStore.getState().addPayment({ id: 'p11', invoiceId: '', clientId: 'c1', amount: 2 } as never);
+    expect(h.addPayment).toHaveBeenCalledTimes(2);
+    expect(h.toast.success).toHaveBeenCalledTimes(2);
   });
 
   it('shows a refusal as an error and lets the form stay open (the promise rejects)', async () => {
@@ -81,7 +86,7 @@ describe('approving and rejecting never end in silence', () => {
     const [ids, patch] = h.updateManyExpenses.mock.calls[0];
     expect(ids).toEqual(['1', '2']);
     expect(patch).toMatchObject({ approvalStatus: 'approved', reviewedBy: 'u1', rejectionReason: null });
-    expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('تم اعتماد 2 مصروفاً'), expect.anything());
+    expect(h.toast.success).toHaveBeenCalledWith(expect.stringContaining('تم اعتماد 2 مصروفاً'));
   });
 
   it('skips a closed one but still approves the rest', async () => {

@@ -11,12 +11,11 @@ const fs = vi.hoisted(() => ({
 }));
 vi.mock('firebase/firestore', () => ({ ...fs }));
 vi.mock('../config/firebase', () => ({ db: { name: 'db' } }));
-vi.mock('./expenseTransactions', () => ({ addExpenseConfirmedOnce: vi.fn() }));
 vi.mock('./expenseInvoiceTransactions', () => ({ createExpenseInvoiceAtomic: vi.fn(), deleteExpenseInvoiceAtomic: vi.fn() }));
 vi.mock('../core/access/constraints', () => ({ toConstraints: vi.fn() }));
 
 import { paymentsService } from './firebaseService';
-import { ACK_WAIT_ONLINE_MS, queuedWrites, setLateFailureReporter } from './writeAck';
+import { OFFLINE_MESSAGE, SLOW_NETWORK_MESSAGE, WRITE_WAIT_MS } from './writeAck';
 
 const snap = (exists: boolean) => ({ exists: () => exists });
 const never = () => new Promise<void>(() => undefined);
@@ -30,9 +29,9 @@ beforeEach(() => {
   fs.getDocFromCache.mockResolvedValue(snap(true));
   fs.getDoc.mockResolvedValue(snap(true));
   fs.getDocs.mockResolvedValue({ empty: true, docs: [] });
-  setLateFailureReporter(vi.fn());
+  vi.stubGlobal('navigator', { onLine: true });
 });
-afterEach(() => { vi.useRealTimers(); setLateFailureReporter(null); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('adding', () => {
   it('writes the record under its own id and gives the id back', async () => {
@@ -40,13 +39,23 @@ describe('adding', () => {
     expect(fs.setDoc).toHaveBeenCalledWith({ path: 'payments/p1' }, { id: 'p1', amount: 5 });
   });
 
-  it('does not hold the screen up when the server is silent: it resolves, counted as queued', async () => {
+  it('ends in a clear message, not a spinner, when the server is silent', async () => {
     fs.setDoc.mockReturnValue(never());
-    const before = queuedWrites();
     const done = paymentsService.add({ id: 'p2', amount: 1 });
-    await vi.advanceTimersByTimeAsync(ACK_WAIT_ONLINE_MS + 1);
-    await expect(done).resolves.toBe('p2');
-    expect(queuedWrites()).toBe(before + 1);
+    const assertion = expect(done).rejects.toThrow(SLOW_NETWORK_MESSAGE);
+    await vi.advanceTimersByTimeAsync(WRITE_WAIT_MS + 1);
+    await assertion;
+  });
+
+  it('writes nothing at all when the device is offline', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    await expect(paymentsService.add({ id: 'p4', amount: 1 })).rejects.toThrow(OFFLINE_MESSAGE);
+    expect(fs.setDoc).not.toHaveBeenCalled();
+  });
+
+  it('takes several entries in a row, each written once under its own id', async () => {
+    for (const id of ['a', 'b', 'c']) await paymentsService.add({ id, amount: 1 });
+    expect(fs.setDoc.mock.calls.map((c) => (c[0] as { path: string }).path)).toEqual(['payments/a', 'payments/b', 'payments/c']);
   });
 
   it('still reports a refusal that comes in time', async () => {
@@ -94,11 +103,12 @@ describe('updating', () => {
     expect(fs.updateDoc).not.toHaveBeenCalled();
   });
 
-  it('is queued, not stuck, when the server is silent', async () => {
+  it('is refused with a clear message, not stuck, when the server is silent', async () => {
     fs.updateDoc.mockReturnValue(never());
     const done = paymentsService.update('p1', { amount: 2 });
-    await vi.advanceTimersByTimeAsync(ACK_WAIT_ONLINE_MS + 1);
-    await expect(done).resolves.toBeUndefined();
+    const assertion = expect(done).rejects.toThrow(SLOW_NETWORK_MESSAGE);
+    await vi.advanceTimersByTimeAsync(WRITE_WAIT_MS + 1);
+    await assertion;
   });
 });
 
@@ -110,13 +120,12 @@ describe('deleting', () => {
     expect(fs.getDoc).not.toHaveBeenCalled();
   });
 
-  it('is done on the device and queued when the server is silent', async () => {
+  it('is refused with a clear message when the server is silent', async () => {
     fs.deleteDoc.mockReturnValue(never());
-    const before = queuedWrites();
     const done = paymentsService.delete('p1');
-    await vi.advanceTimersByTimeAsync(ACK_WAIT_ONLINE_MS + 1);
-    await expect(done).resolves.toBeUndefined();
-    expect(queuedWrites()).toBe(before + 1);
+    const assertion = expect(done).rejects.toThrow(SLOW_NETWORK_MESSAGE);
+    await vi.advanceTimersByTimeAsync(WRITE_WAIT_MS + 1);
+    await assertion;
   });
 
   it('reports a refusal (a closed record, no permission)', async () => {

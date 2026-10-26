@@ -5,11 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import QuickExpenseSheet from './QuickExpenseSheet';
 import type { Client, Expense, ProjectPhase } from '../../types';
 import { CONSTRUCTION_EXPENSE_CATEGORIES } from '../../core/expenseCategories';
-const mocks = vi.hoisted(() => ({ add: vi.fn(), confirmed: vi.fn(), expenses: [] as Expense[], phases: [] as ProjectPhase[], clients: [] as Client[], scope: 'all' }));
+const mocks = vi.hoisted(() => ({ add: vi.fn(), expenses: [] as Expense[], phases: [] as ProjectPhase[], clients: [] as Client[], scope: 'all' }));
 vi.mock('../../config/firebase', () => ({ firebaseConfig: { projectId: 'demo-quick-ui' } }));
 vi.mock('../../stores/useAuthStore', () => ({ useAuthStore: (select: (state: unknown) => unknown) => select({ user: { id: 'u1' } }) }));
 vi.mock('../../stores/useDataStore', () => ({ useDataStore: (select: (state: unknown) => unknown) => select({ addExpense: mocks.add, projectPhases: mocks.phases }) }));
-vi.mock('../../services/firebaseService', () => ({ expensesService: { getConfirmedById: mocks.confirmed } }));
 vi.mock('./useQuickExpenseModel', () => ({ useQuickExpenseModel: () => ({ access: { can: () => true, expenseScope: mocks.scope }, me: { id: 'u1', name: 'عمر' }, owner: { id: 'u1', name: 'عمر' }, ownerIsMe: true, clients: mocks.clients, expenses: mocks.expenses, loading: false, canPickPerson: false, people: [], remaining: 1000 }) }));
 let root: Root;
 let host: HTMLDivElement;
@@ -25,7 +24,7 @@ async function open() { host = document.createElement('div'); document.body.appe
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   window.matchMedia = vi.fn().mockReturnValue({ matches: false, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() });
-  localStorage.clear(); mocks.add.mockReset().mockResolvedValue(undefined); mocks.confirmed.mockReset().mockResolvedValue(null);
+  localStorage.clear(); mocks.add.mockReset().mockResolvedValue(undefined);
   mocks.expenses = []; mocks.phases = []; mocks.scope = 'all'; mocks.clients = [{ id: 'c1', name: 'الموقع الأول' } as Client];
 });
 afterEach(async () => { await act(async () => { root?.unmount(); }); document.body.innerHTML = ''; localStorage.clear(); vi.useRealTimers(); });
@@ -89,18 +88,33 @@ describe('quick expense user journey', () => {
     expect(mocks.add.mock.calls[0][0]).toMatchObject({ clientId: 'c1', userId: 'u1', quantity: 3, unitPrice: 0.1, amount: 0.3 });
     expect(document.body.textContent).toContain('مصروف آخر');
   });
-  it('keeps an uncertain operation immutable across closing and retrying, then accepts late success', async () => {
-    vi.useFakeTimers(); let resolve!: () => void;
-    const work = new Promise<void>(done => { resolve = done; }); mocks.add.mockReturnValue(work);
-    await open(); await input('المبلغ بالدينار', '12.125'); await click('تسجيل المصروف');
-    const sent = mocks.add.mock.calls[0][0];
-    await act(async () => { await vi.advanceTimersByTimeAsync(15001); });
-    expect(document.querySelector('fieldset')?.disabled).toBe(true);
-    await act(async () => { root.unmount(); }); host.remove(); await open();
-    await click('التحقق وإعادة المحاولة');
-    expect(mocks.add.mock.calls[1][0]).toEqual(sent);
-    await act(async () => { resolve(); await work; });
+  it('records two entries in a row, each one its own expense', async () => {
+    await open();
+    await input('المبلغ بالدينار', '10'); await click('تسجيل المصروف');
     expect(document.body.textContent).toContain('مصروف آخر');
-    expect([...Array(localStorage.length)].map((_, i) => localStorage.key(i)).some(k => k?.startsWith('quick-expense:draft'))).toBe(false);
+    await click('مصروف آخر');
+    await input('المبلغ بالدينار', '20'); await click('تسجيل المصروف');
+    expect(mocks.add).toHaveBeenCalledTimes(2);
+    const [first, second] = mocks.add.mock.calls.map((c) => c[0] as Expense);
+    expect(first.amount).toBe(10); expect(second.amount).toBe(20);
+    expect(second.id).not.toBe(first.id);
+    expect(document.body.textContent).toContain('مصروف آخر');
+  });
+  it('after a failure shows the reason, keeps the form, and a second press rewrites the SAME record', async () => {
+    mocks.add.mockRejectedValueOnce(Object.assign(new Error('الاتصال بطيء'), { code: 'slow-network' }));
+    await open(); await input('المبلغ بالدينار', '12.125'); await click('تسجيل المصروف');
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain('الاتصال بطيء');
+    expect(document.querySelector('fieldset')?.disabled).toBe(false);
+    await click('تسجيل المصروف');
+    expect(mocks.add).toHaveBeenCalledTimes(2);
+    expect(mocks.add.mock.calls[1][0]).toEqual(mocks.add.mock.calls[0][0]);
+    expect(document.body.textContent).toContain('مصروف آخر');
+  });
+  it('keeps nothing on the device: no draft survives closing the sheet', async () => {
+    await open(); await input('المبلغ بالدينار', '5');
+    await act(async () => { root.unmount(); }); host.remove();
+    expect([...Array(localStorage.length)].map((_, i) => localStorage.key(i)).some((k) => k?.startsWith('quick-expense:draft'))).toBe(false);
+    await open();
+    expect((document.getElementById([...document.querySelectorAll('label')].find((el) => el.textContent === 'المبلغ بالدينار')!.htmlFor) as HTMLInputElement).value).toBe('');
   });
 });

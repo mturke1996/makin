@@ -3,7 +3,6 @@ import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebas
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { createEnv, dbFor } from './helpers';
 import { createExpenseInvoiceAtomic, deleteExpenseInvoiceAtomic } from '../../src/services/expenseInvoiceTransactions';
-import { addExpenseConfirmedOnce } from '../../src/services/expenseTransactions';
 import type { Expense } from '../../src/types';
 
 let env: RulesTestEnvironment;
@@ -98,28 +97,26 @@ describe('worker payment linking', () => {
   });
 });
 
-describe('idempotent expense submission', () => {
-  it('allows confirming a missing operation without exposing a colleague expense', async () => {
+describe('expense submission by a fixed id', () => {
+  it('lets an employee confirm a missing operation without exposing a colleague expense', async () => {
     await assertSucceeds(getDoc(doc(dbFor(env, 'field'), 'expenses', 'not-submitted')));
     await assertFails(getDoc(doc(dbFor(env, 'field'), 'expenses', 'e-field2')));
   });
 
-  it('creates one record on simultaneous retries and rejects a different same-id payload', async () => {
+  it('writes one record when the same operation is sent twice', async () => {
     const db = dbFor(env, 'field');
     const record = expense('retry-once');
-    await Promise.all([addExpenseConfirmedOnce(db, record), addExpenseConfirmedOnce(db, record)]);
-    expect((await saved('expenses', record.id)).data()?.amount).toBe(record.amount);
-    await expect(addExpenseConfirmedOnce(db, { ...record, amount: 100 })).rejects.toThrow('ببيانات مختلفة');
+    await Promise.all([setDoc(doc(db, 'expenses', record.id), record), setDoc(doc(db, 'expenses', record.id), record)]);
     expect((await saved('expenses', record.id)).data()?.amount).toBe(record.amount);
   });
 
-  it('settles a saved operation after invoice closure without overwriting its closed state', async () => {
+  it('refuses a retry that would rewrite an expense already closed by an invoice', async () => {
     const record = await seedExpense('retry-after-close');
     await createExpenseInvoiceAtomic(dbFor(env, 'accountant'), input('retry-invoice', [record.id]));
-    await addExpenseConfirmedOnce(dbFor(env, 'field'), record);
+    await assertFails(setDoc(doc(dbFor(env, 'field'), 'expenses', record.id), { ...record, amount: record.amount + 1 }));
     const existing = (await saved('expenses', record.id)).data();
     expect(existing?.isClosed).toBe(true);
-    expect(existing?.expenseInvoiceId).toBe('retry-invoice');
+    expect(existing?.amount).toBe(record.amount);
   });
 });
 

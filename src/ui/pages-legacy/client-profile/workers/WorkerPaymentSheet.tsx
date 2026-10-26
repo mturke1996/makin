@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { WarningAmber } from '../../../../design-system/icons';
 import { Amount, Button, Input, Sheet, Textarea } from '../../../../design-system/primitives';
 import { formatCurrencyDisplay } from '../../../../core/utils-formatters';
@@ -9,8 +9,7 @@ import { CustodyOverdraftNotice } from '../profileBanners';
 import { numberToInput, parseNumberInput, todayDay } from './format';
 import { NumberField } from './fields';
 import type { WorkerPaymentValues } from './types';
-import { clearWorkerPaymentDraft, readWorkerPaymentDraft, saveWorkerPaymentDraft, type WorkerPaymentDraft } from './workerPaymentDraft';
-import { SAVE_TIMEOUT_MS, withTimeout } from '../../../quick-expense/quickExpenseLogic';
+import { formatFirebaseError } from '../../../../core/formatFirebaseError';
 
 const NOTE_CHIPS = ['دفعة مقدمة', 'إنجاز مرحلة', 'دفعة نهائية', 'دفعة على الحساب'];
 
@@ -21,8 +20,6 @@ interface WorkerPaymentSheetProps {
   ledger: WorkerLedger;
   /** The approved progress against what he has been paid, for the advance and the early-payment notices. */
   progress: WorkerProgressView;
-  /** Account-scoped drafts never appear for another signed-in user. */
-  draftScope: string;
   /** الدفعة قيد التعديل، أو لا شيء لدفعة جديدة. */
   edit?: WorkerLedgerPayment | null;
   /** رصيد عهدة المستخدم لإظهار تنبيه التجاوز كما في نموذج المصروف. */
@@ -31,27 +28,19 @@ interface WorkerPaymentSheetProps {
 }
 
 /** صرف دفعة لعامل أو تعديلها: المبلغ، التاريخ، الملاحظة، ومعاينة المتبقي قبل الحفظ. */
-export function WorkerPaymentSheet({ open, onClose, worker, ledger, progress, draftScope, edit, fundStats, onSubmit }: WorkerPaymentSheetProps) {
-  const scope = `${draftScope}:${worker.clientId}`;
-  const [initial] = useState<WorkerPaymentDraft>(() => (!edit && readWorkerPaymentDraft(scope, worker.id)) || {
-    operationId: edit?.id ?? crypto.randomUUID(), createdAt: edit?.createdAt ?? new Date().toISOString(),
-    amountText: edit ? numberToInput(edit.amount) : '', date: edit?.day || todayDay(), note: edit?.note ?? '', attempted: false, advance: !!edit?.expense.isWorkerAdvance,
-  });
-  const [amountText, setAmountText] = useState(initial.amountText);
-  const [date, setDate] = useState(initial.date);
-  const [note, setNote] = useState(initial.note);
-  const [attempted, setAttempted] = useState(initial.attempted);
-  const [advance, setAdvance] = useState(!!initial.advance);
-  const [saveError, setSaveError] = useState(initial.attempted ? 'هذه الدفعة لها محاولة حفظ غير مؤكدة. أعد المحاولة بنفس المرجع والبيانات لتأكيدها دون تكرار.' : '');
+export function WorkerPaymentSheet({ open, onClose, worker, ledger, progress, edit, fundStats, onSubmit }: WorkerPaymentSheetProps) {
+  // The sheet is mounted afresh for every payment, so the operation id is new each time; a retry after a failure keeps it
+  // (the record has a fixed id, so a late success and a retry never make two payments).
+  const [operation] = useState(() => ({ id: edit?.id ?? crypto.randomUUID(), createdAt: edit?.createdAt ?? new Date().toISOString() }));
+  const [amountText, setAmountText] = useState(edit ? numberToInput(edit.amount) : '');
+  const [date, setDate] = useState(edit?.day || todayDay());
+  const [note, setNote] = useState(edit?.note ?? '');
+  const [advance, setAdvance] = useState(!!edit?.expense.isWorkerAdvance);
+  const [saveError, setSaveError] = useState('');
   const [errors, setErrors] = useState<{ amount?: string; date?: string }>({});
   const [busy, setBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const saving = useRef(false);
-  const completed = useRef(false);
-  const draft = (): WorkerPaymentDraft => ({ ...initial, amountText, date, note, attempted, advance });
-  useEffect(() => {
-    if (!edit && !completed.current && (amountText || note || attempted)) saveWorkerPaymentDraft(scope, worker.id, { ...initial, amountText, date, note, attempted, advance });
-  }, [edit, scope, worker.id, initial, amountText, date, note, attempted, advance]);
 
   // عند التعديل نحسب «قبل هذه الدفعة» بإرجاع مبلغها إلى المتبقي.
   const editedAmount = edit?.amount ?? 0;
@@ -84,23 +73,10 @@ export function WorkerPaymentSheet({ open, onClose, worker, ledger, progress, dr
     saving.current = true;
     setBusy(true);
     setSaveError('');
-    if (!edit) {
-      saveWorkerPaymentDraft(scope, worker.id, { ...draft(), attempted: true });
-      setAttempted(true);
-    }
     try {
-      const work = onSubmit({ amount, date, note: note.trim(), operationId: initial.operationId, createdAt: initial.createdAt, advance });
-      void work.then(() => {
-        completed.current = true;
-        if (!edit) clearWorkerPaymentDraft(scope, worker.id);
-      }, () => {});
-      await withTimeout(work, SAVE_TIMEOUT_MS, 'لم يتأكد الحفظ بعد');
+      await onSubmit({ amount, date, note: note.trim(), operationId: operation.id, createdAt: operation.createdAt, advance });
     } catch (cause) {
-      const code = (cause as { code?: string })?.code?.replace('firestore/', '');
-      if (!edit && ['permission-denied', 'invalid-argument', 'failed-precondition', 'not-found'].includes(code ?? '')) {
-        setAttempted(false);
-      }
-      setSaveError(edit ? 'تعذر تأكيد التعديل. بقيت البيانات كما كتبتها، ويمكنك إعادة المحاولة.' : 'لم يتأكد حفظ الدفعة. أعد المحاولة بنفس المرجع والبيانات؛ يُحفظ الطلب عند إغلاق النافذة لإكماله لاحقاً.');
+      setSaveError(formatFirebaseError(cause));
     } finally {
       setBusy(false);
       saving.current = false;
@@ -125,14 +101,13 @@ export function WorkerPaymentSheet({ open, onClose, worker, ledger, progress, dr
       subtitle={worker.name}
       footer={
         <Button type="submit" form="worker-payment-form" size="lg" block loading={busy}>
-          {edit ? 'حفظ التعديل' : attempted ? 'إعادة محاولة تأكيد الدفعة' : amount > 0 ? `تسجيل ${formatCurrencyDisplay(amount)}` : 'تسجيل الدفعة'}
+          {edit ? 'حفظ التعديل' : amount > 0 ? `تسجيل ${formatCurrencyDisplay(amount)}` : 'تسجيل الدفعة'}
         </Button>
       }
     >
       <form id="worker-payment-form" ref={formRef} noValidate onSubmit={submit} className="space-y-5 p-4 pb-6">
         {saveError && <p role="status" className="rounded-md bg-warning-soft p-3 text-sm leading-relaxed text-warning-ink">{saveError}</p>}
-        {!edit && attempted && <p className="break-all text-xs text-fg-muted">مرجع الدفعة: <bdi dir="ltr">{initial.operationId}</bdi></p>}
-        <fieldset disabled={busy || (!edit && attempted)} className="space-y-5">
+        <fieldset disabled={busy} className="space-y-5">
         <dl className="grid grid-cols-3 gap-3 rounded-md bg-surface-sunken p-3.5">
           <div className="min-w-0">
             <dt className="text-2xs text-fg-muted">المتفق عليه</dt>

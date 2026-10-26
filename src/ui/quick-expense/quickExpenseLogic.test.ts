@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   amountToInput,
   buildQuickExpense,
@@ -16,7 +16,6 @@ import {
   previewCustody,
   rankCategories,
   rankRecentClients,
-  withTimeout,
 } from './quickExpenseLogic';
 import { readQuickPrefs, writeQuickPrefs } from './quickPrefs';
 
@@ -351,26 +350,5 @@ describe('quick prefs', () => {
     garbage.setItem('quick-expense:v1:u1', JSON.stringify({ clientId: 5, category: '' }));
     expect(readQuickPrefs('u1', garbage)).toEqual({});
     expect(readQuickPrefs(undefined, memory())).toEqual({});
-  });
-});
-
-describe('withTimeout', () => {
-  afterEach(() => vi.useRealTimers());
-
-  it('passes the result through when the work is quick', async () => {
-    await expect(withTimeout(Promise.resolve(7), 1000, 'slow')).resolves.toBe(7);
-  });
-
-  it('passes the work\'s own error through', async () => {
-    await expect(withTimeout(Promise.reject(new Error('denied')), 1000, 'slow')).rejects.toThrow('denied');
-  });
-
-  it('gives up with the message when the work stays silent', async () => {
-    vi.useFakeTimers();
-    const silent = new Promise<void>(() => {});
-    const result = withTimeout(silent, 15000, 'تأخر الإرسال');
-    const assertion = expect(result).rejects.toThrow('تأخر الإرسال');
-    await vi.advanceTimersByTimeAsync(15000);
-    await assertion;
   });
 });

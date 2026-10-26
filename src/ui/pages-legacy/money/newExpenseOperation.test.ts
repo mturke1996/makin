@@ -3,7 +3,6 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { sameSubmittedExpense } from '../../../services/expenseTransactions';
 
 const captured = vi.hoisted(() => ({ props: null as null | { onSubmit: (d: unknown) => Promise<void>; onClose: () => void; open: boolean } }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
@@ -44,7 +43,7 @@ beforeEach(async () => {
 });
 afterEach(async () => { vi.useRealTimers(); await act(async () => root.unmount()); host.remove(); });
 
-describe('saving a new expense on a slow connection', () => {
+describe('saving a new expense', () => {
   it('repeats the SAME operation when «save» is pressed again, so it can never be recorded twice', async () => {
     const calls: Array<Record<string, unknown>> = [];
     useDataStore.setState({ addExpense: vi.fn(async (e: never) => { calls.push(e); if (calls.length === 1) throw Object.assign(new Error('slow'), { code: 'unavailable' }); }) });
@@ -54,8 +53,8 @@ describe('saving a new expense on a slow connection', () => {
     expect(calls).toHaveLength(2);
     expect(calls[1].id).toBe(calls[0].id);
     expect(calls[1].createdAt).toBe(calls[0].createdAt);
-    // the server compares the saved record with the repeat: they must be the same operation
-    expect(sameSubmittedExpense(calls[0], calls[1])).toBe(true);
+    // the same operation, field for field: writing it again rewrites the same record
+    expect({ ...calls[1], updatedAt: 0 }).toEqual({ ...calls[0], updatedAt: 0 });
   });
 
   it('starts a new operation once the form is closed or the expense is saved', async () => {
@@ -69,13 +68,12 @@ describe('saving a new expense on a slow connection', () => {
     expect(new Set(ids).size).toBe(3);
   });
 
-  it('stops waiting after fifteen seconds with a clear message, and the form can be pressed again', async () => {
-    await act(async () => { useDataStore.setState({ addExpense: vi.fn(() => new Promise<void>(() => undefined)) }); });
-    vi.useFakeTimers();
-    const done = captured.props!.onSubmit(form).catch((e: Error & { code?: string }) => e);
-    await vi.advanceTimersByTimeAsync(15001);
-    const error = (await done) as Error & { code?: string };
-    expect(error.code).toBe('deadline-exceeded');
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('لن يُسجَّل المصروف مرتين'));
+  it('shows the failure to the form (it stays open) and the next press goes through', async () => {
+    const calls: unknown[] = [];
+    useDataStore.setState({ addExpense: vi.fn(async (e: never) => { calls.push(e); if (calls.length === 1) throw Object.assign(new Error('الاتصال بطيء'), { code: 'slow-network' }); }) });
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('مصروف جديد'))!.click());
+    await expect(captured.props!.onSubmit(form)).rejects.toMatchObject({ code: 'slow-network' });
+    await expect(captured.props!.onSubmit(form)).resolves.toBeUndefined();
+    expect(calls).toHaveLength(2);
   });
 });

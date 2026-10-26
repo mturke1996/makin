@@ -2,7 +2,6 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Add, Check, HourglassEmpty, CancelOutlined, Receipt, Search, TrendingDown } from '../../design-system/icons';
 import { useDataSlice } from '../../stores/useDataStore';
-import { boundOnline } from '../../services/writeAck';
 import { deny } from '../feedback/deny';
 import toast from 'react-hot-toast';
 import { EXPENSE_CLOSED_MESSAGE, expenseReadOnlyNotice, isExpenseLocked } from '../../core/finance/expenseLock';
@@ -50,9 +49,6 @@ import { useVisibleCount } from './client-profile/activity/useVisibleCount';
  * totals) their own expenses and the page says so ("مصروفاتي"); someone with `expenses.view.all`
  * sees everyone's, with who recorded each one taken from the users directory.
  */
-/** A new expense needs the server's confirmation (it is recorded once or not at all); the form waits this long for it. */
-const NEW_EXPENSE_WAIT_MS = 15000;
-
 export const ExpensesPage = () => {
   const navigate = useNavigate();
   const access = useAccess();
@@ -203,25 +199,15 @@ export const ExpensesPage = () => {
       // The owner (`userId`) is set once, at creation: the rules refuse a change of owner.
       await updateExpense(editing.id, payload);
     } else {
-      try {
-        await boundOnline(
-          addExpense({
-            id: expenseId,
-            ...payload,
-            isClosed: false,
-            createdAt: operation.current!.createdAt,
-            userId: user!.id,
-            createdBy: user?.displayName || 'غير معروف',
-          }),
-          NEW_EXPENSE_WAIT_MS,
-          'تأخر تأكيد الحفظ بسبب بطء الاتصال. اضغط «حفظ» مجدداً: لن يُسجَّل المصروف مرتين.',
-        );
-        operation.current = undefined;
-      } catch (error) {
-        // The store already told the person about its own refusals; the slow-answer message is ours to show.
-        if ((error as { code?: string })?.code === 'deadline-exceeded') toast.error((error as Error).message);
-        throw error;
-      }
+      await addExpense({
+        id: expenseId,
+        ...payload,
+        isClosed: false,
+        createdAt: operation.current!.createdAt,
+        userId: user!.id,
+        createdBy: user?.displayName || 'غير معروف',
+      });
+      operation.current = undefined;
     }
   };
 
