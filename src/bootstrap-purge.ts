@@ -18,3 +18,18 @@ try {
 } catch {
   localStorage.removeItem('brand-override');
 }
+
+/**
+ * The app used to keep a copy of the data on the device (offline mode). It is online only now: remove what the old
+ * versions left behind so it cannot show stale records or take up space.
+ */
+try {
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith('app-cache-') || key.startsWith('quick-expense:draft:') || key.startsWith('saas-build.worker-payment.')) localStorage.removeItem(key);
+  }
+  void (indexedDB as IDBFactory & { databases?: () => Promise<Array<{ name?: string }>> }).databases?.()
+    .then((all) => all.forEach((entry) => { if (entry.name?.startsWith('firestore/')) indexedDB.deleteDatabase(entry.name); }))
+    .catch(() => undefined);
+} catch {
+  /* storage is blocked: there is nothing to remove */
+}

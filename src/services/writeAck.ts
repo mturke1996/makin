@@ -1,65 +1,36 @@
-import toast from 'react-hot-toast';
-import { formatFirebaseError } from '../core/formatFirebaseError';
-
 /**
- * Waiting for the server is not the same as saving.
+ * The app works online only: a change is either confirmed by the server or the person is told at once that it was not.
  *
- * With the local cache on, Firestore applies a write to this device at once and sends it when it can. The promise it
- * returns, though, settles only when the SERVER answers: on a weak or lost connection it stays open for minutes, and a
- * button that waits for it spins with nothing to say. `ackOrQueue` waits a short while (2.5s) for the answer (so a refusal
- * such as «permission denied» still reaches the person while they are looking), and then lets go: the change is on
- * the device, it goes up by itself, and if the server turns it down later the person is told then.
+ * - With no connection nothing is written (`requireOnline`): no hidden queue, no «saved on this device».
+ * - With a connection the screen already shows the change (Firestore applies it locally the moment it is sent) and the
+ *   button waits for the server's answer, but never longer than `WRITE_WAIT_MS`: a refusal (permission, rules) reaches
+ *   the person while they are looking, and a dead connection ends in a clear message instead of a spinner.
  */
 
-/** How long a button waits for the server before the change is treated as «saved here, uploading». */
-export const ACK_WAIT_ONLINE_MS = 2500;
-/** The same when the device already knows it is offline: no point making anyone wait. */
-export const ACK_WAIT_OFFLINE_MS = 400;
+/** How long a button waits for the server before it reports a slow connection. */
+export const WRITE_WAIT_MS = 10000;
 
-let queued = 0;
-/** How many writes so far were let go before the server answered (a screen compares before and after an action). */
-export const queuedWrites = () => queued;
-
-type LateFailureReporter = (error: unknown) => void;
-const defaultReporter: LateFailureReporter = (error) => {
-  console.warn('[write] the server refused a change saved on this device:', error);
-  toast.error(`تعذّر رفع تغيير حُفظ على جهازك: ${formatFirebaseError(error)}`, { duration: 8000 });
-};
-let reportLateFailure: LateFailureReporter = defaultReporter;
-/** For tests: replace what happens when a write that was let go is refused later. */
-export function setLateFailureReporter(reporter: LateFailureReporter | null) {
-  reportLateFailure = reporter ?? defaultReporter;
-}
+export const OFFLINE_MESSAGE = 'لا يوجد اتصال بالإنترنت. اتصل ثم أعد المحاولة، لم يُحفظ شيء.';
+export const SLOW_NETWORK_MESSAGE = 'الاتصال بطيء ولم يصل رد من الخادم. تحقق من الإنترنت ثم حاول مجدداً.';
 
 const isOffline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
 
-export type AckResult = 'confirmed' | 'queued';
-
-export async function ackOrQueue(write: Promise<unknown>, waitMs: number = isOffline() ? ACK_WAIT_OFFLINE_MS : ACK_WAIT_ONLINE_MS): Promise<AckResult> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const slow = new Promise<'queued'>((resolve) => {
-    timer = setTimeout(() => resolve('queued'), waitMs);
-  });
-  try {
-    // A refusal that arrives in time rejects here, and the caller shows it like any other error.
-    const result = await Promise.race([write.then(() => 'confirmed' as const), slow]);
-    if (result === 'queued') {
-      queued += 1;
-      write.catch(reportLateFailure);
-    }
-    return result;
-  } finally {
-    clearTimeout(timer);
-  }
+/** Throws before anything is written when the device knows it has no connection. */
+export function requireOnline(): void {
+  if (isOffline()) throw Object.assign(new Error(OFFLINE_MESSAGE), { code: 'offline' });
 }
 
 /**
- * For work that cannot be left half done on the device (a transaction needs the server): gives up waiting after `ms`
- * with `message`, instead of spinning for ever. The work itself is not cancelled.
+ * Rejects with `message` when `work` has not settled in `ms`. The work itself is not cancelled: every write uses a fixed
+ * document id, so a late success and a retry never make two records.
  */
-export function boundOnline<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
+export function boundOnline<T>(work: Promise<T>, ms: number = WRITE_WAIT_MS, message: string = SLOW_NETWORK_MESSAGE): Promise<T> {
+  if (isOffline()) {
+    work.catch(() => undefined);
+    return Promise.reject(Object.assign(new Error(OFFLINE_MESSAGE), { code: 'offline' }));
+  }
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(Object.assign(new Error(message), { code: 'deadline-exceeded' })), ms);
+    const timer = setTimeout(() => reject(Object.assign(new Error(message), { code: 'slow-network' })), ms);
     work.then(
       (value) => {
         clearTimeout(timer);
@@ -73,4 +44,8 @@ export function boundOnline<T>(work: Promise<T>, ms: number, message: string): P
   });
 }
 
-export const SLOW_NETWORK_MESSAGE = 'الاتصال بطيء ولم يصل رد من الخادم. تحقق من الإنترنت ثم حاول مجدداً.';
+/** A write to the server: refused at once when offline, otherwise confirmed or reported within `WRITE_WAIT_MS`. */
+export async function confirmWrite(start: () => Promise<unknown>, ms: number = WRITE_WAIT_MS): Promise<void> {
+  requireOnline();
+  await boundOnline(start(), ms);
+}

@@ -7,6 +7,7 @@ import { NotificationPanel } from '../notifications/NotificationPanel';
 import { SmartAlertsBootstrap } from '../notifications/SmartAlertsBootstrap';
 import { InstallBanner } from '../../pwa/InstallUi';
 import { PageFallback } from '../feedback/PageFallback';
+import { OfflineBanner } from '../feedback/OfflineBanner';
 
 /**
  * AppShell: authenticated layout.
@@ -29,6 +30,7 @@ export function AppShell() {
 
   return (
     <div className="app-shell-root">
+      <OfflineBanner />
       <SmartAlertsBootstrap />
       <NotificationPanel />
       <Sidebar />

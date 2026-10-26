@@ -328,39 +328,25 @@ export function calculateQuickQuantity(quantityText: string, priceText: string):
   return { quantity, unitPrice, amount, ...(error ? { error } : {}) };
 }
 
-/** Compare the immutable request, ignoring server metadata and later review/closing fields. */
-export function sameQuickExpenseRequest(a: Expense, b: Expense): boolean {
-  const fields: (keyof Expense)[] = ['id', 'clientId', 'userId', 'amount', 'category', 'description', 'date', 'invoiceNumber', 'notes', 'quantity', 'unitPrice', 'unit', 'phaseId', 'createdAt'];
-  return fields.every((field) => (a[field] ?? '') === (b[field] ?? ''));
-}
-
 /** Only visible entries are considered: this warning never fetches somebody else's expenses. */
 export function findPossibleDuplicate(expenses: readonly Expense[], input: Pick<Expense, 'clientId' | 'category' | 'amount' | 'date' | 'userId'>): Expense | undefined {
   if (input.amount <= 0 || !input.clientId) return undefined;
   return expenses.find((expense) => expense.clientId === input.clientId && expense.userId === input.userId && expense.category === input.category && expense.date === input.date && toMilli(expense.amount) === toMilli(input.amount));
 }
 
-/* ── Saving ─────────────────────────────────────────────────────────────── */
-
-/** How long a save may stay silent before the sheet reports it (a weak connection holds writes back). */
-export const SAVE_TIMEOUT_MS = 15000;
-
-/**
- * Rejects with `message` when `work` has not settled in `ms`. The write itself is not cancelled: a
- * retry reuses the same document id, so a late success and a retry never make two expenses.
- */
-export function withTimeout<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(message)), ms);
-    work.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    );
-  });
+/** What the quick-expense sheet collects (all text, as typed). */
+export interface QuickForm {
+  clientId: string;
+  category: string;
+  mode: 'amount' | 'quantity';
+  amount: string;
+  quantity: string;
+  unitPrice: string;
+  unit: string;
+  description: string;
+  invoiceNumber: string;
+  notes: string;
+  date: string;
+  phaseId: string;
+  personId: string;
 }

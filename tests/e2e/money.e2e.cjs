@@ -251,35 +251,117 @@ scenario('admin adds a payment, then deletes it', async ({ browser }) => {
   await ctx.close();
 });
 
-scenario('offline: approving does not hang, says it is saved on the device, and reaches the server when back online', async ({ browser }) => {
+scenario('offline: approving is refused at once with a clear message, nothing is queued, and works again when back online', async ({ browser }) => {
   await expense(`t-off-${RUN}`, `اعتماد بلا اتصال ${RUN}`);
   const { ctx, page } = await open(browser, 'admin@makin.test');
   await go(page, '/expenses');
   await ctx.setOffline(true);
+  check(await until(async () => (await page.getByRole('alert').allInnerTexts()).some((t) => t.includes('لا يوجد اتصال')), 4000), 'no offline banner');
   const started = Date.now();
   await page.getByRole('button', { name: `اعتماد مصروف اعتماد بلا اتصال ${RUN}` }).click();
-  const message = await until(async () => (await toasts(page)).find((t) => t.includes('تم اعتماد')), 9000);
+  const message = await until(async () => (await toasts(page)).find((t) => t.includes('لا يوجد اتصال')), 4000);
   check(message, 'no answer while offline: the button hangs');
-  check(Date.now() - started < 8000, `answered only after ${Date.now() - started}ms`);
-  check(message.includes('سيُرفع'), 'it did not say it will upload later');
-  check((await get('expenses', `t-off-${RUN}`)).approvalStatus === 'pending', 'the server changed while offline?');
+  check(Date.now() - started < 3000, `answered only after ${Date.now() - started}ms`);
   await ctx.setOffline(false);
-  const doc = await until(async () => { const d = await get('expenses', `t-off-${RUN}`); return d.approvalStatus === 'approved' && d; }, 20000);
-  check(doc, 'the change never reached the server after reconnecting');
+  await page.waitForTimeout(1500);
+  // Nothing was queued on the device: coming back online must not apply the refused approval by itself.
+  check((await get('expenses', `t-off-${RUN}`)).approvalStatus === 'pending', 'a refused change was applied later');
+  await page.getByRole('button', { name: `اعتماد مصروف اعتماد بلا اتصال ${RUN}` }).click();
+  const doc = await until(async () => { const d = await get('expenses', `t-off-${RUN}`); return d.approvalStatus === 'approved' && d; }, 10000);
+  check(doc, 'approving does not work after the connection returned');
   await ctx.close();
 });
 
-scenario('offline: deleting a payment is immediate on screen and reaches the server later', async ({ browser }) => {
+scenario('offline: deleting a payment is refused at once and the payment stays', async ({ browser }) => {
   await put('payments', `t-pay-off-${RUN}`, { invoiceId: '', clientId: 'c-villa', amount: 4321, paymentMethod: 'cash', paymentDate: '2030-01-01', createdBy: 'x', ...stamp() });
   const { ctx, page } = await open(browser, 'admin@makin.test');
   await go(page, '/payments');
   await ctx.setOffline(true);
   await page.getByRole('button', { name: /حذف دفعة/ }).first().click();
   await page.getByRole('button', { name: 'حذف الدفعة' }).click();
-  const message = await until(async () => (await toasts(page)).find((t) => t.includes('تم حذف الدفعة')), 9000);
+  const message = await until(async () => (await toasts(page)).find((t) => t.includes('لا يوجد اتصال')), 4000);
   check(message, 'the delete button hangs offline');
   await ctx.setOffline(false);
-  check(await until(async () => (await get('payments', `t-pay-off-${RUN}`)) === null, 20000), 'the delete never reached the server');
+  await page.waitForTimeout(1500);
+  check(await get('payments', `t-pay-off-${RUN}`), 'the refused delete was applied later');
+  await ctx.close();
+});
+
+scenario('three payments in a row, each saved at once, the form never hangs (desktop)', async ({ browser }) => {
+  const { ctx, page, problems } = await open(browser, 'admin@makin.test');
+  await go(page, '/payments');
+  for (const [i, amount] of [[1, 111.5], [2, 222.5], [3, 333.5]]) {
+    const started = Date.now();
+    await page.getByRole('button', { name: 'دفعة جديدة' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('مبلغ الدفعة').fill(String(amount));
+    await dialog.getByLabel('العميل', { exact: true }).selectOption({ index: 1 });
+    await dialog.getByRole('button', { name: 'حفظ الدفعة' }).click();
+    check(await until(async () => (await list('payments')).find((p) => p.amount === amount), 8000), `payment #${i} was not recorded`);
+    check(await until(async () => (await page.getByRole('dialog').count()) === 0, 8000), `the form stayed open after payment #${i}`);
+    check(Date.now() - started < 9000, `payment #${i} took ${Date.now() - started}ms`);
+  }
+  check(problems.length === 0, `page errors: ${problems.join('; ')}`);
+  for (const p of await list('payments')) if ([111.5, 222.5, 333.5].includes(p.amount)) await remove('payments', p.id);
+  await ctx.close();
+});
+
+scenario('three expenses in a row on a phone, each saved, none lost or doubled', async ({ browser }) => {
+  const { ctx, page, problems } = await open(browser, 'admin@makin.test', { width: 390, height: 844 });
+  await go(page, '/expenses');
+  for (const i of [1, 2, 3]) {
+    const description = `مصروف متتالي ${i} ${RUN}`;
+    await page.getByRole('button', { name: 'مصروف جديد' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('وصف المصروف').fill(description);
+    await dialog.getByLabel('المبلغ', { exact: true }).fill(String(10 + i));
+    await dialog.getByRole('button', { name: 'حفظ المصروف' }).click();
+    check(await until(async () => (await list('expenses')).find((d) => d.description === description), 8000), `expense #${i} was not recorded`);
+    check(await until(async () => (await page.getByRole('dialog').count()) === 0, 8000), `the form stayed open after expense #${i}`);
+  }
+  const saved = (await list('expenses')).filter((d) => d.description.includes(`مصروف متتالي`) && d.description.endsWith(RUN));
+  check(saved.length === 3, `expected 3 expenses, found ${saved.length}`);
+  check(problems.length === 0, `page errors: ${problems.join('; ')}`);
+  for (const d of saved) await remove('expenses', d.id);
+  await ctx.close();
+});
+
+scenario('quick expense three times in a row (the «مصروف آخر» button), each its own record', async ({ browser }) => {
+  const { ctx, page, problems } = await open(browser, 'admin@makin.test', { width: 390, height: 844 });
+  await go(page, '/clients/c-villa');
+  await page.getByRole('button', { name: 'تسجيل مصروف سريع' }).first().click();
+  const amounts = [71.25, 72.25, 73.25];
+  for (const [i, amount] of amounts.entries()) {
+    const dialog = page.getByRole('dialog');
+    await dialog.waitFor();
+    await dialog.locator('input[inputmode="decimal"]').first().fill(String(amount));
+    await dialog.getByRole('button', { name: /تسجيل المصروف/ }).click();
+    check(await until(async () => (await list('expenses')).find((d) => d.amount === amount && d.clientId === 'c-villa'), 8000), `quick expense #${i + 1} was not recorded`);
+    if (i < amounts.length - 1) await page.getByRole('button', { name: 'مصروف آخر' }).first().click();
+  }
+  const saved = (await list('expenses')).filter((d) => amounts.includes(d.amount) && d.clientId === 'c-villa');
+  check(saved.length === 3 && new Set(saved.map((d) => d.id)).size === 3, `expected 3 distinct expenses, found ${saved.length}`);
+  check(problems.length === 0, `page errors: ${problems.join('; ')}`);
+  for (const d of saved) await remove('expenses', d.id);
+  await ctx.close();
+});
+
+scenario('a slow network (1.2s each way): two payments in a row still both save', async ({ browser }) => {
+  const { ctx, page } = await open(browser, 'admin@makin.test');
+  await go(page, '/payments');
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 1200, downloadThroughput: 60 * 1024, uploadThroughput: 40 * 1024 });
+  for (const amount of [444.5, 555.5]) {
+    await page.getByRole('button', { name: 'دفعة جديدة' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('مبلغ الدفعة').fill(String(amount));
+    await dialog.getByLabel('العميل', { exact: true }).selectOption({ index: 1 });
+    await dialog.getByRole('button', { name: 'حفظ الدفعة' }).click();
+    check(await until(async () => (await list('payments')).find((p) => p.amount === amount), 20000), `payment ${amount} was not recorded on a slow network`);
+    check(await until(async () => (await page.getByRole('dialog').count()) === 0, 20000), `the form hung after payment ${amount}`);
+  }
+  for (const p of await list('payments')) if ([444.5, 555.5].includes(p.amount)) await remove('payments', p.id);
   await ctx.close();
 });
 

@@ -374,7 +374,6 @@ export function WorkersFlow({
           open={open && payment.open}
           onClose={payment.hide}
           worker={paymentCtx.worker}
-          draftScope={user?.id ?? ''}
           ledger={paymentCtx.ledger}
           progress={progressOf(paymentCtx)}
           edit={payment.value?.edit ?? null}

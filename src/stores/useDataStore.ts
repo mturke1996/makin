@@ -23,7 +23,7 @@ import {
   toConstraints,
 } from '../services/firebaseService';
 import { db } from '../config/firebase';
-import { SLOW_NETWORK_MESSAGE, boundOnline, queuedWrites } from '../services/writeAck';
+import { SLOW_NETWORK_MESSAGE, boundOnline } from '../services/writeAck';
 import { deleteStorageFileByUrl } from '../services/storageService';
 import type {
   Client,
@@ -60,13 +60,8 @@ import { useAuthStore } from './useAuthStore';
 import { SOURCES, mergeById, planFor, sortRecords, type DataKey } from '../core/access/dataPlan';
 import type { Principal } from '../core/access/principal';
 
-// ─── localStorage cache (instant paint) ───────────────────────
-// The cache is only reused for the SAME person with the SAME permissions; anything else is dropped,
-// so one user's records can never appear on the screen of another.
-const CACHE_PREFIX = 'app-cache-';
-const CACHE_OWNER_KEY = 'app-cache-owner';
 type StoreKey = Exclude<DataKey, 'fundTransactions'>;
-const CACHE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance', 'suppliers'];
+const STORE_KEYS: readonly StoreKey[] = ['clients', 'invoices', 'payments', 'expenses', 'expenseInvoices', 'standaloneDebts', 'debtParties', 'workers', 'userBalances', 'letters', 'projectPhases', 'boqItems', 'siteReports', 'paymentMilestones', 'workerAttendance', 'suppliers'];
 
 const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: any[], onError?: (e: any) => void) => () => void }> = {
   clients: clientsService,
@@ -87,38 +82,8 @@ const SERVICES: Record<StoreKey, { subscribe: (cb: (data: any[]) => void, c?: an
   suppliers: suppliersService,
 };
 
-const cacheOwnerTag = (principal: Principal | null) => (principal ? `${principal.id}|${JSON.stringify(planFor(principal))}` : '');
-
-const loadCache = (key: string): any[] => {
-  try {
-    const raw = localStorage.getItem(CACHE_PREFIX + key);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-};
-
-const dropCache = () => {
-  CACHE_KEYS.forEach((key) => {
-    clearTimeout(saveCacheTimers[key]);
-    try { localStorage.removeItem(CACHE_PREFIX + key); } catch {}
-  });
-  try { localStorage.removeItem(CACHE_OWNER_KEY); } catch {}
-};
-
 /** How long snapshots are gathered before the store is set once for all of them. */
 export const SNAPSHOT_BATCH_MS = 30;
-
-// Debounced save to avoid excessive writes
-const saveCacheTimers: Record<string, any> = {};
-const saveCache = (key: string, data: any[]) => {
-  clearTimeout(saveCacheTimers[key]);
-  // Serialising a whole collection is synchronous work: it waits for an idle moment instead of landing in the middle
-  // of a save or a scroll. A longer pause also merges the two snapshots every write produces into one.
-  saveCacheTimers[key] = setTimeout(() => {
-    const write = () => { try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch {} };
-    if (typeof requestIdleCallback === 'function') requestIdleCallback(write, { timeout: 4000 });
-    else write();
-  }, 1500);
-};
 
 /** The signed-in person as the approval rules see them. */
 const approvalActor = (): ApprovalActor => {
@@ -140,13 +105,10 @@ const withoutApproval = (data: Partial<Expense>): Partial<Expense> => {
 
 // Helper: toast + in-app activity feed + clearer Firebase error text
 const handleAsync = async (operation: () => Promise<any>, successMessage: string) => {
-  const queuedBefore = queuedWrites();
   try {
     await operation();
-    // The server had not answered when the change was let go: it is saved on this device and goes up by itself.
-    const message = queuedWrites() > queuedBefore ? `${successMessage}، وسيُرفع تلقائياً عند توفر اتصال جيد` : successMessage;
-    toast.success(message, { duration: queuedWrites() > queuedBefore ? 5000 : undefined });
-    useNotificationStore.getState().push({ type: 'success', title: message });
+    toast.success(successMessage);
+    useNotificationStore.getState().push({ type: 'success', title: successMessage });
     void writeAuditLog({ summary: successMessage });
   } catch (error) {
     console.error(error);
@@ -179,7 +141,7 @@ interface DataState {
   // Initialization
   /** Subscribes to exactly what this person may download (see core/access/dataPlan). Returns the unsubscribe. */
   initialize: (principal: Principal | null) => () => void;
-  /** Forget everything in memory and in the localStorage cache (logout). */
+  /** Forget everything held in memory (logout). */
   reset: () => void;
 
   // Actions
@@ -282,7 +244,6 @@ async function syncInvoiceStatusFromPayments(
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
-  // ─── Load cached data instantly on store creation ──────────
   clients: [],
   invoices: [],
   payments: [],
@@ -302,7 +263,6 @@ export const useDataStore = create<DataState>((set, get) => ({
   isLoading: true,
 
   reset: () => {
-    dropCache();
     set({
       clients: [], invoices: [], payments: [], expenses: [], expenseInvoices: [], standaloneDebts: [],
       debtParties: [], workers: [], userBalances: [], letters: [], projectPhases: [], boqItems: [],
@@ -312,23 +272,13 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   initialize: (principal) => {
     const plan = planFor(principal);
-    const planned = CACHE_KEYS.filter((key) => plan[key].length > 0);
-
-    // Start from the cache only when it was written for this same person and plan.
-    const tag = cacheOwnerTag(principal);
-    let cacheValid = false;
-    try { cacheValid = !!tag && localStorage.getItem(CACHE_OWNER_KEY) === tag; } catch {}
-    if (!cacheValid) {
-      dropCache();
-      try { if (tag) localStorage.setItem(CACHE_OWNER_KEY, tag); } catch {}
-    }
+    const planned = STORE_KEYS.filter((key) => plan[key].length > 0);
     const initial: Partial<Record<StoreKey, any[]>> = {};
-    for (const key of CACHE_KEYS) initial[key] = plan[key].length > 0 && cacheValid ? loadCache(key) : [];
-    const hasCachedData = planned.some((key) => (initial[key] ?? []).length > 0);
-    set({ ...initial, isLoading: planned.length > 0 && !hasCachedData } as Partial<DataState>);
+    for (const key of STORE_KEYS) initial[key] = [];
+    set({ ...initial, isLoading: planned.length > 0 } as Partial<DataState>);
 
     // Snapshots of the fourteen collections arrive one after another, often within a few milliseconds of each other
-    // (the cache answers them all at start-up). Setting the store for each one re-renders every screen that reads it
+    // (the first answers come together). Setting the store for each one re-renders every screen that reads it
     // fourteen times in a row; the patches are collected and applied together instead, and «loading» ends in the
     // same patch as the last data, so a screen never shows an empty list between the two.
     let patch: Partial<DataState> = {};
@@ -363,7 +313,6 @@ export const useDataStore = create<DataState>((set, get) => ({
               parts[i] = rows;
               const merged = sortRecords(mergeById(parts), SOURCES[key].sort);
               queue({ [key]: merged } as Partial<DataState>);
-              saveCache(key, merged);
               settle(id);
             },
             toConstraints(spec),
@@ -515,9 +464,9 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   // Expense Actions
   addExpense: async (expense) => {
-    // The same operation id always gets the same approval fields, so a retry is still the same submission.
+    // The same operation id always gets the same approval fields, so a retry rewrites the same record.
     const stamped: Expense = { ...withoutApproval(expense), ...approvalFieldsForNew(approvalActor(), expense.createdAt) } as Expense;
-    await handleAsync(() => expensesService.addConfirmedOnce(stamped), 'تم تسجيل المصروف بنجاح');
+    await handleAsync(() => expensesService.add(stamped), 'تم تسجيل المصروف بنجاح');
   },
   updateExpense: async (id, data) => {
     await handleAsync(async () => {

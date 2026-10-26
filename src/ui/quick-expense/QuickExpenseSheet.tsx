@@ -9,7 +9,6 @@ import { formatFirebaseError } from '../../core/formatFirebaseError';
 import { firebaseConfig } from '../../config/firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataStore } from '../../stores/useDataStore';
-import { expensesService } from '../../services/firebaseService';
 import type { Expense } from '../../types';
 import { AmountEntry } from './AmountEntry';
 import { QuantityEntry } from './QuantityEntry';
@@ -20,12 +19,6 @@ import { EmployeePicker } from './EmployeePicker';
 import { SavedSummary, type SavedInfo } from './SavedSummary';
 import { readQuickPrefs, writeQuickPrefs } from './quickPrefs';
 import {
-  clearQuickDraft,
-  readQuickDraft,
-  writeQuickDraft,
-  type QuickDraft,
-} from './quickDraft';
-import {
   buildQuickExpense,
   calculateQuickQuantity,
   DEFAULT_CATEGORY,
@@ -34,9 +27,7 @@ import {
   localISODate,
   parseAmount,
   previewCustody,
-  sameQuickExpenseRequest,
-  SAVE_TIMEOUT_MS,
-  withTimeout,
+  type QuickForm,
 } from './quickExpenseLogic';
 import { useQuickExpenseModel } from './useQuickExpenseModel';
 import { repeatExpenseDraft, quickPhaseBudget } from './repeatExpense';
@@ -50,7 +41,10 @@ interface QuickExpenseSheetProps {
 type Phase = 'form' | 'saving' | 'done';
 const projectId = firebaseConfig.projectId;
 
-/** A durable draft and immutable operation ID keep a slow connection from creating duplicate expenses. */
+/**
+ * One quick entry: fill, press, done. The expense has a fixed id for the whole entry, so pressing again after a failure
+ * rewrites the same record instead of making a second one. Nothing is kept on the device.
+ */
 export default function QuickExpenseSheet({
   open,
   onClose,
@@ -58,13 +52,11 @@ export default function QuickExpenseSheet({
   initialPhaseId,
 }: QuickExpenseSheetProps) {
   const userId = useAuthStore((s) => s.user?.id ?? '');
-  const [restored] = useState(() => readQuickDraft(projectId, userId));
   const [prefs, setPrefs] = useState(() =>
     readQuickPrefs(userId, undefined, projectId),
   );
-  const [draft, setDraft] = useState<QuickDraft>(
-    () =>
-      restored ?? {
+  const [draft, setDraft] = useState<QuickForm>(
+    () => ({
         clientId: initialClientId ?? '',
         category:
           prefs.category &&
@@ -84,7 +76,7 @@ export default function QuickExpenseSheet({
         date: localISODate(),
         phaseId: initialPhaseId ?? '',
         personId: '',
-      },
+      }),
   );
   const {
     access,
@@ -105,8 +97,8 @@ export default function QuickExpenseSheet({
   const [saved, setSaved] = useState<SavedInfo | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
-  const [confirmedConflict, setConfirmedConflict] = useState(false);
-  const operation = useRef<Expense | undefined>(restored?.operation);
+  /** The identity of this entry, created at the first press and dropped once it is saved. */
+  const operation = useRef<{ id: string; now: Date } | undefined>(undefined);
   const busy = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -115,11 +107,9 @@ export default function QuickExpenseSheet({
       mounted.current = false;
     };
   }, []);
-  const patch = (change: Partial<QuickDraft>) => {
-    if (!operation.current) {
-      setDraft((d) => ({ ...d, ...change }));
-      setError('');
-    }
+  const patch = (change: Partial<QuickForm>) => {
+    setDraft((d) => ({ ...d, ...change }));
+    setError('');
   };
   const client = clients.find((c) => c.id === draft.clientId);
   const quantity = calculateQuickQuantity(draft.quantity, draft.unitPrice);
@@ -128,7 +118,7 @@ export default function QuickExpenseSheet({
   const categoryLabel = getExpenseCategoryLabel(draft.category);
   const preview =
     remaining === null ? null : previewCustody(remaining, amountValue);
-  const locked = !!draft.operation || phase === 'saving';
+  const locked = phase === 'saving';
   const phases = access.can('projects.view')
     ? projectPhases.filter((p) => p.clientId === draft.clientId)
     : [];
@@ -164,19 +154,13 @@ export default function QuickExpenseSheet({
   const canSave =
     !busy.current &&
     phase !== 'saving' &&
-    (!!draft.operation ||
-      (!!client &&
-        amountValue > 0 &&
-        amountValue <= 999999999 &&
-        validDate &&
-        (draft.mode !== 'quantity' || !quantity.error)));
-
-  useEffect(() => {
-    if (phase !== 'done') writeQuickDraft(projectId, userId, draft);
-  }, [draft, userId, phase]);
+    !!client &&
+    amountValue > 0 &&
+    amountValue <= 999999999 &&
+    validDate &&
+    (draft.mode !== 'quantity' || !quantity.error);
 
   const complete = (expense: Expense) => {
-    clearQuickDraft(projectId, userId, expense.id);
     if (!mounted.current || operation.current?.id !== expense.id) return;
     operation.current = undefined;
     const nextPrefs = {
@@ -198,39 +182,8 @@ export default function QuickExpenseSheet({
     });
     setError('');
     setPhase('done');
-    setDraft((d) => ({ ...d, operation: undefined }));
     navigator.vibrate?.(12);
   };
-
-  // A cached optimistic snapshot is never treated as proof of a completed write.
-  useEffect(() => {
-    const pending = restored?.operation;
-    if (!pending) return;
-    let alive = true;
-    void expensesService
-      .getConfirmedById(pending.id)
-      .then((found) => {
-        if (!alive || !found) return;
-        if (sameQuickExpenseRequest(found, pending)) complete(pending);
-        else {
-          setConfirmedConflict(true);
-          setError(
-            'المعرّف محفوظ ببيانات مختلفة. راجع قائمة المصروفات قبل إجراء عملية جديدة.',
-          );
-        }
-      })
-      .catch(() => {
-        if (alive)
-          setError(
-            'هناك عملية سابقة قيد التحقق. اتصل بالإنترنت واضغط التحقق وإعادة المحاولة.',
-          );
-      });
-    return () => {
-      alive = false;
-    };
-    // The opening snapshot is deliberately immutable for the lifetime of this sheet.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const save = async () => {
     if (!canSave || busy.current) return;
@@ -238,96 +191,50 @@ export default function QuickExpenseSheet({
       setError('لا تملك صلاحية تسجيل هذا المصروف');
       return;
     }
-    if (navigator.onLine === false) {
-      setError(
-        'لا يوجد اتصال. المسودة محفوظة على هذا الجهاز، اتصل ثم أعد المحاولة.',
-      );
-      return;
-    }
-    const expense =
-      operation.current ??
-      buildQuickExpense({
-        id: crypto.randomUUID(),
-        now: new Date(),
-        clientId: draft.clientId,
-        amount: amountValue,
-        category: draft.category,
-        description: draft.description,
-        fallbackDescription: defaultDescription(categoryLabel, client?.name),
-        invoiceNumber: draft.invoiceNumber,
-        owner,
-        date: draft.date,
-        notes: draft.notes,
-        ...(access.can('projects.view') &&
-        phases.some((p) => p.id === draft.phaseId)
-          ? { phaseId: draft.phaseId }
-          : {}),
-        ...(draft.mode === 'quantity'
-          ? {
-              quantity: quantity.quantity,
-              unitPrice: quantity.unitPrice,
-              unit: draft.unit,
-            }
-          : {}),
-      });
-    const pending = { ...draft, operation: expense };
-    if (!writeQuickDraft(projectId, userId, pending)) {
-      setError(
-        'تعذّر حفظ مرجع العملية على الجهاز. اسمح بالتخزين في المتصفح ثم أعد المحاولة.',
-      );
-      return;
-    }
-    operation.current = expense;
-    setDraft(pending);
+    const entry = (operation.current ??= { id: crypto.randomUUID(), now: new Date() });
+    const expense = buildQuickExpense({
+      id: entry.id,
+      now: entry.now,
+      clientId: draft.clientId,
+      amount: amountValue,
+      category: draft.category,
+      description: draft.description,
+      fallbackDescription: defaultDescription(categoryLabel, client?.name),
+      invoiceNumber: draft.invoiceNumber,
+      owner,
+      date: draft.date,
+      notes: draft.notes,
+      ...(access.can('projects.view') &&
+      phases.some((p) => p.id === draft.phaseId)
+        ? { phaseId: draft.phaseId }
+        : {}),
+      ...(draft.mode === 'quantity'
+        ? {
+            quantity: quantity.quantity,
+            unitPrice: quantity.unitPrice,
+            unit: draft.unit,
+          }
+        : {}),
+    });
     busy.current = true;
     setPhase('saving');
     setError('');
-    const work = addExpense(expense);
-    void work.then(
-      () => complete(expense),
-      () => {},
-    );
     try {
-      await withTimeout(
-        work,
-        SAVE_TIMEOUT_MS,
-        'تأخر تأكيد الحفظ. البيانات مقفلة لحماية العملية؛ أعد التحقق بنفس المرجع.',
-      );
+      await addExpense(expense);
+      complete(expense);
     } catch (cause) {
-      if (!mounted.current || operation.current?.id !== expense.id) return;
-      const code = (cause as { code?: string })?.code?.replace(
-        'firestore/',
-        '',
-      );
-      if (code === 'operation-conflict') setConfirmedConflict(true);
-      if (
-        [
-          'permission-denied',
-          'invalid-argument',
-          'not-found',
-          'failed-precondition',
-        ].includes(code ?? '')
-      ) {
-        operation.current = undefined;
-        setDraft((d) => ({ ...d, operation: undefined }));
+      if (mounted.current) {
+        setError(formatFirebaseError(cause));
+        setPhase('form');
       }
-      setError(
-        cause instanceof Error && (!code || code === 'operation-conflict')
-          ? cause.message
-          : formatFirebaseError(cause),
-      );
-      setPhase('form');
     } finally {
       busy.current = false;
     }
   };
   const another = () => {
     operation.current = undefined;
-    setConfirmedConflict(false);
-    clearQuickDraft(projectId, userId);
     setDraft((d) => ({
       ...d,
-      operation: undefined,
       amount: '',
       quantity: '',
       unitPrice: '',
@@ -381,41 +288,25 @@ export default function QuickExpenseSheet({
                 {error}
               </p>
             )}
-            {draft.operation && (
-              <p
-                role="status"
-                className="text-xs leading-relaxed text-fg-subtle"
-              >
-                هناك طلب لم يتأكد حفظه بعد. إعادة المحاولة تتحقق منه بالمرجع
-                نفسه وتحمي من التكرار.
-              </p>
-            )}
             <Button
               block
               loading={phase === 'saving'}
               disabled={!canSave}
               onClick={() => void save()}
             >
-              {draft.operation ? 'التحقق وإعادة المحاولة' : 'تسجيل المصروف'}
+              تسجيل المصروف
             </Button>
-            {confirmedConflict && (
-              <Button block variant="outline" onClick={another}>
-                راجعت المصروف المسجل، بدء عملية جديدة
-              </Button>
-            )}
-            {!draft.operation && (
-              <p className="text-center text-xs text-fg-muted">
-                {!client ? (
-                  'اختر العميل أولًا'
-                ) : amountValue <= 0 ? (
-                  'أدخل المبلغ أو الكمية والسعر'
-                ) : (
-                  <>
-                    سيُسجل <Amount amount={amountValue} /> على {client.name}
-                  </>
-                )}
-              </p>
-            )}
+            <p className="text-center text-xs text-fg-muted">
+              {!client ? (
+                'اختر العميل أولًا'
+              ) : amountValue <= 0 ? (
+                'أدخل المبلغ أو الكمية والسعر'
+              ) : (
+                <>
+                  سيُسجل <Amount amount={amountValue} /> على {client.name}
+                </>
+              )}
+            </p>
           </div>
         )
       }
@@ -427,11 +318,6 @@ export default function QuickExpenseSheet({
           disabled={locked}
           className="min-w-0 space-y-5 px-4 py-4 lg:px-6"
         >
-          {restored && (
-            <p className="text-xs text-fg-muted">
-              استُعيدت المسودة المحفوظة على هذا الجهاز.
-            </p>
-          )}
           {repeatable.length > 0 && (
             <Button variant="outline" block onClick={() => setRepeatOpen(true)}>
               إعادة استخدام مصروف سابق
@@ -521,7 +407,7 @@ export default function QuickExpenseSheet({
             value={draft.description}
             onChange={(e) => patch({ description: e.target.value })}
           />
-          {duplicate && !draft.operation && (
+          {duplicate && (
             <p
               role="status"
               className="rounded-md bg-warning-soft p-3 text-sm leading-relaxed text-warning-ink"

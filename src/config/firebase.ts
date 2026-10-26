@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from 'firebase/firestore';
+import { initializeFirestore, memoryLocalCache, connectFirestoreEmulator } from 'firebase/firestore';
 import { useBrandStore } from '../stores/useBrandStore';
 import type { FirebaseBrandConfig } from './brand.types';
 
@@ -50,11 +50,11 @@ export const hasValidFirebase = firebaseConfig.apiKey && firebaseConfig.apiKey !
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig as any);
 
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
-});
+/**
+ * Online only: the cache lives in memory and dies with the tab. Nothing is kept on the device between visits (no
+ * IndexedDB, no tab lease to wait on), a change is shown at once and confirmed by the server (see services/writeAck).
+ */
+export const db = initializeFirestore(app, { localCache: memoryLocalCache() });
 
 /**
  * Local development against the Firebase emulators (`npm run emulators`, then `npm run dev:emulators`).
